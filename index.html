@@ -810,156 +810,319 @@ function renderPlayerList(players){
       </div>`).join('');
 }
 
+// ════════════════════════════════════════════
+// NIGHT TURN ORDER
+// Each entry: { role(s), label, condition(gs,dayNum) }
+// roles = array of roles that share this turn (e.g. all wolves act together)
+// ════════════════════════════════════════════
+const NIGHT_SEQUENCE = [
+  // Day-1-only roles
+  { id:'cupid',      roles:['cupid'],                               label:{en:'Cupid',fr:'Cupidon',ar:'كيوبيد'},         onlyDay1:true  },
+  { id:'thief',      roles:['thief'],                               label:{en:'Thief',fr:'Voleur',ar:'اللص'},            onlyDay1:true  },
+  { id:'wildchild',  roles:['wildchild'],                           label:{en:'Wild Child',fr:'Enfant Sauvage',ar:'الطفل البري'}, onlyDay1:true },
+  { id:'wolfhound',  roles:['wolfhound'],                           label:{en:'Wolf-Hound',fr:'Chien-Loup',ar:'كلب الذئب'}, onlyDay1:true },
+  // Every night
+  { id:'seer',       roles:['seer'],                                label:{en:'Seer',fr:'Voyante',ar:'العرافة'}           },
+  { id:'apprenticeseer', roles:['apprenticeseer'],                  label:{en:'Apprentice Seer',fr:'Apprentie Voyante',ar:'تلميذة العرافة'}, condition:(gs)=>!getAlive(gs).find(p=>p.role==='seer') },
+  { id:'fox',        roles:['fox'],                                 label:{en:'Fox',fr:'Renard',ar:'الثعلب'}              },
+  { id:'bodyguard',  roles:['bodyguard'],                           label:{en:'Bodyguard',fr:'Garde du Corps',ar:'الحارس الشخصي'} },
+  { id:'savior',     roles:['savior'],                              label:{en:'Savior',fr:'Sauveur',ar:'المنقذ'}          },
+  { id:'wolves',     roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher'], label:{en:'Werewolves',fr:'Loups-Garous',ar:'الذئاب'} },
+  { id:'whitewerewolf', roles:['whitewerewolf'],                    label:{en:'White Werewolf',fr:'Loup Blanc',ar:'الذئب الأبيض'}, condition:(gs,dn)=>dn%2===0 },
+  { id:'witch',      roles:['witch'],                               label:{en:'Witch',fr:'Sorcière',ar:'الساحرة'}         },
+  { id:'fluteplayer',roles:['fluteplayer'],                         label:{en:'Flute Player',fr:'Joueur de Flûte',ar:'عازف الناي'} },
+  { id:'crow',       roles:['crow'],                                label:{en:'Crow',fr:'Corbeau',ar:'الغراب'}            },
+  { id:'pyromaniac', roles:['pyromaniac'],                          label:{en:'Pyromaniac',fr:'Pyromane',ar:'مجنون النار'} },
+  { id:'puppeteer',  roles:['puppeteer'],                           label:{en:'Puppeteer',fr:'Marionnettiste',ar:'محرك الدمى'} },
+  { id:'necromancer',roles:['necromancer'],                         label:{en:'Necromancer',fr:'Nécromancien',ar:'الساحر الأسود'} },
+  { id:'gravedigger',roles:['gravedigger'],                         label:{en:'Grave Digger',fr:'Fossoyeur',ar:'حفار القبور'} },
+  { id:'sectleader', roles:['sectleader'],                          label:{en:'Sect Leader',fr:'Meneur de Secte',ar:'زعيم الطائفة'} },
+  { id:'twosisters', roles:['twosisters'],                          label:{en:'Two Sisters',fr:'Deux Sœurs',ar:'الأختان'} },
+  { id:'threebrothers',roles:['threebrothers'],                     label:{en:'Three Brothers',fr:'Trois Frères',ar:'الإخوة الثلاثة'} },
+];
+
+function getAlive(gs){
+  return gs?.players ? Object.values(gs.players).filter(p=>p.alive) : [];
+}
+
+// Build the sequence for this night: skip roles not present or whose condition fails
+function buildNightQueue(gs, dayNum){
+  const aliveRoles=new Set(getAlive(gs).map(p=>p.role));
+  return NIGHT_SEQUENCE.filter(step=>{
+    if(step.onlyDay1 && dayNum!==1) return false;
+    if(step.condition && !step.condition(gs, dayNum)) return false;
+    return step.roles.some(r=>aliveRoles.has(r));
+  });
+}
+
+// ════════════════════════════════════════════
+// PHASE RENDER
+// ════════════════════════════════════════════
 function renderPhase(){
   const ph=gameState.phase;
-  document.getElementById('phaseTitle').textContent=ph==='night'?tr('ph_night'):tr('ph_day');
-  let desc='';
-  if(ph==='night'){
-    if(myRole==='werewolf') desc=lang==='ar'?'اختر ضحيتك':lang==='fr'?'Choisissez une victime':'Choose your victim';
-    else if(myRole==='seer') desc=lang==='ar'?'اكشف دور لاعب':lang==='fr'?'Voyez le rôle d\'un joueur':'Investigate a player';
-    else if(myRole==='witch') desc=lang==='ar'?'استخدم جرعاتك':lang==='fr'?'Utilisez vos potions':'Use your potions';
-    else desc=lang==='ar'?'يحل الليل…':lang==='fr'?'La nuit tombe…':'The night unfolds…';
-  } else {
-    desc=lang==='ar'?'صوّت لإقصاء لاعب':lang==='fr'?'Votez pour éliminer un joueur':'Vote to eliminate a player';
-  }
-  document.getElementById('phaseDesc').textContent=desc;
-  renderActionButtons(ph);
-}
-
-function renderActionButtons(ph){
   const ab=document.getElementById('actionBtns');
   ab.innerHTML='';
+
+  if(ph==='day'){
+    document.getElementById('phaseTitle').textContent=tr('ph_day');
+    document.getElementById('phaseDesc').textContent=
+      lang==='ar'?'صوّت لإقصاء لاعب':lang==='fr'?'Votez pour éliminer un joueur':'Vote to eliminate a player';
+    renderDayVoting();
+    return;
+  }
+
+  // NIGHT
+  document.getElementById('phaseTitle').textContent=tr('ph_night');
+  const turn=gameState.nightTurn||{};
+  const stepId=turn.stepId;
+
+  // Find the step definition
+  const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
+  const stepLabel=step ? (step.label[lang]||step.label.en) : '…';
+  const isMyTurn = step && step.roles.includes(myRole);
   const me=gameState.players?.[myId];
-  if(!me?.alive) return; // dead players can't act
+  const iAmAlive = me?.alive;
 
-  const players=gameState.players?Object.values(gameState.players):[];
-  const alive=players.filter(p=>p.alive&&p.id!==myId);
+  if(!stepId){
+    document.getElementById('phaseDesc').textContent=lang==='ar'?'الليل يبدأ…':lang==='fr'?'La nuit commence…':'Night begins…';
+    return;
+  }
 
-  // Check if already acted this phase
+  // What everyone sees
+  if(!isMyTurn || !iAmAlive){
+    document.getElementById('phaseDesc').textContent=
+      lang==='ar'? `${stepLabel} يتصرف الآن… 🌙` :
+      lang==='fr'? `${stepLabel} agit maintenant… 🌙` :
+                   `${stepLabel} is acting now… 🌙`;
+    // Show "waiting" with subtle progress dots
+    ab.innerHTML=`<div style="color:var(--ghost);opacity:.5;font-size:.85rem;margin-top:.5rem">
+      ${lang==='ar'?'انتظر دورك':lang==='fr'?'Attendez votre tour':'Waiting for your turn…'}
+    </div>`;
+    return;
+  }
+
+  // It's MY turn
+  document.getElementById('phaseDesc').textContent=
+    lang==='ar'? `دورك! ${stepLabel}` :
+    lang==='fr'? `C'est votre tour ! ${stepLabel}` :
+                 `Your turn! ${stepLabel}`;
+
   const actions=gameState.nightActions||{};
-  const alreadyActed=actions[myId];
+  const alreadyActed = !!actions[myId];
+  if(alreadyActed){
+    ab.innerHTML=`<div style="color:var(--green);font-size:.95rem;font-weight:700">✓ ${lang==='ar'?'تم تسجيل اختيارك':lang==='fr'?'Choix enregistré':'Choice recorded'}</div>`;
+    return;
+  }
 
-  if(ph==='night'){
-    // Wolves: pick a victim
-    if((myRole==='werewolf'||myRole==='bigbadwolf'||myRole==='alphawolf'||myRole==='whitewerewolf'||myRole==='wolffather')){
-      if(alreadyActed){
-        const target=players.find(p=>p.id===actions[myId]?.target);
-        ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${lang==='ar'?'اخترت: ':'Cible choisie : '}${target?.name||'?'} ✓</div>`;
-      } else {
-        alive.forEach(p=>{
-          const btn=document.createElement('button');
-          btn.className='btn';
-          btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
-          btn.textContent=(lang==='ar'?'اقتل ':'Tuer ')+p.name;
-          btn.onclick=()=>doNightAction('kill',p.id,p.name);
-          ab.appendChild(btn);
-        });
-      }
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive&&p.id!==myId);
+  const aliveAll=players.filter(p=>p.alive);
+
+  // ── WOLVES ──
+  if(stepId==='wolves'){
+    alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'kill',target:p.id})));
+  }
+  // ── WHITE WEREWOLF (kill own pack) ──
+  else if(stepId==='whitewerewolf'){
+    alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'ww_kill',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── SEER / APPRENTICE SEER ──
+  else if(stepId==='seer'||stepId==='apprenticeseer'){
+    alive.forEach(p=>addBtn(ab,p.name,'seer',()=>{
+      const role=gameState.players[p.id]?.role||'unknown';
+      const team=ROLES_DEF[role]?.team||'?';
+      const result=lang==='ar'?(team==='werewolf'?'🐺 ذئب':'✓ بريء'):lang==='fr'?(team==='werewolf'?'🐺 Loup':'✓ Innocent'):(team==='werewolf'?'🐺 Werewolf':'✓ Innocent');
+      submitAction({type:'seer',target:p.id,result});
+      setTimeout(()=>alert('🔮 '+p.name+': '+result),100);
+    }));
+  }
+  // ── BODYGUARD ──
+  else if(stepId==='bodyguard'){
+    const lastProtected=gameState.nightActions?._bodyguardLast;
+    aliveAll.filter(p=>p.id!==lastProtected).forEach(p=>addBtn(ab,p.name,'protect',()=>submitAction({type:'protect',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── SAVIOR ──
+  else if(stepId==='savior'){
+    const lastSaved=gameState.nightActions?._saviorLast;
+    aliveAll.filter(p=>p.id!==lastSaved).forEach(p=>addBtn(ab,p.name,'protect',()=>submitAction({type:'savior_save',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── WITCH ──
+  else if(stepId==='witch'){
+    const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
+    const wolfVictimId=gameState.nightActions?._wolfVictim;
+    let hasBtns=false;
+    if(potions.life&&wolfVictimId){
+      const v=players.find(p=>p.id===wolfVictimId);
+      if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name,'save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
     }
-    // Seer: investigate a player
-    else if(myRole==='seer'||myRole==='apprenticeseer'){
-      if(alreadyActed){
-        const target=players.find(p=>p.id===actions[myId]?.target);
-        const res=actions[myId]?.result;
-        ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${target?.name||'?'} → ${res||'?'} ✓</div>`;
-      } else {
-        alive.forEach(p=>{
-          const btn=document.createElement('button');
-          btn.className='btn btn-secondary';
-          btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
-          btn.textContent=(lang==='ar'?'افحص ':'Voir ')+p.name;
-          btn.onclick=()=>doSeerAction(p.id,p.name);
-          ab.appendChild(btn);
-        });
-      }
+    if(potions.death){
+      alive.forEach(p=>{ addBtn(ab,(lang==='ar'?'سمّ ':lang==='fr'?'Empoisonner ':'Poison ')+p.name,'kill',()=>submitWitch('poison',p.id)); hasBtns=true; });
     }
-    // Witch: save or kill
-    else if(myRole==='witch'){
-      const witchState=gameState.witchPotions?.[myId]||{life:true,death:true};
-      const wolfVictim=gameState.nightActions?._wolfVictim;
-      if(!alreadyActed){
-        if(witchState.life&&wolfVictim){
-          const v=players.find(p=>p.id===wolfVictim);
-          const btn=document.createElement('button');
-          btn.className='btn btn-secondary';
-          btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;background:var(--green);';
-          btn.textContent=(lang==='ar'?'أنقذ ':'Sauver ')+( v?.name||'?');
-          btn.onclick=()=>doWitchAction('save',wolfVictim);
-          ab.appendChild(btn);
+    if(!hasBtns) ab.innerHTML+=`<div style="opacity:.5;font-size:.85rem">${lang==='ar'?'لا جرعات':lang==='fr'?'Plus de potions':'No potions left'}</div>`;
+    addSkipBtn(ab);
+  }
+  // ── CUPID ──
+  else if(stepId==='cupid'){
+    const chosen=gameState.nightActions?.['_cupid_chosen']||[];
+    if(chosen.length<2){
+      aliveAll.filter(p=>!chosen.includes(p.id)).forEach(p=>addBtn(ab,p.name,'special',()=>{
+        const cur=gameState.nightActions?.['_cupid_chosen']||[];
+        if(cur.length===0){
+          writeAction({'_cupid_chosen':[p.id]});
+        } else {
+          submitAction({type:'cupid',target:p.id,partner:cur[0]});
+          writeAction({'_cupid_chosen':[...cur,p.id]});
+          setTimeout(()=>alert('💘 '+lang==='ar'?'تم ربط العاشقَين':lang==='fr'?'Amoureux liés':'Lovers linked!'),100);
         }
-        if(witchState.death){
-          alive.forEach(p=>{
-            const btn=document.createElement('button');
-            btn.className='btn';
-            btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
-            btn.textContent=(lang==='ar'?'سمّ ':'Tuer ')+p.name;
-            btn.onclick=()=>doWitchAction('poison',p.id);
-            ab.appendChild(btn);
-          });
-        }
-        if(!witchState.life&&!witchState.death){
-          ab.innerHTML=`<div style="color:var(--ghost);font-size:.85rem;opacity:.6">${lang==='ar'?'لا جرعات متبقية':'No potions left'}</div>`;
-        }
-      } else {
-        ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${lang==='ar'?'تصرفت هذه الليلة ✓':'Action taken tonight ✓'}</div>`;
-      }
+      }));
+      ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem">${lang==='ar'?`اختر ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} لاعب(ين)`:lang==='fr'?`Choisissez ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} joueur(s)`:`Choose ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} player(s)`}</div>`+ab.innerHTML;
     }
-  } else {
-    // Day phase: voting
-    if(alreadyActed){
-      const target=players.find(p=>p.id===actions[myId]?.target);
-      ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${lang==='ar'?'صوّتت ضد: ':'Vote contre : '}${target?.name||'?'} ✓</div>`;
-    } else {
-      alive.forEach(p=>{
-        const btn=document.createElement('button');
-        btn.className='btn';
-        btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
-        btn.textContent=(lang==='ar'?'صوّت ضد ':'Voter ')+p.name;
-        btn.onclick=()=>doVote(p.id,p.name);
-        ab.appendChild(btn);
-      });
-    }
+  }
+  // ── THIEF ──
+  else if(stepId==='thief'){
+    const extras=gameState.thiefCards||[];
+    if(extras.length){
+      extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'special',()=>submitAction({type:'thief',take:r})); });
+    } else { addSkipBtn(ab); }
+  }
+  // ── WILDCHILD ──
+  else if(stepId==='wildchild'){
+    alive.forEach(p=>addBtn(ab,p.name,'special',()=>{
+      submitAction({type:'wildchild_model',target:p.id});
+      setTimeout(()=>alert('🧒 '+(lang==='ar'?'قدوتك: ':lang==='fr'?'Modèle : ':'Role model: ')+p.name),100);
+    }));
+  }
+  // ── WOLFHOUND ──
+  else if(stepId==='wolfhound'){
+    addBtn(ab,lang==='ar'?'قروي':lang==='fr'?'Villageois':'Villager','protect',()=>submitAction({type:'wolfhound_choose',pick:'villager'}));
+    addBtn(ab,lang==='ar'?'ذئب':lang==='fr'?'Loup-Garou':'Werewolf','kill',()=>submitAction({type:'wolfhound_choose',pick:'werewolf'}));
+  }
+  // ── FOX ──
+  else if(stepId==='fox'){
+    // Fox sniffs a group of 3; simplified: pick one player to sniff
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'شمّ ':lang==='fr'?'Flairer ':'Sniff ')+p.name,'seer',()=>{
+      const role=gameState.players[p.id]?.role;
+      const isWolf=ROLES_DEF[role]?.team==='werewolf';
+      submitAction({type:'fox_sniff',target:p.id,found:isWolf});
+      setTimeout(()=>alert('🦊 '+(isWolf?(lang==='ar'?'🐺 ذئب بالقرب!':lang==='fr'?'🐺 Loup proche !':'🐺 Wolf nearby!'):(lang==='ar'?'لا ذئاب':lang==='fr'?'Pas de loup':'No wolf'))),100);
+    }));
+    addSkipBtn(ab);
+  }
+  // ── FLUTE PLAYER ──
+  else if(stepId==='fluteplayer'){
+    let enchanted=(gameState.nightActions?._fluteEnchanted||[]);
+    const notYet=alive.filter(p=>!enchanted.includes(p.id));
+    const need=2-((gameState.nightActions?._fluteThisNight||[]).length);
+    if(need>0 && notYet.length){
+      notYet.forEach(p=>addBtn(ab,(lang==='ar'?'سحر ':lang==='fr'?'Envoûter ':'Enchant ')+p.name,'special',()=>{
+        const cur=gameState.nightActions?._fluteThisNight||[];
+        if(cur.length<2){
+          const upd={type:'flute',target:p.id};
+          writeAction({'_fluteThisNight':[...cur,p.id],'_fluteEnchanted':[...enchanted,p.id]});
+          if(cur.length===1) submitAction(upd);
+        }
+      }));
+    } else { submitAction({type:'flute',target:null}); }
+  }
+  // ── CROW ──
+  else if(stepId==='crow'){
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'اتهم ':lang==='fr'?'Accuser ':'Accuse ')+p.name,'kill',()=>submitAction({type:'crow_accuse',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── PYROMANIAC ──
+  else if(stepId==='pyromaniac'){
+    const doused=gameState.nightActions?._pyroDoused||[];
+    alive.filter(p=>!doused.includes(p.id)).forEach(p=>addBtn(ab,(lang==='ar'?'رشّ ':lang==='fr'?'Arroser ':'Douse ')+p.name,'kill',()=>submitAction({type:'pyro_douse',target:p.id})));
+    if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','kill',()=>submitAction({type:'pyro_ignite'}));
+    addSkipBtn(ab);
+  }
+  // ── PUPPETEER ──
+  else if(stepId==='puppeteer'){
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'تحكم في ':lang==='fr'?'Contrôler ':'Control ')+p.name,'special',()=>submitAction({type:'puppet',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── NECROMANCER ──
+  else if(stepId==='necromancer'){
+    const dead=players.filter(p=>!p.alive);
+    dead.forEach(p=>addBtn(ab,(lang==='ar'?'استحضر ':lang==='fr'?'Invoquer ':'Channel ')+p.name,'special',()=>submitAction({type:'necro',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── GRAVEDIGGER ──
+  else if(stepId==='gravedigger'){
+    const dead=players.filter(p=>!p.alive);
+    dead.forEach(p=>addBtn(ab,(lang==='ar'?'استخدم قدرة ':lang==='fr'?'Utiliser ':'Use ability of ')+p.name,'special',()=>submitAction({type:'grave',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── SECT LEADER ──
+  else if(stepId==='sectleader'){
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'جنّد ':lang==='fr'?'Recruter ':'Recruit ')+p.name,'special',()=>submitAction({type:'sect_recruit',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── TWO SISTERS ──
+  else if(stepId==='twosisters'){
+    // Sisters just see each other — they auto-act, show info
+    const sisters=aliveAll.filter(p=>p.role==='twosisters');
+    ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem">👯 ${lang==='ar'?'أختك هي: ':lang==='fr'?'Votre sœur est : ':'Your sister is: '} <strong>${sisters.filter(p=>p.id!==myId).map(p=>p.name).join(', ')||'?'}</strong></div>`;
+    setTimeout(()=>submitAction({type:'sisters_meet'}),1500);
+  }
+  // ── THREE BROTHERS ──
+  else if(stepId==='threebrothers'){
+    const brothers=aliveAll.filter(p=>p.role==='threebrothers');
+    ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem">👬 ${lang==='ar'?'إخوتك هم: ':lang==='fr'?'Vos frères sont : ':'Your brothers are: '} <strong>${brothers.filter(p=>p.id!==myId).map(p=>p.name).join(', ')||'?'}</strong></div>`;
+    setTimeout(()=>submitAction({type:'brothers_meet'}),1500);
   }
 }
 
-function doNightAction(type,targetId,targetName){
-  if(!myId) return;
-  const action={type,target:targetId,by:myId,ts:Date.now()};
+function addBtn(container, label, type, onclick){
+  const btn=document.createElement('button');
+  btn.className='btn'+(type==='protect'?' btn-secondary':'');
+  btn.style.cssText='font-size:.82rem;padding:.45rem .9rem;margin:.2rem;'+(type==='save'?'background:var(--green);':type==='seer'?'background:var(--purple);border:1px solid var(--moon);':'');
+  btn.textContent=label;
+  btn.onclick=onclick;
+  container.appendChild(btn);
+}
+function addSkipBtn(container){
+  addBtn(container, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>submitAction({type:'skip'}));
+}
+
+// Write action to Firebase or local without marking "done"
+function writeAction(fields){
   if(fbOk&&db&&roomCode){
     const upd={};
-    upd[`games/${roomCode}/nightActions/${myId}`]=action;
-    // track wolf victim for witch
-    if(type==='kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=targetId;
+    Object.entries(fields).forEach(([k,v])=>{ upd[`games/${roomCode}/nightActions/${k}`]=v; });
     db.ref().update(upd);
   } else if(gameState){
     if(!gameState.nightActions) gameState.nightActions={};
-    gameState.nightActions[myId]=action;
-    if(type==='kill') gameState.nightActions._wolfVictim=targetId;
-    renderGame();
+    Object.assign(gameState.nightActions,fields);
   }
 }
 
-function doSeerAction(targetId,targetName){
-  if(!myId) return;
-  const target=gameState.players?.[targetId];
-  const role=target?.role||'unknown';
-  const team=ROLES_DEF[role]?.team||'unknown';
-  const result=lang==='ar'?(team==='werewolf'?'ذئب 🐺':'بريء ✓'):lang==='fr'?(team==='werewolf'?'Loup 🐺':'Innocent ✓'):(team==='werewolf'?'Werewolf 🐺':'Innocent ✓');
-  const action={type:'seer',target:targetId,result,by:myId,ts:Date.now()};
+// Submit MY action (marks me as done for this turn)
+function submitAction(action){
+  const data={...action, by:myId, ts:Date.now()};
   if(fbOk&&db&&roomCode){
-    db.ref(`games/${roomCode}/nightActions/${myId}`).set(action);
+    const upd={};
+    upd[`games/${roomCode}/nightActions/${myId}`]=data;
+    if(action.type==='kill'||action.type==='bigbad_kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=action.target;
+    if(action.type==='protect')    upd[`games/${roomCode}/nightActions/_bodyguardProtected`]=action.target;
+    if(action.type==='savior_save') upd[`games/${roomCode}/nightActions/_saviorProtected`]=action.target;
+    db.ref().update(upd);
   } else if(gameState){
     if(!gameState.nightActions) gameState.nightActions={};
-    gameState.nightActions[myId]=action;
+    gameState.nightActions[myId]=data;
+    if(action.type==='kill') gameState.nightActions._wolfVictim=action.target;
+    if(action.type==='protect') gameState.nightActions._bodyguardProtected=action.target;
+    if(action.type==='savior_save') gameState.nightActions._saviorProtected=action.target;
+    checkTurnComplete();
     renderGame();
   }
-  // Show result immediately in a simple alert
-  alert((targetName||'?')+': '+result);
 }
 
-function doWitchAction(type,targetId){
-  if(!myId) return;
-  const action={type:'witch_'+type,target:targetId,by:myId,ts:Date.now()};
+function submitWitch(type, targetId){
+  const action={type:'witch_'+type, target:targetId, by:myId, ts:Date.now()};
   const potionKey=type==='save'?'life':'death';
   if(fbOk&&db&&roomCode){
     const upd={};
@@ -972,11 +1135,190 @@ function doWitchAction(type,targetId){
     if(!gameState.witchPotions) gameState.witchPotions={};
     if(!gameState.witchPotions[myId]) gameState.witchPotions[myId]={life:true,death:true};
     gameState.witchPotions[myId][potionKey]=false;
+    checkTurnComplete();
     renderGame();
   }
 }
 
-function doVote(targetId,targetName){
+// ════════════════════════════════════════════
+// TURN ADVANCEMENT (leader only)
+// ════════════════════════════════════════════
+let _lastStepId=null; // prevent re-triggering
+
+function checkTurnComplete(){
+  if(!isLeader) return;
+  if(gameState?.phase!=='night') return;
+
+  const turn=gameState.nightTurn||{};
+  const stepId=turn.stepId;
+  if(!stepId) { advanceNightTurn(0); return; }
+  if(stepId===_lastStepId) return; // already processed
+
+  const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
+  if(!step) { advanceNightTurnFromCurrent(); return; }
+
+  const players=Object.values(gameState.players||{});
+  const actingPlayers=players.filter(p=>p.alive && step.roles.includes(p.role));
+  const actions=gameState.nightActions||{};
+  const allDone=actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]);
+
+  if(allDone){
+    _lastStepId=stepId;
+    advanceNightTurnFromCurrent();
+  }
+}
+
+function advanceNightTurnFromCurrent(){
+  const queue=buildNightQueue(gameState, gameState.dayNum||1);
+  const curIdx=queue.findIndex(s=>s.id===(gameState.nightTurn?.stepId));
+  advanceNightTurn(curIdx+1, queue);
+}
+
+function advanceNightTurn(idx, queue){
+  if(!queue) queue=buildNightQueue(gameState, gameState.dayNum||1);
+  if(idx>=queue.length){
+    // All turns done → resolve night → go to day
+    resolveNightAndAdvance();
+    return;
+  }
+  const step=queue[idx];
+  const update={ stepId:step.id, stepIndex:idx, turnStart:Date.now() };
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/nightTurn`).set(update);
+  } else if(gameState){
+    gameState.nightTurn=update;
+    renderGame();
+  }
+}
+
+// ════════════════════════════════════════════
+// NIGHT RESOLUTION
+// ════════════════════════════════════════════
+function resolveNightAndAdvance(){
+  if(!isLeader) return;
+  const gs=gameState;
+  const actions=gs.nightActions||{};
+  const players={...(gs.players||{})};
+
+  // Collect who dies
+  const killSet=new Set();
+
+  // Wolf kill
+  const wolfVictim=actions._wolfVictim;
+  if(wolfVictim) killSet.add(wolfVictim);
+
+  // Witch poison
+  Object.values(actions).forEach(a=>{
+    if(a?.type==='witch_poison'&&a.target) killSet.add(a.target);
+  });
+
+  // Pyromaniac ignite
+  const ignite=Object.values(actions).find(a=>a?.type==='pyro_ignite');
+  if(ignite){
+    const doused=actions._pyroDoused||[];
+    doused.forEach(id=>killSet.add(id));
+    // pyro dies too
+    const pyro=Object.values(players).find(p=>p.role==='pyromaniac');
+    if(pyro) killSet.add(pyro.id);
+  }
+
+  // White werewolf kill
+  const wwKill=Object.values(actions).find(a=>a?.type==='ww_kill');
+  if(wwKill?.target) killSet.add(wwKill.target);
+
+  // Remove protections
+  const bodyguardProtected=actions._bodyguardProtected;
+  const saviorProtected=actions._saviorProtected;
+  const witchSaved=Object.values(actions).find(a=>a?.type==='witch_save');
+  if(bodyguardProtected) killSet.delete(bodyguardProtected);
+  if(saviorProtected)    killSet.delete(saviorProtected);
+  if(witchSaved?.target) killSet.delete(witchSaved.target);
+
+  // Berserker: immune first 2 nights
+  const dayNum=gs.dayNum||1;
+  if(dayNum<=2){
+    Object.values(players).forEach(p=>{ if(p.role==='berserker') killSet.delete(p.id); });
+  }
+
+  // Mark dead
+  const upd={};
+  killSet.forEach(id=>{ if(players[id]) upd[`games/${roomCode}/players/${id}/alive`]=false; });
+
+  // Update savior's last-saved memory (can't save same person twice)
+  const saviorAction=Object.values(actions).find(a=>a?.type==='savior_save');
+  if(saviorAction?.target) upd[`games/${roomCode}/nightActions/_saviorLast`]=saviorAction.target;
+
+  // Bodyguard last protected
+  if(bodyguardProtected) upd[`games/${roomCode}/nightActions/_bodyguardLast`]=bodyguardProtected;
+
+  // Advance to day
+  const nextDay=(gs.dayNum||1);
+  upd[`games/${roomCode}/phase`]='day';
+  upd[`games/${roomCode}/phaseStart`]=Date.now();
+  upd[`games/${roomCode}/dayNum`]=nextDay;
+  upd[`games/${roomCode}/nightTurn`]={stepId:null};
+  upd[`games/${roomCode}/nightActions`]={
+    _saviorLast: saviorAction?.target||null,
+    _bodyguardLast: bodyguardProtected||null,
+    _fluteEnchanted: actions._fluteEnchanted||[],
+    _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
+  };
+
+  if(fbOk&&db&&roomCode){
+    db.ref().update(upd);
+  } else {
+    killSet.forEach(id=>{ if(gs.players[id]) gs.players[id].alive=false; });
+    Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},nightActions:{
+      _saviorLast: saviorAction?.target||null,
+      _bodyguardLast: bodyguardProtected||null,
+      _fluteEnchanted: actions._fluteEnchanted||[],
+      _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
+    }});
+    renderGame();
+  }
+}
+
+// ════════════════════════════════════════════
+// DAY VOTING
+// ════════════════════════════════════════════
+function renderDayVoting(){
+  const ab=document.getElementById('actionBtns');
+  const me=gameState.players?.[myId];
+  if(!me?.alive){ ab.innerHTML=`<div style="opacity:.5">${lang==='ar'?'أنت خارج اللعبة':lang==='fr'?'Vous êtes éliminé':'You are eliminated'}</div>`; return; }
+
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive&&p.id!==myId);
+  const actions=gameState.nightActions||{};
+  const voted=!!actions[myId];
+
+  // Tally votes for display
+  const tally={};
+  Object.values(actions).forEach(a=>{ if(a?.type==='vote'&&a.target){ tally[a.target]=(tally[a.target]||0)+1; }});
+  // Crow bonus
+  const crowAccused=actions._crowAccused;
+  if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+
+  if(voted){
+    const myVote=players.find(p=>p.id===actions[myId]?.target);
+    ab.innerHTML=`<div style="color:var(--green);font-size:.9rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
+  } else {
+    alive.forEach(p=>{
+      const votes=tally[p.id]||0;
+      addBtn(ab, `${p.name}${votes>0?' ('+votes+')':''}`, 'kill', ()=>doVote(p.id));
+    });
+  }
+
+  // Show tally
+  if(Object.keys(tally).length){
+    const tallyHtml=Object.entries(tally).sort((a,b)=>b[1]-a[1]).map(([id,v])=>{
+      const name=players.find(p=>p.id===id)?.name||'?';
+      return `<span style="color:var(--moon-pale)">${name}: ${v}</span>`;
+    }).join(' · ');
+    ab.innerHTML+=`<div style="font-size:.78rem;margin-top:.6rem;opacity:.75">${tallyHtml}</div>`;
+  }
+}
+
+function doVote(targetId){
   if(!myId) return;
   const action={type:'vote',target:targetId,by:myId,ts:Date.now()};
   if(fbOk&&db&&roomCode){
@@ -984,40 +1326,138 @@ function doVote(targetId,targetName){
   } else if(gameState){
     if(!gameState.nightActions) gameState.nightActions={};
     gameState.nightActions[myId]=action;
+    // Check if all alive voted
+    checkDayVoteComplete();
     renderGame();
   }
 }
 
+function checkDayVoteComplete(){
+  if(!isLeader) return;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const actions=gameState.nightActions||{};
+  const allVoted=alive.every(p=>!!actions[p.id]);
+  if(allVoted) resolveDayAndAdvance();
+}
+
+function resolveDayAndAdvance(){
+  if(!isLeader) return;
+  const gs=gameState;
+  const players=Object.values(gs.players||{});
+  const actions=gs.nightActions||{};
+
+  // Tally
+  const tally={};
+  Object.values(actions).forEach(a=>{ if(a?.type==='vote'&&a.target) tally[a.target]=(tally[a.target]||0)+1; });
+  const crowAccused=actions._crowAccused;
+  if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+
+  // Find max
+  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  const upd={};
+
+  if(sorted.length){
+    const maxVotes=sorted[0][1];
+    const tied=sorted.filter(([,v])=>v===maxVotes);
+    if(tied.length===1){
+      // Eliminate player
+      const eliminatedId=tied[0][0];
+      const eliminated=players.find(p=>p.id===eliminatedId);
+      // Village idiot: revealed but stays alive
+      if(eliminated?.role==='villageidiot'){
+        upd[`games/${roomCode}/players/${eliminatedId}/idiotRevealed`]=true;
+      } else {
+        upd[`games/${roomCode}/players/${eliminatedId}/alive`]=false;
+      }
+      // Scapegoat: if tied, scapegoat dies instead — handled above (no tie here)
+    } else {
+      // Tie: eliminate scapegoat if present
+      const scapegoat=players.find(p=>p.alive&&p.role==='scapegoat');
+      if(scapegoat) upd[`games/${roomCode}/players/${scapegoat.id}/alive`]=false;
+    }
+  }
+
+  // Advance to next night
+  const nextNight=(gs.dayNum||1)+1;
+  upd[`games/${roomCode}/phase`]='night';
+  upd[`games/${roomCode}/phaseStart`]=Date.now();
+  upd[`games/${roomCode}/dayNum`]=nextNight;
+  upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+  upd[`games/${roomCode}/nightActions`]={
+    _saviorLast: actions._saviorLast||null,
+    _bodyguardLast: actions._bodyguardLast||null,
+    _fluteEnchanted: actions._fluteEnchanted||[],
+    _pyroDoused: actions._pyroDoused||[],
+  };
+
+  if(fbOk&&db&&roomCode){
+    db.ref().update(upd,()=>{
+      // After write, kick off first night turn
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    });
+  } else {
+    Object.entries(upd).forEach(([k,v])=>{
+      // crude local apply
+    });
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
+    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+  }
+}
+
+// ════════════════════════════════════════════
+// TIMER — per turn during night, per phase during day
+// ════════════════════════════════════════════
 function startTimer(){
   if(timerTO) clearTimeout(timerTO);
   tick();
 }
 function tick(){
-  if(!gameState?.phaseStart) return;
-  const dur=(gameState.phase==='night'?cfg.nightTimer:cfg.dayTimer)||60;
-  const rem=Math.max(0,Math.ceil(dur-(Date.now()-gameState.phaseStart)/1000));
+  if(!gameState) return;
+  const ph=gameState.phase;
+  let start, dur;
+  if(ph==='night'){
+    const turn=gameState.nightTurn||{};
+    start=turn.turnStart||gameState.phaseStart;
+    dur=cfg.nightTimer||45;
+  } else {
+    start=gameState.phaseStart;
+    dur=cfg.dayTimer||60;
+  }
+  if(!start){ timerTO=setTimeout(tick,1000); return; }
+  const rem=Math.max(0,Math.ceil(dur-(Date.now()-start)/1000));
   document.getElementById('phaseTimer').textContent=rem;
   if(rem>0){
     timerTO=setTimeout(tick,1000);
   } else {
-    advancePhase();
+    // Timer expired for this turn
+    if(ph==='night'){
+      if(isLeader) autoSkipTurn();
+    } else {
+      if(isLeader) checkDayVoteComplete() || resolveDayAndAdvance();
+    }
   }
 }
 
-function advancePhase(){
-  if(!isLeader) return; // only leader advances phase to avoid duplicate writes
-  const nextPhase=gameState.phase==='night'?'day':'night';
-  const nextDay=nextPhase==='night'?(gameState.dayNum||1)+1:(gameState.dayNum||1);
+function autoSkipTurn(){
+  // Force-submit skip for any acting players who haven't acted
+  const turn=gameState.nightTurn||{};
+  const step=NIGHT_SEQUENCE.find(s=>s.id===turn.stepId);
+  if(!step){ advanceNightTurnFromCurrent(); return; }
+  const players=Object.values(gameState.players||{});
+  const actingPlayers=players.filter(p=>p.alive&&step.roles.includes(p.role));
+  const actions=gameState.nightActions||{};
+  const pending=actingPlayers.filter(p=>!actions[p.id]);
+  if(pending.length===0){ advanceNightTurnFromCurrent(); return; }
   if(fbOk&&db&&roomCode){
-    db.ref(`games/${roomCode}`).update({
-      phase:nextPhase,
-      phaseStart:Date.now(),
-      dayNum:nextDay,
-      nightActions:{} // clear actions each phase
-    });
-  } else if(gameState){
-    Object.assign(gameState,{phase:nextPhase,phaseStart:Date.now(),dayNum:nextDay,nightActions:{}});
-    renderGame();
+    const upd={};
+    pending.forEach(p=>{ upd[`games/${roomCode}/nightActions/${p.id}`]={type:'skip',by:p.id,ts:Date.now(),auto:true}; });
+    db.ref().update(upd,()=>advanceNightTurnFromCurrent());
+  } else {
+    pending.forEach(p=>{ gameState.nightActions[p.id]={type:'skip',by:p.id,ts:Date.now(),auto:true}; });
+    advanceNightTurnFromCurrent();
   }
 }
 
