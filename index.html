@@ -674,9 +674,112 @@ function showGameOver(result){
           </div>`;
         }).join('')}
       </div>
-      <button class="btn" style="margin-top:1.5rem;padding:.8rem 2rem" onclick="doLeave()">${lang==='ar'?'خروج':lang==='fr'?'Quitter':'Leave Game'}</button>
+      <div id="readySection" style="margin-top:1.5rem">
+        <div id="readyStatus" style="font-size:.85rem;color:var(--moon-pale);margin-bottom:.6rem"></div>
+        <button class="btn" style="padding:.8rem 2rem;font-size:1.05rem;margin-right:.5rem" onclick="doReady()">🔄 ${lang==='ar'?'مستعد للعب مرة أخرى':lang==='fr'?'Prêt à rejouer':'Ready to Play Again'}</button>
+        <button class="btn btn-secondary" style="padding:.8rem 1.5rem;font-size:.95rem" onclick="doLeave()">${lang==='ar'?'خروج':lang==='fr'?'Quitter':'Leave Game'}</button>
+      </div>
     </div>`;
   playView.style.display='flex';
+  // Listen for ready states
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/readyPlayers`).on('value',snap=>{
+      renderReadyStatus(snap.val()||{});
+    });
+  }
+}
+
+function doReady(){
+  if(!myId) return;
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/readyPlayers/${myId}`).set({name:myName,ts:Date.now()});
+  } else if(gameState){
+    if(!gameState.readyPlayers) gameState.readyPlayers={};
+    gameState.readyPlayers[myId]={name:myName,ts:Date.now()};
+    renderReadyStatus(gameState.readyPlayers);
+    // In offline mode, if all players ready, restart immediately
+    const players=Object.values(gameState.players||{});
+    if(Object.keys(gameState.readyPlayers).length>=players.length) doRestart();
+  }
+}
+
+function renderReadyStatus(readyPlayers){
+  const el=document.getElementById('readyStatus');
+  if(!el) return;
+  const players=Object.values(gameState?.players||{});
+  const readyIds=Object.keys(readyPlayers);
+  const readyCount=readyIds.length;
+  const totalCount=players.length;
+
+  let html=`<div style="margin-bottom:.4rem">${readyCount}/${totalCount} ${lang==='ar'?'مستعدون':lang==='fr'?'prêts':'ready'}</div>`;
+  html+='<div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap">';
+  players.forEach(p=>{
+    const isReady=readyIds.includes(p.id);
+    html+=`<span style="padding:.2rem .5rem;border-radius:3px;font-size:.75rem;background:${isReady?'var(--green)':'var(--purple)'};color:${isReady?'#fff':'var(--ghost)'};border:1px solid ${isReady?'var(--green)':'var(--moon)'}">${p.name} ${isReady?'✓':'…'}</span>`;
+  });
+  html+='</div>';
+  el.innerHTML=html;
+
+  // If all ready and I'm leader, restart the game
+  if(isLeader && readyCount>=totalCount && totalCount>0){
+    doRestart();
+  }
+}
+
+function doRestart(){
+  if(!isLeader) return;
+  const players=Object.values(gameState?.players||{});
+  if(players.length<4) return;
+
+  // Reset state and assign new random roles
+  _gameOver=false;
+  _previousAlive={};
+  _lastStepId=null;
+
+  const roles=assignRoles(players.length);
+
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    players.forEach((p,i)=>{
+      upd[`games/${roomCode}/players/${p.id}/role`]=roles[i];
+      upd[`games/${roomCode}/players/${p.id}/alive`]=true;
+      upd[`games/${roomCode}/players/${p.id}/idiotRevealed`]=null;
+    });
+    upd[`games/${roomCode}/status`]='playing';
+    upd[`games/${roomCode}/phase`]='night';
+    upd[`games/${roomCode}/phaseStart`]=Date.now();
+    upd[`games/${roomCode}/dayNum`]=1;
+    upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+    upd[`games/${roomCode}/nightActions`]=null;
+    upd[`games/${roomCode}/dayVotes`]=null;
+    upd[`games/${roomCode}/witchPotions`]=null;
+    upd[`games/${roomCode}/maire`]=null;
+    upd[`games/${roomCode}/maireCandidates`]=null;
+    upd[`games/${roomCode}/maireVotes`]=null;
+    upd[`games/${roomCode}/maireSkipDay`]=null;
+    upd[`games/${roomCode}/readyPlayers`]=null;
+    upd[`games/${roomCode}/teamChat`]=null;
+    db.ref(`games/${roomCode}/readyPlayers`).off();
+    db.ref().update(upd,()=>{
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    });
+  } else {
+    players.forEach((p,i)=>{
+      gameState.players[p.id].role=roles[i];
+      gameState.players[p.id].alive=true;
+      delete gameState.players[p.id].idiotRevealed;
+    });
+    Object.assign(gameState,{
+      status:'playing', phase:'night', phaseStart:Date.now(), dayNum:1,
+      nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},
+      nightActions:null, dayVotes:null, witchPotions:null,
+      maire:null, maireCandidates:null, maireVotes:null, maireSkipDay:null,
+      readyPlayers:null, teamChat:null
+    });
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+  }
+}
 }
 
 // ════════════════════════════════════════════
@@ -900,9 +1003,19 @@ function doStartGame(){
     upd[`games/${roomCode}/phase`]='night';
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
+    // Reset witch potions: each witch gets 1 life + 1 death potion
+    upd[`games/${roomCode}/witchPotions`]=null;
+    players.forEach((p,i)=>{
+      if(roles[i]==='witch') upd[`games/${roomCode}/witchPotions/${p.id}`]={life:true,death:true};
+    });
     db.ref().update(upd);
   } else {
     players.forEach((p,i)=>{ gameState.players[p.id].role=roles[i]; });
+    // Reset witch potions locally
+    gameState.witchPotions={};
+    players.forEach((p,i)=>{
+      if(roles[i]==='witch') gameState.witchPotions[p.id]={life:true,death:true};
+    });
     Object.assign(gameState,{status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1});
     renderGame();
   }
@@ -1165,6 +1278,13 @@ function renderPhase(){
     const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
     const wolfVictimId=gameState.nightActions?._wolfVictim;
     let hasBtns=false;
+    // Show potion status
+    const lifeIcon=potions.life?'🟢':'⚫';
+    const deathIcon=potions.death?'🔴':'⚫';
+    const potionLabel=document.createElement('div');
+    potionLabel.style.cssText='font-size:.82rem;color:var(--moon-pale);margin-bottom:.5rem';
+    potionLabel.innerHTML=`${lifeIcon} ${lang==='ar'?'جرعة الحياة':lang==='fr'?'Potion de vie':'Life Potion'}: ${potions.life?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')} &nbsp;|&nbsp; ${deathIcon} ${lang==='ar'?'جرعة الموت':lang==='fr'?'Potion de mort':'Death Potion'}: ${potions.death?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')}`;
+    ab.appendChild(potionLabel);
     if(potions.life&&wolfVictimId){
       const v=players.find(p=>p.id===wolfVictimId);
       if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name,'save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
