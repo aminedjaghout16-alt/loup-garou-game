@@ -824,7 +824,11 @@ function applyTranslations(){
   // translate every element whose id starts with t_ or st_ or ph_
   document.querySelectorAll('[id]').forEach(el=>{
     const v=tr(el.id);
-    if(v!==el.id) el.textContent=v;
+    if(v!==el.id){
+      // For buttons, only update text content if they have no child elements
+      if(el.tagName==='BUTTON' && el.children.length>0) return;
+      el.textContent=v;
+    }
   });
 }
 
@@ -922,7 +926,11 @@ async function enterRoom(){
     // Live listener
     ref.on('value', snap=>{
       gameState=snap.val();
-      if(gameState?.config) cfg=gameState.config;
+      if(gameState?.config) {
+        cfg=gameState.config;
+        // Firebase can convert arrays to objects — fix roles
+        if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
+      }
       // Derive leader status from Firebase data
       if(gameState?.leader===myId) isLeader=true;
       // Check if maire requested skip day
@@ -992,14 +1000,18 @@ function cfgChanged(){
 // START
 // ════════════════════════════════════════════
 function doStartGame(){
-  if(!isLeader) return;
-  const players=gameState?.players?Object.values(gameState.players):[];
-  if(players.length<2){
+  // Robust leader check: use both local flag and Firebase data
+  const amLeader = isLeader || (gameState?.leader === myId);
+  if(!amLeader){ console.warn('Not leader, cannot start'); return; }
+  const players = gameState?.players ? Object.values(gameState.players) : [];
+  if(players.length < 2){
     alert(lang==='ar'?'تحتاج لاعبَين على الأقل':lang==='fr'?'Minimum 2 joueurs':'Need at least 2 players');
     return;
   }
-  const roles=assignRoles(players.length);
-  if(fbOk&&db){
+  // Ensure isLeader is set for future checks
+  isLeader = true;
+  const roles = assignRoles(players.length);
+  if(fbOk && db && roomCode){
     const upd={};
     players.forEach((p,i)=>{ upd[`games/${roomCode}/players/${p.id}/role`]=roles[i]; });
     upd[`games/${roomCode}/status`]='playing';
@@ -1011,7 +1023,12 @@ function doStartGame(){
     players.forEach((p,i)=>{
       if(roles[i]==='witch') upd[`games/${roomCode}/witchPotions/${p.id}`]={life:true,death:true};
     });
-    db.ref().update(upd);
+    db.ref().update(upd).then(()=>{
+      console.log('✅ Game started');
+    }).catch(err=>{
+      console.error('Start game error:', err);
+      alert('⚠️ Error starting game');
+    });
   } else {
     players.forEach((p,i)=>{ gameState.players[p.id].role=roles[i]; });
     // Reset witch potions locally
@@ -1025,11 +1042,18 @@ function doStartGame(){
 }
 
 function assignRoles(n){
-  let pool=[...cfg.roles];
+  // Ensure cfg.roles is always a proper array (Firebase can return objects)
+  let rolesArr = cfg.roles;
+  if(!Array.isArray(rolesArr)){
+    rolesArr = rolesArr ? Object.values(rolesArr) : ['werewolf','villager'];
+  }
+  if(rolesArr.length === 0) rolesArr = ['werewolf','villager'];
+  let pool=[...rolesArr];
   const out=[];
   // guarantee a wolf
   const wi=pool.indexOf('werewolf');
   if(wi>=0){out.push('werewolf');pool.splice(wi,1);}
+  else { out.push('werewolf'); } // always guarantee at least one wolf
   while(out.length<n){
     if(pool.length){const i=Math.floor(Math.random()*pool.length);out.push(pool[i]);pool.splice(i,1);}
     else out.push('villager');
@@ -1051,8 +1075,11 @@ function renderGame(){
     document.getElementById('playView').style.display='none';
     document.getElementById('hStatus').textContent=tr('st_setup');
     document.getElementById('hPhase').textContent='—';
-    document.getElementById('hostStart').style.display=isLeader?'block':'none';
-    document.getElementById('guestWait').style.display=isLeader?'none':'block';
+    // Robust leader check
+    const amLeader = isLeader || (gameState?.leader === myId);
+    if(amLeader) isLeader = true;
+    document.getElementById('hostStart').style.display=amLeader?'block':'none';
+    document.getElementById('guestWait').style.display=amLeader?'none':'block';
     // Sync config inputs for non-leaders
     if(gameState.config){
       const c=gameState.config;
