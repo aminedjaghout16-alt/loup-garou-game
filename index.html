@@ -333,6 +333,7 @@ const ROLES = {
 // ===== STATE =====
 let lang = 'en';
 let db = null;
+let useLocalStorage = false;
 let playerId = null;
 let playerName = null;
 let roomCode = null;
@@ -344,16 +345,26 @@ let gameConfig = { numPlayers: 6, roles: ['werewolf', 'seer', 'witch', 'villager
 // ===== FIREBASE INIT =====
 function initFirebase() {
   const config = {
-    apiKey: "AIzaSyBwGygunwwrPa60-qp9MFVo6EoUZFFOw1E",
-    authDomain: "aminestore-42df8.firebaseapp.com",
-    databaseURL: "https://aminestore-42df8-default-rtdb.firebaseio.com",
-    projectId: "aminestore-42df8",
+    apiKey: "AIzaSyDWmug1e7a8ahUI0ErCbbZ70rW8-jw2kzY",
+    authDomain: "loup-garou-game-41471.firebaseapp.com",
+    databaseURL: "https://loup-garou-game-41471-default-rtdb.firebaseio.com",
+    projectId: "loup-garou-game-41471",
+    storageBucket: "loup-garou-game-41471.firebasestorage.app",
+    messagingSenderId: "31396402640",
+    appId: "1:31396402640:web:46c382244ab1b471a555d5"
   };
   
-  if (!firebase.apps.length) {
-    firebase.initializeApp(config);
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
+    db = firebase.database();
+    console.log('✅ Firebase initialized');
+  } catch(e) {
+    console.error('⚠️ Firebase error:', e);
+    alert('⚠️ Firebase connection issue. Game will work offline.');
+    useLocalStorage = true;
   }
-  db = firebase.database();
 }
 
 // ===== LANGUAGE =====
@@ -393,10 +404,13 @@ function showLoginScreen() {
 function createGame() {
   playerId = 'player_' + Date.now();
   playerName = document.getElementById('playerName').value.trim();
-  if (!playerName) { alert(t('labelName')); return; }
+  if (!playerName) { alert('Please enter your name'); return; }
   
   roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
   isLeader = true;
+  
+  console.log('🎮 Creating game:', roomCode, playerName);
+  
   joinGameRoom();
 }
 
@@ -404,7 +418,9 @@ function joinGame() {
   playerId = 'player_' + Date.now();
   playerName = document.getElementById('playerName').value.trim();
   roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
-  if (!playerName || !roomCode) { alert('Please fill all fields'); return; }
+  if (!playerName || !roomCode) { alert('Please enter name and room code'); return; }
+  
+  console.log('🎮 Joining game:', roomCode, playerName);
   
   isLeader = false;
   joinGameRoom();
@@ -413,46 +429,95 @@ function joinGame() {
 async function joinGameRoom() {
   initFirebase();
   
-  const roomRef = db.ref(`games/${roomCode}`);
-  roomRef.once('value', async (snap) => {
-    if (!snap.exists() && !isLeader) {
-      alert('Room not found!');
-      return;
-    }
+  if (!db || useLocalStorage) {
+    // Use localStorage for offline mode
+    useLocalStorageMode();
+    return;
+  }
+  
+  try {
+    const roomRef = db.ref(`games/${roomCode}`);
     
-    if (!snap.exists()) {
-      // Create new game
-      await roomRef.set({
-        code: roomCode,
-        leader: playerId,
-        status: 'setup',
-        phase: 'setup',
-        players: {},
-        config: gameConfig,
-        chat: [],
-        createdAt: Date.now()
+    roomRef.once('value', async (snap) => {
+      if (!snap.exists() && !isLeader) {
+        alert('❌ Room not found!');
+        return;
+      }
+      
+      if (!snap.exists() && isLeader) {
+        // Create new game
+        console.log('📝 Creating new room:', roomCode);
+        await roomRef.set({
+          code: roomCode,
+          leader: playerId,
+          status: 'setup',
+          phase: 'setup',
+          players: {},
+          config: gameConfig,
+          chat: [],
+          createdAt: Date.now()
+        });
+      }
+      
+      // Add player
+      console.log('👤 Adding player:', playerName);
+      await roomRef.child(`players/${playerId}`).set({
+        id: playerId,
+        name: playerName,
+        alive: true,
+        role: null,
+        joinedAt: Date.now()
       });
-    }
-    
-    // Add player
-    await roomRef.child(`players/${playerId}`).set({
-      id: playerId,
-      name: playerName,
-      alive: true,
-      role: null,
-      joinedAt: Date.now()
+      
+      // Listen to game updates
+      roomRef.on('value', (snap) => {
+        gameState = snap.val();
+        updateGameView();
+      });
+      
+      // Show game screen
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('gameScreen').classList.remove('hidden');
+      
+      console.log('✅ Game started!');
     });
-    
-    // Listen to game updates
-    roomRef.on('value', (snap) => {
-      gameState = snap.val();
-      updateGameView();
-    });
-    
-    // Show game screen
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('gameScreen').classList.remove('hidden');
-  });
+  } catch(e) {
+    console.error('❌ Firebase error:', e);
+    alert('⚠️ Connection error. Trying offline mode...');
+    useLocalStorageMode();
+  }
+}
+
+function useLocalStorageMode() {
+  console.log('📱 Using local storage mode');
+  
+  // Create game in localStorage
+  gameState = {
+    code: roomCode,
+    leader: playerId,
+    status: 'setup',
+    phase: 'setup',
+    players: {
+      [playerId]: {
+        id: playerId,
+        name: playerName,
+        alive: true,
+        role: null,
+        joinedAt: Date.now()
+      }
+    },
+    config: gameConfig,
+    chat: [],
+    createdAt: Date.now()
+  };
+  
+  localStorage.setItem(`game_${roomCode}`, JSON.stringify(gameState));
+  
+  // Show game screen
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  
+  updateGameView();
 }
 
 // ===== GAME CONFIG =====
@@ -645,16 +710,34 @@ function sendChat() {
   
   const messages = gameState.chat || [];
   messages.push({ player: playerName, text, time: Date.now() });
+  gameState.chat = messages;
   
-  db.ref(`games/${roomCode}/chat`).set(messages);
+  if (!useLocalStorage && db) {
+    db.ref(`games/${roomCode}/chat`).set(messages);
+  } else {
+    localStorage.setItem(`game_${roomCode}`, JSON.stringify(gameState));
+  }
+  
   input.value = '';
+  updateChat();
 }
 
 // ===== INIT =====
 window.addEventListener('load', () => {
+  console.log('🎮 Loup-Garou Game Loading...');
+  console.log('📍 Location:', window.location.href);
   initFirebase();
   showLoginScreen();
+  console.log('✅ Login screen ready!');
 });
+
+// Debug helper
+window.DEBUG = {
+  gameState: () => gameState,
+  playerData: () => ({ playerId, playerName, roomCode, isLeader }),
+  localStorage: () => localStorage
+};
+console.log('💡 Use DEBUG object to inspect game state in console');
 </script>
 </body>
 </html>
