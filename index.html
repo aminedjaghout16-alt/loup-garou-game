@@ -823,6 +823,169 @@ function renderPhase(){
     desc=lang==='ar'?'صوّت لإقصاء لاعب':lang==='fr'?'Votez pour éliminer un joueur':'Vote to eliminate a player';
   }
   document.getElementById('phaseDesc').textContent=desc;
+  renderActionButtons(ph);
+}
+
+function renderActionButtons(ph){
+  const ab=document.getElementById('actionBtns');
+  ab.innerHTML='';
+  const me=gameState.players?.[myId];
+  if(!me?.alive) return; // dead players can't act
+
+  const players=gameState.players?Object.values(gameState.players):[];
+  const alive=players.filter(p=>p.alive&&p.id!==myId);
+
+  // Check if already acted this phase
+  const actions=gameState.nightActions||{};
+  const alreadyActed=actions[myId];
+
+  if(ph==='night'){
+    // Wolves: pick a victim
+    if((myRole==='werewolf'||myRole==='bigbadwolf'||myRole==='alphawolf'||myRole==='whitewerewolf'||myRole==='wolffather')){
+      if(alreadyActed){
+        const target=players.find(p=>p.id===actions[myId]?.target);
+        ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${lang==='ar'?'اخترت: ':'Cible choisie : '}${target?.name||'?'} ✓</div>`;
+      } else {
+        alive.forEach(p=>{
+          const btn=document.createElement('button');
+          btn.className='btn';
+          btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
+          btn.textContent=(lang==='ar'?'اقتل ':'Tuer ')+p.name;
+          btn.onclick=()=>doNightAction('kill',p.id,p.name);
+          ab.appendChild(btn);
+        });
+      }
+    }
+    // Seer: investigate a player
+    else if(myRole==='seer'||myRole==='apprenticeseer'){
+      if(alreadyActed){
+        const target=players.find(p=>p.id===actions[myId]?.target);
+        const res=actions[myId]?.result;
+        ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${target?.name||'?'} → ${res||'?'} ✓</div>`;
+      } else {
+        alive.forEach(p=>{
+          const btn=document.createElement('button');
+          btn.className='btn btn-secondary';
+          btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
+          btn.textContent=(lang==='ar'?'افحص ':'Voir ')+p.name;
+          btn.onclick=()=>doSeerAction(p.id,p.name);
+          ab.appendChild(btn);
+        });
+      }
+    }
+    // Witch: save or kill
+    else if(myRole==='witch'){
+      const witchState=gameState.witchPotions?.[myId]||{life:true,death:true};
+      const wolfVictim=gameState.nightActions?._wolfVictim;
+      if(!alreadyActed){
+        if(witchState.life&&wolfVictim){
+          const v=players.find(p=>p.id===wolfVictim);
+          const btn=document.createElement('button');
+          btn.className='btn btn-secondary';
+          btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;background:var(--green);';
+          btn.textContent=(lang==='ar'?'أنقذ ':'Sauver ')+( v?.name||'?');
+          btn.onclick=()=>doWitchAction('save',wolfVictim);
+          ab.appendChild(btn);
+        }
+        if(witchState.death){
+          alive.forEach(p=>{
+            const btn=document.createElement('button');
+            btn.className='btn';
+            btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
+            btn.textContent=(lang==='ar'?'سمّ ':'Tuer ')+p.name;
+            btn.onclick=()=>doWitchAction('poison',p.id);
+            ab.appendChild(btn);
+          });
+        }
+        if(!witchState.life&&!witchState.death){
+          ab.innerHTML=`<div style="color:var(--ghost);font-size:.85rem;opacity:.6">${lang==='ar'?'لا جرعات متبقية':'No potions left'}</div>`;
+        }
+      } else {
+        ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${lang==='ar'?'تصرفت هذه الليلة ✓':'Action taken tonight ✓'}</div>`;
+      }
+    }
+  } else {
+    // Day phase: voting
+    if(alreadyActed){
+      const target=players.find(p=>p.id===actions[myId]?.target);
+      ab.innerHTML=`<div style="color:var(--moon);font-size:.9rem">${lang==='ar'?'صوّتت ضد: ':'Vote contre : '}${target?.name||'?'} ✓</div>`;
+    } else {
+      alive.forEach(p=>{
+        const btn=document.createElement('button');
+        btn.className='btn';
+        btn.style.cssText='font-size:.82rem;padding:.5rem 1rem;';
+        btn.textContent=(lang==='ar'?'صوّت ضد ':'Voter ')+p.name;
+        btn.onclick=()=>doVote(p.id,p.name);
+        ab.appendChild(btn);
+      });
+    }
+  }
+}
+
+function doNightAction(type,targetId,targetName){
+  if(!myId) return;
+  const action={type,target:targetId,by:myId,ts:Date.now()};
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    upd[`games/${roomCode}/nightActions/${myId}`]=action;
+    // track wolf victim for witch
+    if(type==='kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=targetId;
+    db.ref().update(upd);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions[myId]=action;
+    if(type==='kill') gameState.nightActions._wolfVictim=targetId;
+    renderGame();
+  }
+}
+
+function doSeerAction(targetId,targetName){
+  if(!myId) return;
+  const target=gameState.players?.[targetId];
+  const role=target?.role||'unknown';
+  const team=ROLES_DEF[role]?.team||'unknown';
+  const result=lang==='ar'?(team==='werewolf'?'ذئب 🐺':'بريء ✓'):lang==='fr'?(team==='werewolf'?'Loup 🐺':'Innocent ✓'):(team==='werewolf'?'Werewolf 🐺':'Innocent ✓');
+  const action={type:'seer',target:targetId,result,by:myId,ts:Date.now()};
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/nightActions/${myId}`).set(action);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions[myId]=action;
+    renderGame();
+  }
+  // Show result immediately in a simple alert
+  alert((targetName||'?')+': '+result);
+}
+
+function doWitchAction(type,targetId){
+  if(!myId) return;
+  const action={type:'witch_'+type,target:targetId,by:myId,ts:Date.now()};
+  const potionKey=type==='save'?'life':'death';
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    upd[`games/${roomCode}/nightActions/${myId}`]=action;
+    upd[`games/${roomCode}/witchPotions/${myId}/${potionKey}`]=false;
+    db.ref().update(upd);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions[myId]=action;
+    if(!gameState.witchPotions) gameState.witchPotions={};
+    if(!gameState.witchPotions[myId]) gameState.witchPotions[myId]={life:true,death:true};
+    gameState.witchPotions[myId][potionKey]=false;
+    renderGame();
+  }
+}
+
+function doVote(targetId,targetName){
+  if(!myId) return;
+  const action={type:'vote',target:targetId,by:myId,ts:Date.now()};
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/nightActions/${myId}`).set(action);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions[myId]=action;
+    renderGame();
+  }
 }
 
 function startTimer(){
@@ -834,7 +997,28 @@ function tick(){
   const dur=(gameState.phase==='night'?cfg.nightTimer:cfg.dayTimer)||60;
   const rem=Math.max(0,Math.ceil(dur-(Date.now()-gameState.phaseStart)/1000));
   document.getElementById('phaseTimer').textContent=rem;
-  if(rem>0) timerTO=setTimeout(tick,1000);
+  if(rem>0){
+    timerTO=setTimeout(tick,1000);
+  } else {
+    advancePhase();
+  }
+}
+
+function advancePhase(){
+  if(!isLeader) return; // only leader advances phase to avoid duplicate writes
+  const nextPhase=gameState.phase==='night'?'day':'night';
+  const nextDay=nextPhase==='night'?(gameState.dayNum||1)+1:(gameState.dayNum||1);
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}`).update({
+      phase:nextPhase,
+      phaseStart:Date.now(),
+      dayNum:nextDay,
+      nightActions:{} // clear actions each phase
+    });
+  } else if(gameState){
+    Object.assign(gameState,{phase:nextPhase,phaseStart:Date.now(),dayNum:nextDay,nightActions:{}});
+    renderGame();
+  }
 }
 
 // ════════════════════════════════════════════
