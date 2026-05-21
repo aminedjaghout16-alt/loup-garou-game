@@ -843,20 +843,81 @@ function buildRolesGrid(){
   const order=['village','werewolf','solo'];
   const sorted=Object.entries(ROLES_DEF).sort((a,b)=>order.indexOf(a[1].team)-order.indexOf(b[1].team));
   const canEdit=isLeader;
+
+  // ── Lock base werewolf — auto-managed ──
+  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+
   grid.innerHTML=sorted.map(([k,r])=>{
-    const checked=cfg.roles.includes(k)?'checked':'';
-    const dis=canEdit?'':'disabled';
-    return `<label class="rc t-${r.team}">
+    const isBaseWolf = k==='werewolf';
+    const isVillager = k==='villager';
+    // Base werewolf and villager are auto-managed — always locked
+    const autoManaged = isBaseWolf || isVillager;
+    const checked = cfg.roles.includes(k) ? 'checked' : '';
+    const dis = (!canEdit || autoManaged) ? 'disabled' : '';
+    const autoLabel = isBaseWolf
+      ? `<span style="font-size:.68rem;color:var(--moon);margin-left:.3rem">(auto)</span>`
+      : isVillager
+      ? `<span style="font-size:.68rem;color:var(--moon);margin-left:.3rem">(filler)</span>`
+      : '';
+    return `<label class="rc t-${r.team}" style="${autoManaged?'opacity:.6;cursor:default':''}">
       <input type="checkbox" value="${k}" ${checked} ${dis} onchange="toggleRole('${k}',this.checked)">
       <span class="rc-emoji">${r.e}</span>
-      <span>${tr(k)}</span>
+      <span>${tr(k)}${autoLabel}</span>
     </label>`;
   }).join('');
+
+  updateRolePreview();
+}
+
+function updateRolePreview(){
+  // Show or create the preview banner
+  let preview=document.getElementById('rolePreview');
+  if(!preview){
+    preview=document.createElement('div');
+    preview.id='rolePreview';
+    preview.style.cssText='margin-top:.8rem;padding:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;font-size:.82rem;line-height:1.7';
+    const grid=document.getElementById('rolesGrid');
+    grid?.parentNode?.insertBefore(preview, grid.nextSibling);
+  }
+
+  const n = cfg.numPlayers || 6;
+  const wolfCount = wolfCountForPlayers(n);
+
+  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  let checkedRoles = cfg.roles;
+  if(!Array.isArray(checkedRoles)) checkedRoles = checkedRoles ? Object.values(checkedRoles) : [];
+  const specialRoles = checkedRoles.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
+  const extraWolves = checkedRoles.filter(r=>WOLF_ROLES.includes(r)&&r!=='werewolf');
+  const specialCount = Math.min(specialRoles.length, n - wolfCount);
+  const villagerCount = n - wolfCount - specialCount;
+
+  const wolfLine = wolfCount===1
+    ? `1× 🐺 ${tr('werewolf')}`
+    : `${wolfCount}× 🐺 ${tr('werewolf')}`;
+  const specialLine = specialCount>0
+    ? specialRoles.slice(0,specialCount).map(r=>`${ROLES_DEF[r]?.e||'?'} ${tr(r)}`).join(', ')
+    : '';
+  const villagerLine = villagerCount>0
+    ? `${villagerCount}× 🧑‍🌾 ${tr('villager')}`
+    : '';
+
+  const lines = [wolfLine, specialLine, villagerLine].filter(Boolean);
+
+  preview.innerHTML=`
+    <div style="color:var(--moon-pale);font-family:'Cinzel',serif;font-size:.8rem;margin-bottom:.4rem">
+      ${lang==='ar'?`📋 توزيع الأدوار (${n} لاعبين)`:lang==='fr'?`📋 Composition (${n} joueurs)`:`📋 Role Composition (${n} players)`}
+    </div>
+    <div style="color:var(--ghost)">${lines.join(' &nbsp;·&nbsp; ')}</div>
+    ${specialCount < specialRoles.length
+      ? `<div style="color:var(--moon);font-size:.75rem;margin-top:.3rem">⚠️ ${specialRoles.length - specialCount} ${lang==='ar'?'دور مختار لن يُستخدم (عدد اللاعبين قليل)':lang==='fr'?'rôle(s) sélectionné(s) ignoré(s) (pas assez de joueurs)':'selected role(s) ignored — not enough players'}</div>`
+      : ''}
+  `;
 }
 
 function toggleRole(k,on){
   if(on){ if(!cfg.roles.includes(k)) cfg.roles.push(k); }
   else   { cfg.roles=cfg.roles.filter(r=>r!==k); }
+  updateRolePreview();
   pushCfg();
 }
 
@@ -995,6 +1056,7 @@ function cfgChanged(){
   cfg.numPlayers=parseInt(document.getElementById('cfgNum').value)||6;
   cfg.dayTimer=parseInt(document.getElementById('cfgDay').value)||60;
   cfg.nightTimer=parseInt(document.getElementById('cfgNight').value)||45;
+  updateRolePreview();
   pushCfg();
 }
 
@@ -1055,23 +1117,57 @@ function doStartGame(){
   }
 }
 
+// ── Wolf count scaling (classic Loup-Garou balance) ──
+function wolfCountForPlayers(n){
+  if(n<=6)  return 1;
+  if(n<=9)  return 2;
+  if(n<=12) return 3;
+  if(n<=15) return 4;
+  if(n<=18) return 5;
+  return 6;
+}
+
 function assignRoles(n){
   // Ensure cfg.roles is always a proper array (Firebase can return objects)
-  let rolesArr = cfg.roles;
-  if(!Array.isArray(rolesArr)){
-    rolesArr = rolesArr ? Object.values(rolesArr) : ['werewolf','villager'];
+  let checkedRoles = cfg.roles;
+  if(!Array.isArray(checkedRoles)){
+    checkedRoles = checkedRoles ? Object.values(checkedRoles) : [];
   }
-  if(rolesArr.length === 0) rolesArr = ['werewolf','villager'];
-  let pool=[...rolesArr];
-  const out=[];
-  // guarantee a wolf
-  const wi=pool.indexOf('werewolf');
-  if(wi>=0){out.push('werewolf');pool.splice(wi,1);}
-  else { out.push('werewolf'); } // always guarantee at least one wolf
-  while(out.length<n){
-    if(pool.length){const i=Math.floor(Math.random()*pool.length);out.push(pool[i]);pool.splice(i,1);}
-    else out.push('villager');
+
+  // Separate what the host checked into wolf-team and special village/solo roles
+  const WOLF_ROLES = ['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  const specialRoles = checkedRoles.filter(r => r!=='werewolf' && r!=='villager' && !WOLF_ROLES.includes(r));
+  const extraWolfRoles = checkedRoles.filter(r => WOLF_ROLES.includes(r) && r!=='werewolf'); // non-standard wolf variants
+
+  // How many wolves do we need?
+  const wolfCount = wolfCountForPlayers(n);
+
+  // Build the final pool:
+  // 1. Always start with base werewolves
+  const out = [];
+  for(let i=0;i<wolfCount;i++) out.push('werewolf');
+
+  // 2. Replace some base werewolves with special wolf variants if host chose them
+  // (e.g. 1 alphawolf can replace 1 werewolf slot)
+  let wolfSlotsLeft = wolfCount;
+  const wolfVariantsToUse = [];
+  for(const wr of extraWolfRoles){
+    if(wolfVariantsToUse.length < wolfCount - 1){ // always keep at least 1 base werewolf
+      wolfVariantsToUse.push(wr);
+    }
   }
+  // Replace base werewolves with variants
+  wolfVariantsToUse.forEach((wr,i)=>{ out[i+1]=wr; });
+
+  // 3. Fill remaining slots with special roles (shuffled), then villagers
+  const slotsLeft = n - wolfCount;
+  // Shuffle and trim special roles to fit
+  const shuffledSpecial = [...specialRoles].sort(()=>Math.random()-.5).slice(0, slotsLeft);
+  shuffledSpecial.forEach(r=>out.push(r));
+
+  // 4. Pad with villagers
+  while(out.length < n) out.push('villager');
+
   return out.sort(()=>Math.random()-.5);
 }
 
