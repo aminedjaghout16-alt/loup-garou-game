@@ -101,22 +101,21 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 .cm{margin-bottom:.55rem;padding:.42rem .55rem;background:var(--purple);border-left:3px solid var(--moon);border-radius:2px;font-size:.8rem}
 .cm .cn{color:var(--moon-pale);font-weight:700}
 .cm .ct{color:var(--ghost);margin-top:.15rem}
-.chat-tabs{display:flex;gap:.3rem;margin-bottom:.5rem;flex-wrap:wrap}
-.chat-tab{padding:.25rem .6rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);cursor:pointer;border-radius:3px;font-size:.72rem;font-family:inherit;transition:.2s}
-.chat-tab.active{background:var(--moon);color:var(--void);font-weight:700}
-.chat-tab.wolf{border-color:var(--blood-glow)}
-.chat-tab.wolf.active{background:var(--blood-glow);color:#fff}
-.chat-tab.sisters{border-color:var(--green)}
-.chat-tab.sisters.active{background:var(--green);color:#fff}
-.chat-tab.brothers{border-color:#60a5fa}
-.chat-tab.brothers.active{background:#60a5fa;color:#fff}
-.maire-badge{color:var(--moon-pale);font-size:.72rem;margin-left:.3rem}
-.maire-section{padding:.8rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;margin-bottom:.8rem;text-align:center}
-.maire-section h4{color:var(--moon-pale);margin-bottom:.5rem;font-family:'Cinzel',serif}
-.candidate-list{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin:.5rem 0}
 .chat-inp{display:flex;gap:.35rem}
 .chat-inp input{flex:1;padding:.45rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;font-family:inherit;font-size:.82rem}
 .chat-inp button{padding:.45rem .7rem;background:var(--blood-glow);border:none;color:#fff;border-radius:3px;cursor:pointer;font-size:.85rem}
+
+/* Chat tabs */
+.chat-tabs{display:flex;gap:.25rem;margin-bottom:.5rem;flex-wrap:wrap}
+.chat-tab{padding:.25rem .55rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;cursor:pointer;font-family:inherit;font-size:.72rem;transition:.15s}
+.chat-tab.active{background:var(--moon);color:var(--void);font-weight:700}
+.chat-tab .unread{background:var(--blood-glow);color:#fff;border-radius:50%;padding:0 .3rem;font-size:.65rem;margin-left:.2rem}
+
+/* Maire */
+.maire-bar{margin-bottom:.8rem;padding:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;text-align:center}
+.maire-bar .maire-title{color:var(--moon-pale);font-family:'Cinzel',serif;font-size:.9rem;margin-bottom:.4rem}
+.maire-bar .maire-name{color:var(--moon);font-weight:700;font-size:1rem}
+.candidate-list{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:.4rem}
 
 @media(max-width:820px){
   .g-content{flex-direction:column}
@@ -363,11 +362,12 @@ en:{
   d_spiderwoman:'Each night, web two players together — if one is targeted, so is the other.',
   d_trickster:'Once per game, secretly swap the roles of two players.',
   d_gravedigger:'Each night, read and use the ability of one dead player.',
-  maire:'Mayor', d_maire:"The Mayor's vote counts double. Can skip the day vote.",
-  maire_run:'Run for Mayor', maire_election:'Mayor Election', maire_skip_day:'Skip Day (Mayor)',
-  maire_choose_successor:'Choose your successor', maire_candidates:'Candidates:',
-  maire_vote_for:'Vote for Mayor', maire_start_vote:'Start Vote', maire_skip_election:'Skip Election',
-  chat_general:'General', chat_wolves:'Wolves', chat_sisters:'Sisters', chat_brothers:'Brothers',
+  // maire & team chat
+  maire:'Mayor', runForMaire:'Run for Mayor', voteMaire:'Vote for Mayor',
+  skipDay:'Skip Day Vote', maireElected:'Mayor elected!', candidates:'Candidates:',
+  noCandidates:'No candidates yet', maireIs:'Mayor:', maireVotes:'(2 votes)',
+  teamChat:'Team Chat', generalChat:'General',
+  wolvesChat:'Wolves', sistersChat:'Sisters', brothersChat:'Brothers',
 },
 fr:{
   t_title:'Loup-Garou', t_sub:'Rejoignez le jeu de la tromperie et de la survie',
@@ -440,11 +440,12 @@ fr:{
   d_spiderwoman:'Chaque nuit, reliez deux joueurs — si l\'un est ciblé, l\'autre l\'est aussi.',
   d_trickster:'Une fois par partie, échangez secrètement les rôles de deux joueurs.',
   d_gravedigger:'Chaque nuit, lisez et utilisez la capacité d\'un joueur mort.',
-  maire:'Maire', d_maire:'Le vote du Maire compte double. Peut passer le vote du jour.',
-  maire_run:'Se présenter', maire_election:'Élection du Maire', maire_skip_day:'Passer le jour (Maire)',
-  maire_choose_successor:'Choisissez votre successeur', maire_candidates:'Candidats :',
-  maire_vote_for:'Voter pour le Maire', maire_start_vote:'Lancer le vote', maire_skip_election:'Passer l\'élection',
-  chat_general:'Général', chat_wolves:'Loups', chat_sisters:'Sœurs', chat_brothers:'Frères',
+  // maire & team chat
+  maire:'Maire', runForMaire:'Se présenter comme Maire', voteMaire:'Voter pour le Maire',
+  skipDay:'Passer le vote du jour', maireElected:'Maire élu !', candidates:'Candidats :',
+  noCandidates:'Pas encore de candidats', maireIs:'Maire :', maireVotes:'(2 votes)',
+  teamChat:'Chat d\'équipe', generalChat:'Général',
+  wolvesChat:'Loups', sistersChat:'Sœurs', brothersChat:'Frères',
 },
 ar:{
   t_title:'ذئب البشر', t_sub:'انضم إلى لعبة الخداع والبقاء',
@@ -517,11 +518,12 @@ ar:{
   d_spiderwoman:'كل ليلة تربط لاعبَين — إذا استُهدف أحدهما استُهدف الآخر.',
   d_trickster:'مرة واحدة في اللعبة يبدّل سراً أدوار لاعبَين.',
   d_gravedigger:'كل ليلة يقرأ ويستخدم قدرة لاعب ميت.',
-  maire:'العمدة', d_maire:'صوت العمدة يُحسب مرتين. يمكنه تخطي تصويت النهار.',
-  maire_run:'ترشح للعمدة', maire_election:'انتخاب العمدة', maire_skip_day:'تخطي النهار (العمدة)',
-  maire_choose_successor:'اختر خليفتك', maire_candidates:'المرشحون:',
-  maire_vote_for:'صوّت للعمدة', maire_start_vote:'بدء التصويت', maire_skip_election:'تخطي الانتخاب',
-  chat_general:'عام', chat_wolves:'الذئاب', chat_sisters:'الأختان', chat_brothers:'الإخوة',
+  // maire & team chat
+  maire:'العمدة', runForMaire:'ترشح للعمدة', voteMaire:'صوّت للعمدة',
+  skipDay:'تخطي تصويت النهار', maireElected:'تم انتخاب العمدة!', candidates:'المرشحون:',
+  noCandidates:'لا مرشحين بعد', maireIs:'العمدة:', maireVotes:'(صوتان)',
+  teamChat:'دردشة الفريق', generalChat:'عام',
+  wolvesChat:'الذئاب', sistersChat:'الأختان', brothersChat:'الإخوة',
 }};
 
 // ════════════════════════════════════════════
@@ -531,7 +533,7 @@ let lang='en', db=null, fbOk=false;
 let myId=null, myName=null, roomCode=null, gameState=null, myRole=null, isLeader=false;
 let cfg={numPlayers:6, roles:['werewolf','seer','witch','villager'], dayTimer:60, nightTimer:45};
 let timerTO=null;
-let currentChatChannel='general';
+let activeChatTab='general'; // 'general', 'wolves', 'twosisters', 'threebrothers'
 
 // ════════════════════════════════════════════
 // FIREBASE
@@ -653,7 +655,7 @@ async function enterRoom(){
       await ref.set({
         code:roomCode, leader:myId,
         status:'setup', phase:'setup',
-        players:{}, config:cfg, chat:{general:{}},
+        players:{}, config:cfg, chat:[],
         createdAt:Date.now()
       });
       console.log('🆕 Room created',roomCode);
@@ -673,14 +675,15 @@ async function enterRoom(){
     ref.on('value', snap=>{
       gameState=snap.val();
       if(gameState?.config) cfg=gameState.config;
-      try{ renderGame(); }catch(e){ console.error('renderGame error',e); }
-      try{
-        if(isLeader && gameState?.status==='playing'){
-          if(gameState.phase==='night') checkTurnComplete();
-          else if(gameState.phase==='day') checkDayVoteComplete();
-          if(gameState.maireSkipDay) skipToNight();
-        }
-      }catch(e){ console.error('turn check error',e); }
+      // Check if maire requested skip day
+      if(isLeader && gameState?.maireSkipDay && gameState?.phase==='day'){
+        doMaireSkipDay();
+      }
+      // Check if all voted for maire
+      if(isLeader && gameState?.maireCandidates && gameState?.maireVotes && !gameState?.maire){
+        checkMaireElection();
+      }
+      renderGame();
     });
     showGame();
   }catch(ex){
@@ -695,7 +698,7 @@ function offlineEnter(){
   gameState={
     code:roomCode, leader:myId, status:'setup', phase:'setup',
     players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}},
-    config:cfg, chat:{general:{}}, createdAt:Date.now()
+    config:cfg, chat:[], createdAt:Date.now()
   };
   showGame();
   renderGame();
@@ -752,18 +755,11 @@ function doStartGame(){
     upd[`games/${roomCode}/phase`]='night';
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
-    upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
-    upd[`games/${roomCode}/nightActions`]={};
-    upd[`games/${roomCode}/dayVotes`]=null;
-    upd[`games/${roomCode}/maireElectionDone`]=true;
-    db.ref().update(upd,()=>{
-      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },500);
-    });
+    db.ref().update(upd);
   } else {
     players.forEach((p,i)=>{ gameState.players[p.id].role=roles[i]; });
-    Object.assign(gameState,{status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},nightActions:{},dayVotes:null,maireElectionDone:true});
+    Object.assign(gameState,{status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1});
     renderGame();
-    setTimeout(()=>advanceNightTurn(0),500);
   }
 }
 
@@ -812,10 +808,8 @@ function renderGame(){
   } else if(gameState.status==='playing'){
     document.getElementById('setupView').style.display='none';
     document.getElementById('playView').style.display='flex';
+    document.getElementById('hStatus').textContent=tr('st_playing');
     document.getElementById('hPhase').textContent=gameState.phase==='night'?tr('ph_night'):tr('ph_day');
-    // Show maire in status
-    const mairePlayer=gameState.maire?gameState.players?.[gameState.maire]:null;
-    document.getElementById('hStatus').textContent=tr('st_playing')+(mairePlayer?.alive?' | 👑 '+tr('maire')+': '+mairePlayer.name:'');
 
     const me=gameState.players?.[myId];
     if(me?.role){
@@ -829,6 +823,11 @@ function renderGame(){
     renderStats(players);
     renderPhase();
     startTimer();
+    // Leader checks for turn/vote completion on every state update
+    if(isLeader){
+      if(gameState.phase==='night') checkTurnComplete();
+      else if(gameState.phase==='day') checkDayVoteComplete();
+    }
   }
   renderChat();
   applyTranslations();
@@ -847,12 +846,11 @@ function renderStats(players){
 
 function renderPlayerList(players){
   const el=document.getElementById('playerList');
-  const maireId=gameState?.maire||null;
   el.innerHTML=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.9rem;margin-bottom:.6rem">${tr('t_lplayers')}</div>`+
     players.map(p=>`
       <div class="pi">
         <div class="pstatus ${p.alive?'alive':'dead'}"></div>
-        <div style="flex:1">${p.name}${p.id===maireId?'<span class="maire-badge">👑 '+tr('maire')+'</span>':''}</div>
+        <div style="flex:1">${p.name}</div>
         ${p.id===myId?`<span style="color:var(--moon);font-size:.75rem">${tr('you')}</span>`:''}
       </div>`).join('');
 }
@@ -1191,7 +1189,7 @@ function submitWitch(type, targetId){
 // TURN ADVANCEMENT (leader only)
 // ════════════════════════════════════════════
 let _lastStepId=null; // prevent re-triggering
-let _advancingNight=false; // prevent racing calls
+let _advancingStep=false; // lock to prevent double-advance
 
 function checkTurnComplete(){
   if(!isLeader) return;
@@ -1199,14 +1197,8 @@ function checkTurnComplete(){
 
   const turn=gameState.nightTurn||{};
   const stepId=turn.stepId;
-  if(!stepId) {
-    if(_advancingNight) return;
-    _advancingNight=true;
-    advanceNightTurn(0);
-    return;
-  }
-  if(stepId===_lastStepId) return; // already processed
-  _advancingNight=false;
+  if(!stepId) { advanceNightTurn(0); return; }
+  if(_advancingStep) return;
 
   const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
   if(!step) { advanceNightTurnFromCurrent(); return; }
@@ -1216,9 +1208,11 @@ function checkTurnComplete(){
   const actions=gameState.nightActions||{};
   const allDone=actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]);
 
-  if(allDone){
+  if(allDone && stepId!==_lastStepId){
     _lastStepId=stepId;
+    _advancingStep=true;
     advanceNightTurnFromCurrent();
+    setTimeout(()=>{ _advancingStep=false; },500);
   }
 }
 
@@ -1230,15 +1224,13 @@ function advanceNightTurnFromCurrent(){
 
 function advanceNightTurn(idx, queue){
   if(!queue) queue=buildNightQueue(gameState, gameState.dayNum||1);
-  if(idx===0) _lastStepId=null;
   if(idx>=queue.length){
-    _advancingNight=false;
+    // All turns done → resolve night → go to day
     resolveNightAndAdvance();
     return;
   }
   const step=queue[idx];
   const update={ stepId:step.id, stepIndex:idx, turnStart:Date.now() };
-  _advancingNight=false;
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/nightTurn`).set(update);
   } else if(gameState){
@@ -1313,126 +1305,65 @@ function resolveNightAndAdvance(){
   upd[`games/${roomCode}/phaseStart`]=Date.now();
   upd[`games/${roomCode}/dayNum`]=nextDay;
   upd[`games/${roomCode}/nightTurn`]={stepId:null};
-  upd[`games/${roomCode}/dayVotes`]=null;
-  upd[`games/${roomCode}/maireElectionDone`]=false;
-  upd[`games/${roomCode}/maireElection`]=null;
-  // If maire was killed during the night, trigger successor choice
-  if(gs.maire && killSet.has(gs.maire)){
-    upd[`games/${roomCode}/maireSuccessorNeeded`]=true;
-  }
   upd[`games/${roomCode}/nightActions`]={
     _saviorLast: saviorAction?.target||null,
     _bodyguardLast: bodyguardProtected||null,
     _fluteEnchanted: actions._fluteEnchanted||[],
     _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
   };
+  upd[`games/${roomCode}/dayVotes`]=null;
+  upd[`games/${roomCode}/maireCandidates`]=null;
+  upd[`games/${roomCode}/maireVotes`]=null;
 
   if(fbOk&&db&&roomCode){
     db.ref().update(upd);
   } else {
     killSet.forEach(id=>{ if(gs.players[id]) gs.players[id].alive=false; });
-    Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},dayVotes:null,maireElectionDone:false,maireElection:null,nightActions:{
+    Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},nightActions:{
       _saviorLast: saviorAction?.target||null,
       _bodyguardLast: bodyguardProtected||null,
       _fluteEnchanted: actions._fluteEnchanted||[],
       _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
     }});
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
     renderGame();
   }
 }
 
 // ════════════════════════════════════════════
-// DAY VOTING (with Maire election)
+// DAY VOTING
 // ════════════════════════════════════════════
-const WOLF_CHAT_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher'];
-
 function renderDayVoting(){
   const ab=document.getElementById('actionBtns');
   const me=gameState.players?.[myId];
   if(!me?.alive){ ab.innerHTML=`<div style="opacity:.5">${lang==='ar'?'أنت خارج اللعبة':lang==='fr'?'Vous êtes éliminé':'You are eliminated'}</div>`; return; }
 
-  const maireId=gameState.maire||null;
-  const maireAlive=maireId && gameState.players?.[maireId]?.alive;
-  const election=gameState.maireElection||{};
-
-  // Maire successor selection (when maire died and needs to pick successor)
-  if(gameState.maireSuccessorNeeded && maireId===myId){
-    const players=Object.values(gameState.players||{});
-    const alive=players.filter(p=>p.alive&&p.id!==myId);
-    ab.innerHTML=`<div class="maire-section"><h4>👑 ${tr('maire_choose_successor')}</h4><div class="candidate-list"></div></div>`;
-    const cl=ab.querySelector('.candidate-list');
-    alive.forEach(p=>addBtn(cl,p.name,'special',()=>doChooseSuccessor(p.id)));
-    return;
-  }
-
-  // Maire election phase (only if no alive maire and election not yet done this day)
-  if(!maireAlive && !gameState.maireElectionDone){
-    if(election.phase==='voting'){
-      // Active voting for maire — blocks elimination vote
-      const candidates=election.candidates||[];
-      const votes=election.votes||{};
-      const myVote=votes[myId];
-      if(myVote){
-        const votedName=gameState.players?.[myVote]?.name||'?';
-        ab.innerHTML=`<div class="maire-section"><h4>👑 ${tr('maire_election')}</h4><div style="color:var(--green)">✓ ${tr('maire_vote_for')}: ${votedName}</div></div>`;
-      } else {
-        const wrapper=document.createElement('div');
-        wrapper.className='maire-section';
-        wrapper.innerHTML=`<h4>👑 ${tr('maire_vote_for')}</h4><div class="candidate-list"></div>`;
-        ab.appendChild(wrapper);
-        const cl=wrapper.querySelector('.candidate-list');
-        candidates.forEach(id=>{
-          const name=gameState.players?.[id]?.name||'?';
-          addBtn(cl,name,'special',()=>voteMaire(id));
-        });
-      }
-      if(isLeader) checkMaireVoteComplete();
-      return; // block elimination vote while maire voting is active
-    }
-    // Candidacy or no phase yet — show as a small section, does NOT block voting below
-    const candidates=election.candidates||[];
-    const names=candidates.map(id=>gameState.players?.[id]?.name||'?').join(', ');
-    let maireHtml=`<div class="maire-section"><h4>👑 ${tr('maire_election')}</h4>`;
-    maireHtml+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="runForMaire()">${tr('maire_run')}</button>`;
-    if(isLeader && candidates.length>0) maireHtml+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="startMaireVote()">${tr('maire_start_vote')}</button>`;
-    if(isLeader) maireHtml+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="skipMaireElection()">${tr('maire_skip_election')}</button>`;
-    if(candidates.length) maireHtml+=`<div style="margin-top:.5rem;font-size:.85rem;color:var(--moon-pale)">${tr('maire_candidates')} ${names}</div>`;
-    maireHtml+=`</div>`;
-    ab.innerHTML=maireHtml;
-    // Do NOT return — fall through to show elimination voting below
-  }
-
-  // Normal elimination voting
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive&&p.id!==myId);
   const dayVotes=gameState.dayVotes||{};
   const voted=!!dayVotes[myId];
+  const maireId=gameState.maire;
 
   // Tally votes for display
   const tally={};
-  Object.entries(dayVotes).forEach(([voterId,a])=>{
-    if(a?.type==='vote'&&a.target){
-      const weight=(voterId===maireId && maireAlive)?2:1;
-      tally[a.target]=(tally[a.target]||0)+weight;
-    }
-  });
+  Object.values(dayVotes).forEach(a=>{ if(a?.type==='vote'&&a.target){ tally[a.target]=(tally[a.target]||0)+(a.voteWeight||1); }});
   // Crow bonus
-  const crowAccused=gameState.nightActions?._crowAccused;
+  const crowAccused=(gameState.nightActions||{})._crowAccused;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+
+  // Maire section
+  renderMaireSection(ab, players);
 
   if(voted){
     const myVote=players.find(p=>p.id===dayVotes[myId]?.target);
-    ab.innerHTML=`<div style="color:var(--green);font-size:.9rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
+    ab.innerHTML+=`<div style="color:var(--green);font-size:.9rem;margin-top:.5rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
   } else {
     alive.forEach(p=>{
       const votes=tally[p.id]||0;
       addBtn(ab, `${p.name}${votes>0?' ('+votes+')':''}`, 'kill', ()=>doVote(p.id));
     });
-  }
-
-  // Maire skip day button
-  if(maireAlive && myId===maireId){
-    ab.innerHTML+=`<div style="margin-top:.6rem"><button class="btn btn-secondary" style="font-size:.82rem" onclick="maireSkipDay()">👑 ${tr('maire_skip_day')}</button></div>`;
   }
 
   // Show tally
@@ -1445,162 +1376,11 @@ function renderDayVoting(){
   }
 }
 
-function runForMaire(){
-  if(!myId) return;
-  if(fbOk&&db&&roomCode){
-    const ref=db.ref(`games/${roomCode}/maireElection`);
-    ref.once('value',snap=>{
-      const cur=snap.val()||{};
-      const candidates=cur.candidates||[];
-      if(!candidates.includes(myId)){
-        candidates.push(myId);
-        ref.update({phase:'candidacy',candidates});
-      }
-    });
-  } else if(gameState){
-    if(!gameState.maireElection) gameState.maireElection={};
-    if(!gameState.maireElection.candidates) gameState.maireElection.candidates=[];
-    if(!gameState.maireElection.candidates.includes(myId)){
-      gameState.maireElection.candidates.push(myId);
-      gameState.maireElection.phase='candidacy';
-    }
-    renderGame();
-  }
-}
-
-function startMaireVote(){
-  if(!isLeader) return;
-  const candidates=(gameState.maireElection?.candidates)||[];
-  if(candidates.length===0){
-    skipMaireElection(); return;
-  }
-  if(candidates.length===1){
-    // Auto-elect sole candidate
-    electMaire(candidates[0]); return;
-  }
-  if(fbOk&&db&&roomCode){
-    db.ref(`games/${roomCode}/maireElection`).update({phase:'voting',votes:{}});
-  } else if(gameState){
-    gameState.maireElection.phase='voting';
-    gameState.maireElection.votes={};
-    renderGame();
-  }
-}
-
-function skipMaireElection(){
-  if(!isLeader) return;
-  if(fbOk&&db&&roomCode){
-    db.ref().update({
-      [`games/${roomCode}/maireElection`]:null,
-      [`games/${roomCode}/maireElectionDone`]:true
-    });
-  } else if(gameState){
-    gameState.maireElection=null;
-    gameState.maireElectionDone=true;
-    renderGame();
-  }
-}
-
-function voteMaire(candidateId){
-  if(!myId) return;
-  if(fbOk&&db&&roomCode){
-    db.ref(`games/${roomCode}/maireElection/votes/${myId}`).set(candidateId);
-  } else if(gameState){
-    if(!gameState.maireElection.votes) gameState.maireElection.votes={};
-    gameState.maireElection.votes[myId]=candidateId;
-    checkMaireVoteComplete();
-    renderGame();
-  }
-}
-
-function checkMaireVoteComplete(){
-  if(!isLeader) return;
-  const election=gameState.maireElection||{};
-  if(election.phase!=='voting') return;
-  const players=Object.values(gameState.players||{});
-  const alive=players.filter(p=>p.alive);
-  const votes=election.votes||{};
-  const allVoted=alive.every(p=>!!votes[p.id]);
-  if(!allVoted) return;
-  // Tally
-  const tally={};
-  Object.values(votes).forEach(cid=>{ tally[cid]=(tally[cid]||0)+1; });
-  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
-  if(sorted.length) electMaire(sorted[0][0]);
-}
-
-function electMaire(playerId){
-  if(fbOk&&db&&roomCode){
-    db.ref().update({
-      [`games/${roomCode}/maire`]:playerId,
-      [`games/${roomCode}/maireElection`]:null,
-      [`games/${roomCode}/maireElectionDone`]:true
-    });
-  } else if(gameState){
-    gameState.maire=playerId;
-    gameState.maireElection=null;
-    gameState.maireElectionDone=true;
-    renderGame();
-  }
-}
-
-function doChooseSuccessor(targetId){
-  if(fbOk&&db&&roomCode){
-    db.ref().update({
-      [`games/${roomCode}/maire`]:targetId,
-      [`games/${roomCode}/maireSuccessorNeeded`]:null
-    });
-  } else if(gameState){
-    gameState.maire=targetId;
-    gameState.maireSuccessorNeeded=null;
-    renderGame();
-  }
-}
-
-function maireSkipDay(){
-  if(!myId || myId!==gameState?.maire) return;
-  // Skip directly to night without elimination
-  if(!isLeader){
-    // Signal to leader via Firebase
-    if(fbOk&&db&&roomCode) db.ref(`games/${roomCode}/maireSkipDay`).set(true);
-    return;
-  }
-  skipToNight();
-}
-
-function skipToNight(){
-  if(!isLeader) return;
-  const gs=gameState;
-  const actions=gs.nightActions||{};
-  const nextNight=(gs.dayNum||1)+1;
-  const upd={};
-  upd[`games/${roomCode}/phase`]='night';
-  upd[`games/${roomCode}/phaseStart`]=Date.now();
-  upd[`games/${roomCode}/dayNum`]=nextNight;
-  upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
-  upd[`games/${roomCode}/dayVotes`]=null;
-  upd[`games/${roomCode}/maireElectionDone`]=false;
-  upd[`games/${roomCode}/nightActions`]={
-    _saviorLast: actions._saviorLast||null,
-    _bodyguardLast: actions._bodyguardLast||null,
-    _fluteEnchanted: actions._fluteEnchanted||[],
-    _pyroDoused: actions._pyroDoused||[],
-  };
-  if(fbOk&&db&&roomCode){
-    db.ref().update(upd,()=>{
-      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
-    });
-  } else {
-    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},dayVotes:null,maireElectionDone:false,maireSkipDay:null});
-    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
-    renderGame();
-    setTimeout(()=>advanceNightTurn(0),800);
-  }
-}
-
 function doVote(targetId){
   if(!myId) return;
-  const action={type:'vote',target:targetId,by:myId,ts:Date.now()};
+  const maireId=gameState.maire;
+  const voteWeight=(myId===maireId)?2:1;
+  const action={type:'vote',target:targetId,by:myId,ts:Date.now(),voteWeight};
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/dayVotes/${myId}`).set(action);
   } else if(gameState){
@@ -1613,12 +1393,12 @@ function doVote(targetId){
 
 function checkDayVoteComplete(){
   if(!isLeader) return;
-  if(gameState?.maireSkipDay){ skipToNight(); return; }
+  if(gameState?.phase!=='day') return;
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
   const dayVotes=gameState.dayVotes||{};
   const allVoted=alive.every(p=>!!dayVotes[p.id]);
-  if(allVoted) resolveDayAndAdvance();
+  if(allVoted && alive.length>0) resolveDayAndAdvance();
 }
 
 function resolveDayAndAdvance(){
@@ -1626,20 +1406,15 @@ function resolveDayAndAdvance(){
   const gs=gameState;
   const players=Object.values(gs.players||{});
   const dayVotes=gs.dayVotes||{};
-  const maireId=gs.maire||null;
-  const maireAlive=maireId && gs.players?.[maireId]?.alive;
+  const actions=gs.nightActions||{};
 
-  // Tally with maire double vote
+  // Tally
   const tally={};
-  Object.entries(dayVotes).forEach(([voterId,a])=>{
-    if(a?.type==='vote'&&a.target){
-      const weight=(voterId===maireId && maireAlive)?2:1;
-      tally[a.target]=(tally[a.target]||0)+weight;
-    }
-  });
-  const crowAccused=gs.nightActions?._crowAccused;
+  Object.values(dayVotes).forEach(a=>{ if(a?.type==='vote'&&a.target) tally[a.target]=(tally[a.target]||0)+(a.voteWeight||1); });
+  const crowAccused=actions._crowAccused;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
 
+  // Find max
   const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
   const upd={};
 
@@ -1647,45 +1422,51 @@ function resolveDayAndAdvance(){
     const maxVotes=sorted[0][1];
     const tied=sorted.filter(([,v])=>v===maxVotes);
     if(tied.length===1){
+      // Eliminate player
       const eliminatedId=tied[0][0];
       const eliminated=players.find(p=>p.id===eliminatedId);
+      // Village idiot: revealed but stays alive
       if(eliminated?.role==='villageidiot'){
         upd[`games/${roomCode}/players/${eliminatedId}/idiotRevealed`]=true;
       } else {
         upd[`games/${roomCode}/players/${eliminatedId}/alive`]=false;
-        if(eliminatedId===maireId){
-          upd[`games/${roomCode}/maireSuccessorNeeded`]=true;
-        }
       }
+      // Scapegoat: if tied, scapegoat dies instead — handled above (no tie here)
     } else {
+      // Tie: eliminate scapegoat if present
       const scapegoat=players.find(p=>p.alive&&p.role==='scapegoat');
       if(scapegoat) upd[`games/${roomCode}/players/${scapegoat.id}/alive`]=false;
     }
   }
 
+  // Advance to next night
+  _lastStepId=null; // Reset so night turns can advance properly
   const nextNight=(gs.dayNum||1)+1;
-  const actions=gs.nightActions||{};
   upd[`games/${roomCode}/phase`]='night';
   upd[`games/${roomCode}/phaseStart`]=Date.now();
   upd[`games/${roomCode}/dayNum`]=nextNight;
   upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
-  upd[`games/${roomCode}/dayVotes`]=null;
-  upd[`games/${roomCode}/maireElectionDone`]=false;
   upd[`games/${roomCode}/nightActions`]={
     _saviorLast: actions._saviorLast||null,
     _bodyguardLast: actions._bodyguardLast||null,
     _fluteEnchanted: actions._fluteEnchanted||[],
     _pyroDoused: actions._pyroDoused||[],
   };
+  upd[`games/${roomCode}/dayVotes`]=null;
+  upd[`games/${roomCode}/maireCandidates`]=null;
+  upd[`games/${roomCode}/maireVotes`]=null;
 
   if(fbOk&&db&&roomCode){
     db.ref().update(upd,()=>{
+      // After write, kick off first night turn
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     });
   } else {
-    Object.entries(upd).forEach(([k,v])=>{});
-    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},dayVotes:null,maireElectionDone:false});
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
     gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
     renderGame();
     setTimeout(()=>advanceNightTurn(0),800);
   }
@@ -1720,15 +1501,7 @@ function tick(){
     if(ph==='night'){
       if(isLeader) autoSkipTurn();
     } else {
-      if(isLeader){
-        checkDayVoteComplete();
-        // If not all voted, force resolve anyway (timer expired)
-        const dayVotes=gameState.dayVotes||{};
-        const players=Object.values(gameState.players||{});
-        const alive=players.filter(p=>p.alive);
-        const allVoted=alive.every(p=>!!dayVotes[p.id]);
-        if(!allVoted) resolveDayAndAdvance();
-      }
+      if(isLeader) resolveDayAndAdvance();
     }
   }
 }
@@ -1754,79 +1527,256 @@ function autoSkipTurn(){
 }
 
 // ════════════════════════════════════════════
-// CHAT (tabbed: general, werewolf, twosisters, threebrothers)
+// MAIRE (Mayor) SYSTEM
 // ════════════════════════════════════════════
-function getMyChannels(){
-  const channels=['general'];
-  if(myRole && WOLF_CHAT_ROLES.includes(myRole)) channels.push('werewolf');
-  if(myRole==='twosisters') channels.push('twosisters');
-  if(myRole==='threebrothers') channels.push('threebrothers');
+function renderMaireSection(container, players){
+  const me=gameState.players?.[myId];
+  if(!me?.alive) return;
+  const maireId=gameState.maire;
+  const maireName=maireId?gameState.players?.[maireId]?.name:null;
+
+  // Show current maire if elected
+  if(maireId && gameState.players?.[maireId]?.alive){
+    container.innerHTML+=`<div class="maire-bar"><div class="maire-title">👑 ${tr('maireIs')} <strong>${maireName}</strong> ${tr('maireVotes')}</div>`;
+    // Maire can skip day
+    if(myId===maireId){
+      container.innerHTML+=`<button class="btn" style="font-size:.8rem;padding:.35rem .7rem;margin-top:.3rem;background:var(--moon);color:var(--void)" onclick="maireSkipDay()">⏭ ${tr('skipDay')}</button>`;
+    }
+    container.innerHTML+=`</div>`;
+    return;
+  }
+
+  // No maire yet — show candidacy / voting
+  const candidates=gameState.maireCandidates||{};
+  const candidateIds=Object.keys(candidates);
+  const maireVotes=gameState.maireVotes||{};
+  const iAmCandidate=!!candidates[myId];
+  const iVotedMaire=!!maireVotes[myId];
+
+  let html=`<div class="maire-bar"><div class="maire-title">👑 ${tr('maire')}</div>`;
+
+  // Run for maire button
+  if(!iAmCandidate){
+    html+=`<button class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .7rem;margin:.3rem" onclick="runForMaire()">🏛 ${tr('runForMaire')}</button>`;
+  } else {
+    html+=`<div style="color:var(--green);font-size:.8rem;margin:.2rem">✓ ${lang==='ar'?'أنت مرشح':lang==='fr'?'Vous êtes candidat':'You are a candidate'}</div>`;
+  }
+
+  // Show candidates and vote buttons
+  if(candidateIds.length>0){
+    html+=`<div style="font-size:.8rem;color:var(--moon-pale);margin-top:.3rem">${tr('candidates')}</div><div class="candidate-list">`;
+    const maireTally={};
+    Object.values(maireVotes).forEach(v=>{ if(v?.target) maireTally[v.target]=(maireTally[v.target]||0)+1; });
+    candidateIds.forEach(cId=>{
+      const cName=gameState.players?.[cId]?.name||'?';
+      const votes=maireTally[cId]||0;
+      if(!iVotedMaire && cId!==myId){
+        html+=`<button class="btn btn-secondary" style="font-size:.76rem;padding:.25rem .6rem" onclick="voteMaire('${cId}')">🗳 ${cName}${votes>0?' ('+votes+')':''}</button>`;
+      } else {
+        html+=`<span style="font-size:.78rem;color:var(--ghost);padding:.2rem .5rem">${cName}${votes>0?' ('+votes+')':''}</span>`;
+      }
+    });
+    html+=`</div>`;
+  } else {
+    html+=`<div style="font-size:.78rem;opacity:.5;margin-top:.2rem">${tr('noCandidates')}</div>`;
+  }
+  html+=`</div>`;
+  container.innerHTML+=html;
+}
+
+function runForMaire(){
+  if(!myId) return;
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/maireCandidates/${myId}`).set({name:myName,ts:Date.now()});
+  } else if(gameState){
+    if(!gameState.maireCandidates) gameState.maireCandidates={};
+    gameState.maireCandidates[myId]={name:myName,ts:Date.now()};
+    renderGame();
+  }
+}
+
+function voteMaire(candidateId){
+  if(!myId) return;
+  const vote={target:candidateId,by:myId,ts:Date.now()};
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/maireVotes/${myId}`).set(vote);
+    // Check if all alive voted for maire
+    setTimeout(()=>checkMaireElection(),500);
+  } else if(gameState){
+    if(!gameState.maireVotes) gameState.maireVotes={};
+    gameState.maireVotes[myId]=vote;
+    checkMaireElection();
+    renderGame();
+  }
+}
+
+function checkMaireElection(){
+  if(!isLeader) return;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const maireVotes=gameState.maireVotes||{};
+  const totalVoted=Object.keys(maireVotes).length;
+  // Elect when all alive players have voted
+  if(totalVoted<alive.length) return;
+  // Tally
+  const tally={};
+  Object.values(maireVotes).forEach(v=>{ if(v?.target) tally[v.target]=(tally[v.target]||0)+1; });
+  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length) return;
+  const winnerId=sorted[0][0];
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/maire`).set(winnerId);
+  } else if(gameState){
+    gameState.maire=winnerId;
+    renderGame();
+  }
+}
+
+function maireSkipDay(){
+  if(!myId || gameState.maire!==myId) return;
+  if(!isLeader){
+    // Tell leader to skip via Firebase
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/maireSkipDay`).set(Date.now());
+    }
+    return;
+  }
+  doMaireSkipDay();
+}
+
+function doMaireSkipDay(){
+  if(!isLeader) return;
+  const gs=gameState;
+  const actions=gs.nightActions||{};
+  _lastStepId=null;
+  const nextNight=(gs.dayNum||1)+1;
+  const upd={};
+  upd[`games/${roomCode}/phase`]='night';
+  upd[`games/${roomCode}/phaseStart`]=Date.now();
+  upd[`games/${roomCode}/dayNum`]=nextNight;
+  upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+  upd[`games/${roomCode}/nightActions`]={
+    _saviorLast: actions._saviorLast||null,
+    _bodyguardLast: actions._bodyguardLast||null,
+    _fluteEnchanted: actions._fluteEnchanted||[],
+    _pyroDoused: actions._pyroDoused||[],
+  };
+  upd[`games/${roomCode}/dayVotes`]=null;
+  upd[`games/${roomCode}/maireCandidates`]=null;
+  upd[`games/${roomCode}/maireVotes`]=null;
+  upd[`games/${roomCode}/maireSkipDay`]=null;
+  if(fbOk&&db&&roomCode){
+    db.ref().update(upd,()=>{
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    });
+  } else {
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
+    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+  }
+}
+
+// ════════════════════════════════════════════
+// TEAM CHAT SYSTEM
+// ════════════════════════════════════════════
+const TEAM_CHANNELS={
+  wolves:   {roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','wolfhound'], label:{en:'Wolves',fr:'Loups',ar:'الذئاب'}, color:'var(--blood-glow)'},
+  twosisters: {roles:['twosisters'], label:{en:'Sisters',fr:'Sœurs',ar:'الأختان'}, color:'#e879f9'},
+  threebrothers: {roles:['threebrothers'], label:{en:'Brothers',fr:'Frères',ar:'الإخوة'}, color:'#60a5fa'},
+};
+
+function getMyTeamChannels(){
+  if(!myRole) return [];
+  const channels=[];
+  Object.entries(TEAM_CHANNELS).forEach(([key,ch])=>{
+    if(ch.roles.includes(myRole)) channels.push(key);
+  });
+  // wolfhound: only if they chose werewolf
+  if(myRole==='wolfhound'){
+    const myAction=gameState?.nightActions?.[myId];
+    if(myAction?.type==='wolfhound_choose' && myAction.pick==='werewolf'){
+      if(!channels.includes('wolves')) channels.push('wolves');
+    } else {
+      channels=channels.filter(c=>c!=='wolves');
+    }
+  }
   return channels;
 }
 
 function renderChatTabs(){
-  const el=document.getElementById('chatTabs');
-  const channels=getMyChannels();
-  const labels={general:tr('chat_general'),werewolf:tr('chat_wolves'),twosisters:tr('chat_sisters'),threebrothers:tr('chat_brothers')};
-  const classes={general:'',werewolf:'wolf',twosisters:'sisters',threebrothers:'brothers'};
-  el.innerHTML=channels.map(ch=>{
-    const active=ch===currentChatChannel?'active':'';
-    const cls=classes[ch]||'';
-    return `<button class="chat-tab ${cls} ${active}" onclick="switchChat('${ch}')">${labels[ch]||ch}</button>`;
-  }).join('');
+  const tabsEl=document.getElementById('chatTabs');
+  if(!tabsEl) return;
+  const myChannels=getMyTeamChannels();
+  if(myChannels.length===0 && gameState?.status!=='playing'){
+    tabsEl.innerHTML='';
+    activeChatTab='general';
+    return;
+  }
+  let html=`<button class="chat-tab ${activeChatTab==='general'?'active':''}" onclick="switchChatTab('general')">${tr('generalChat')}</button>`;
+  myChannels.forEach(ch=>{
+    const chDef=TEAM_CHANNELS[ch];
+    const label=chDef.label[lang]||chDef.label.en;
+    html+=`<button class="chat-tab ${activeChatTab===ch?'active':''}" style="border-color:${chDef.color}" onclick="switchChatTab('${ch}')">${label}</button>`;
+  });
+  tabsEl.innerHTML=html;
 }
 
-function switchChat(channel){
-  currentChatChannel=channel;
+function switchChatTab(tab){
+  activeChatTab=tab;
   renderChatTabs();
   renderChat();
 }
 
+// ════════════════════════════════════════════
+// CHAT
+// ════════════════════════════════════════════
 function renderChat(){
-  renderChatTabs();
   const el=document.getElementById('chatMsgs');
-  const chatData=gameState?.chat;
-  let msgs=[];
-  if(chatData){
-    if(Array.isArray(chatData)){
-      // Old format: treat as general
-      msgs=chatData.filter(m=>!m.ch||m.ch==='general'||currentChatChannel==='general');
-    } else {
-      const channelData=chatData[currentChatChannel];
-      if(channelData){
-        msgs=Object.values(channelData);
-      }
-    }
+  renderChatTabs();
+  if(activeChatTab==='general'){
+    const raw=gameState?.chat||[];
+    const msgs=Array.isArray(raw)?raw:Object.values(raw);
+    el.innerHTML=msgs.map(m=>`<div class="cm"><div class="cn">${m.n}</div><div class="ct">${m.t}</div></div>`).join('');
+  } else {
+    const teamMsgs=gameState?.teamChat?.[activeChatTab];
+    const raw=teamMsgs||[];
+    const msgs=Array.isArray(raw)?raw:Object.values(raw);
+    const chDef=TEAM_CHANNELS[activeChatTab];
+    const borderColor=chDef?chDef.color:'var(--moon)';
+    el.innerHTML=msgs.map(m=>`<div class="cm" style="border-left-color:${borderColor}"><div class="cn">${m.n}</div><div class="ct">${m.t}</div></div>`).join('');
   }
-  msgs.sort((a,b)=>(a.ts||0)-(b.ts||0));
-  el.innerHTML=msgs.map(m=>`<div class="cm"><div class="cn">${m.n}</div><div class="ct">${m.t}</div></div>`).join('');
   el.scrollTop=el.scrollHeight;
-  // Disable general chat input during night
-  const inp=document.getElementById('chatIn');
-  const sendBtn=inp?.nextElementSibling;
-  const isNight=gameState?.phase==='night';
-  const me=gameState?.players?.[myId];
-  const iAmAlive=me?.alive!==false;
-  let canChat=iAmAlive;
-  if(currentChatChannel==='general' && isNight) canChat=false;
-  if(inp) inp.disabled=!canChat;
-  if(sendBtn) sendBtn.disabled=!canChat;
 }
 
 function sendChat(){
   const inp=document.getElementById('chatIn');
   const txt=inp.value.trim(); if(!txt) return;
-  const isNight=gameState?.phase==='night';
-  if(currentChatChannel==='general' && isNight) return;
-  const msg={n:myName,t:txt,ts:Date.now(),ch:currentChatChannel};
-  if(fbOk&&db&&roomCode){
-    db.ref(`games/${roomCode}/chat/${currentChatChannel}`).push(msg);
-  } else if(gameState){
-    if(!gameState.chat||Array.isArray(gameState.chat)) gameState.chat={general:{}};
-    if(!gameState.chat[currentChatChannel]) gameState.chat[currentChatChannel]={};
-    const key='m_'+Date.now();
-    gameState.chat[currentChatChannel][key]=msg;
-    renderChat();
+  const msg={n:myName,t:txt,ts:Date.now()};
+
+  if(activeChatTab==='general'){
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/chat`).push(msg);
+    } else if(gameState){
+      if(!Array.isArray(gameState.chat)) gameState.chat=[];
+      gameState.chat.push(msg);
+      renderChat();
+    }
+  } else {
+    // Team chat - verify player belongs to this channel
+    const myChannels=getMyTeamChannels();
+    if(!myChannels.includes(activeChatTab)){ inp.value=''; return; }
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/teamChat/${activeChatTab}`).push(msg);
+    } else if(gameState){
+      if(!gameState.teamChat) gameState.teamChat={};
+      if(!Array.isArray(gameState.teamChat[activeChatTab])) gameState.teamChat[activeChatTab]=[];
+      gameState.teamChat[activeChatTab].push(msg);
+      renderChat();
+    }
   }
   inp.value='';
 }
