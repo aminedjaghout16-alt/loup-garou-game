@@ -825,8 +825,10 @@ function applyTranslations(){
   document.querySelectorAll('[id]').forEach(el=>{
     const v=tr(el.id);
     if(v!==el.id){
-      // For buttons, only update text content if they have no child elements
-      if(el.tagName==='BUTTON' && el.children.length>0) return;
+      // Skip buttons and elements with children (dynamic content)
+      if(el.children.length>0) return;
+      // Skip elements that are inside actionBtns or playerList (dynamic gameplay UI)
+      if(el.closest('#actionBtns')||el.closest('#playerList')||el.closest('#playView')) return;
       el.textContent=v;
     }
   });
@@ -1023,21 +1025,33 @@ function doStartGame(){
     players.forEach((p,i)=>{
       if(roles[i]==='witch') upd[`games/${roomCode}/witchPotions/${p.id}`]={life:true,death:true};
     });
+    upd[`games/${roomCode}/nightTurn`]={stepId:'__init__',stepIndex:-1,turnStart:Date.now()};
+    upd[`games/${roomCode}/nightActions`]=null;
+    upd[`games/${roomCode}/dayVotes`]=null;
     db.ref().update(upd).then(()=>{
       console.log('✅ Game started');
+      _lastStepId=null;
+      _advancingStep=false;
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },600);
     }).catch(err=>{
       console.error('Start game error:', err);
-      alert('⚠️ Error starting game');
+      alert('⚠️ Error starting game: '+err.message);
     });
   } else {
     players.forEach((p,i)=>{ gameState.players[p.id].role=roles[i]; });
-    // Reset witch potions locally
     gameState.witchPotions={};
     players.forEach((p,i)=>{
       if(roles[i]==='witch') gameState.witchPotions[p.id]={life:true,death:true};
     });
-    Object.assign(gameState,{status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1});
+    Object.assign(gameState,{
+      status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1,
+      nightTurn:{stepId:'__init__',stepIndex:-1,turnStart:Date.now()},
+      nightActions:null,dayVotes:null
+    });
+    _lastStepId=null;
+    _advancingStep=false;
     renderGame();
+    setTimeout(()=>advanceNightTurn(0),600);
   }
 }
 
@@ -1127,7 +1141,7 @@ function renderGame(){
     renderPlayerList(players);
     renderStats(players);
     renderPhase();
-    startTimer();
+    startTimerIfNeeded();
     // Leader checks for turn/vote completion on every state update
     if(isLeader){
       if(gameState.phase==='night') checkTurnComplete();
@@ -1237,7 +1251,7 @@ function renderPhase(){
   const me=gameState.players?.[myId];
   const iAmAlive = me?.alive;
 
-  if(!stepId){
+  if(!stepId || stepId==='__init__'){
     document.getElementById('phaseDesc').textContent=lang==='ar'?'الليل يبدأ…':lang==='fr'?'La nuit commence…':'Night begins…';
     return;
   }
@@ -1510,14 +1524,27 @@ let _advancingStep=false; // lock to prevent double-advance
 function checkTurnComplete(){
   if(!isLeader) return;
   if(gameState?.phase!=='night') return;
+  if(_advancingStep) return;
 
   const turn=gameState.nightTurn||{};
   const stepId=turn.stepId;
-  if(!stepId) { advanceNightTurn(0); return; }
-  if(_advancingStep) return;
+
+  // No turn started yet or init sentinel — kick off turn 0
+  if(!stepId || stepId==='__init__'){
+    _advancingStep=true;
+    advanceNightTurn(0);
+    setTimeout(()=>{ _advancingStep=false; },600);
+    return;
+  }
 
   const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
-  if(!step) { advanceNightTurnFromCurrent(); return; }
+  // Unknown step id — advance from current position
+  if(!step){
+    _advancingStep=true;
+    advanceNightTurnFromCurrent();
+    setTimeout(()=>{ _advancingStep=false; },600);
+    return;
+  }
 
   const players=Object.values(gameState.players||{});
   const actingPlayers=players.filter(p=>p.alive && step.roles.includes(p.role));
@@ -1528,7 +1555,7 @@ function checkTurnComplete(){
     _lastStepId=stepId;
     _advancingStep=true;
     advanceNightTurnFromCurrent();
-    setTimeout(()=>{ _advancingStep=false; },500);
+    setTimeout(()=>{ _advancingStep=false; },600);
   }
 }
 
@@ -1852,6 +1879,18 @@ function resolveDayAndAdvance(){
 // ════════════════════════════════════════════
 // TIMER — per turn during night, per phase during day
 // ════════════════════════════════════════════
+let _lastTimerKey = null;
+function startTimerIfNeeded(){
+  // Build a key representing what the timer is currently counting for
+  const ph = gameState?.phase;
+  const turnId = gameState?.nightTurn?.stepId;
+  const key = ph==='night' ? ('night:'+turnId) : ('day:'+gameState?.dayNum);
+  if(key !== _lastTimerKey){
+    _lastTimerKey = key;
+    startTimer();
+  }
+}
+
 function startTimer(){
   if(timerTO) clearTimeout(timerTO);
   tick();
@@ -2113,7 +2152,7 @@ const TEAM_CHANNELS={
 
 function getMyTeamChannels(){
   if(!myRole) return [];
-  const channels=[];
+  let channels=[];
   Object.entries(TEAM_CHANNELS).forEach(([key,ch])=>{
     if(ch.roles.includes(myRole)) channels.push(key);
   });
@@ -2211,5 +2250,6 @@ window.addEventListener('load',()=>{
   setLang('en');
 });
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
