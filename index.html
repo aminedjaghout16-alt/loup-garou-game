@@ -1257,22 +1257,86 @@ function renderActionPanel(){
 }
 
 function setNightTarget(targetId){
-  pendingNightAction = { targetId, role: gameState.currentRole };
-  if(fbOk&&db&&roomCode){
-    roomRef('nightActions').set({ ...(gameState.nightActions || {}), [gameState.currentRole]: { targetId, by: myId, at: Date.now() } });
-  } else {
-    gameState.nightActions[gameState.currentRole] = { targetId, by: myId, at: Date.now() };
+  if(!targetId || !gameState) return;
+
+  const role = gameState.currentRole;
+  const target = gameState.players?.[targetId];
+
+  if(role === 'seer' && target){
+    const roleName = tr(target.role || 'villager');
+    alert((lang==='fr' ? 'Rôle de ' : lang==='ar' ? 'دور ' : 'Role of ') + target.name + ': ' + roleName);
   }
+
+  const nextActions = clone(gameState.nightActions || {});
+  nextActions[role] = {
+    targetId,
+    by: myId,
+    at: Date.now()
+  };
+
+  if(role === 'werewolf' && target){
+    const nextPlayers = clone(gameState.players || {});
+    if(nextPlayers[targetId]){
+      nextPlayers[targetId].alive = false;
+    }
+
+    if(fbOk&&db&&roomCode){
+      roomRef('nightActions').set(nextActions);
+      roomRef('players').set(nextPlayers);
+    } else {
+      gameState.nightActions = nextActions;
+      gameState.players = nextPlayers;
+    }
+  } else {
+    if(fbOk&&db&&roomCode){
+      roomRef('nightActions').set(nextActions);
+    } else {
+      gameState.nightActions = nextActions;
+    }
+  }
+
   finishNightStep();
 }
 
 function completeNightAction(type){
-  pendingNightAction = { type, role: gameState.currentRole };
-  if(fbOk&&db&&roomCode){
-    roomRef('nightActions').set({ ...(gameState.nightActions || {}), [gameState.currentRole]: { type, by: myId, at: Date.now() } });
-  } else {
-    gameState.nightActions[gameState.currentRole] = { type, by: myId, at: Date.now() };
+  if(!gameState) return;
+
+  const role = gameState.currentRole;
+  const nextActions = clone(gameState.nightActions || {});
+
+  nextActions[role] = {
+    type,
+    by: myId,
+    at: Date.now()
+  };
+
+  if(role === 'witch'){
+    if(type === 'save'){
+      alert(lang==='fr' ? 'Potion de vie utilisée' : lang==='ar' ? 'تم استخدام جرعة الحياة' : 'Life potion used');
+    } else if(type === 'poison'){
+      const alive = alivePlayers().filter(p=>p.id!==myId);
+      if(alive.length){
+        const victim = alive[Math.floor(Math.random()*alive.length)];
+        const nextPlayers = clone(gameState.players || {});
+        nextPlayers[victim.id].alive = false;
+
+        if(fbOk&&db&&roomCode){
+          roomRef('players').set(nextPlayers);
+        } else {
+          gameState.players = nextPlayers;
+        }
+
+        alert((lang==='fr' ? 'La sorcière a éliminé ' : lang==='ar' ? 'الساحرة قتلت ' : 'The witch eliminated ') + victim.name);
+      }
+    }
   }
+
+  if(fbOk&&db&&roomCode){
+    roomRef('nightActions').set(nextActions);
+  } else {
+    gameState.nightActions = nextActions;
+  }
+
   finishNightStep();
 }
 
@@ -1322,10 +1386,13 @@ function tick(){
   const dur = gameState.phase === 'night' ? (cfg.nightTimer || 45) : (cfg.dayTimer || 60);
   const rem = Math.max(0, Math.ceil(dur - (Date.now()-gameState.phaseStart)/1000));
   document.getElementById('phaseTimer').textContent=rem;
+
   if(rem > 0){
     timerTO=setTimeout(tick,1000);
     return;
   }
+
+  if(myId !== gameState.leader) return;
 
   if(gameState.phase === 'night'){
     finishNightStep();
@@ -1341,6 +1408,7 @@ function tick(){
     if(eliminated) applyElimination(eliminated);
     startNightAfterDay();
   }
+
   renderGame();
 }
 
