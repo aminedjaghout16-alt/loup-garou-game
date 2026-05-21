@@ -212,10 +212,6 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
       <div class="setup-wrap" id="setupView">
         <h2 id="t_setup">Game Setup</h2>
         <div class="s-section">
-          <h4 id="t_nplayers">Number of Players (2–20)</h4>
-          <input type="number" id="cfgNum" min="2" max="20" value="6" onchange="cfgChanged()">
-        </div>
-        <div class="s-section">
           <h4 id="t_roles">Select Roles</h4>
           <div class="roles-grid" id="rolesGrid"></div>
         </div>
@@ -224,6 +220,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
           <div><h4 id="t_nightt">Night Timer (s)</h4><input type="number" id="cfgNight" min="10" max="600" value="45" onchange="cfgChanged()"></div>
         </div>
         <div id="hostStart" style="display:none">
+          <div id="startHelperMsg" style="font-size:.82rem;color:var(--moon-pale);margin-bottom:.6rem;text-align:center"></div>
           <button class="btn" style="width:100%;padding:1rem;font-size:1.05rem" onclick="doStartGame()" id="t_start">Start Game</button>
         </div>
         <div id="guestWait" class="waiting-msg" style="display:none" id="t_wait">Waiting for host to start…</div>
@@ -565,7 +562,7 @@ ar:{
 // ════════════════════════════════════════════
 let lang='en', db=null, fbOk=false;
 let myId=null, myName=null, roomCode=null, gameState=null, myRole=null, isLeader=false;
-let cfg={numPlayers:6, roles:['werewolf','seer','witch','villager'], dayTimer:60, nightTimer:45};
+let cfg={roles:['werewolf','seer','witch','villager'], roleCounts:{werewolf:1, villager:1}, dayTimer:60, nightTimer:45};
 let timerTO=null;
 let activeChatTab='general'; // 'general', 'wolves', 'twosisters', 'threebrothers'
 let _previousAlive={}; // track alive states for death animation
@@ -837,6 +834,14 @@ function applyTranslations(){
 // ════════════════════════════════════════════
 // ROLES GRID
 // ════════════════════════════════════════════
+// Roles that can have multiple copies in a game
+const MULTI_ROLES = {
+  werewolf:      {min:1, max:10},
+  villager:      {min:0, max:15},
+  threebrothers: {min:3, max:3},  // always 3 if enabled — fixed
+  twosisters:    {min:2, max:2},  // always 2 if enabled — fixed
+};
+
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
@@ -844,33 +849,66 @@ function buildRolesGrid(){
   const sorted=Object.entries(ROLES_DEF).sort((a,b)=>order.indexOf(a[1].team)-order.indexOf(b[1].team));
   const canEdit=isLeader;
 
-  // ── Lock base werewolf — auto-managed ──
-  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
+  if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
 
   grid.innerHTML=sorted.map(([k,r])=>{
-    const isBaseWolf = k==='werewolf';
+    const isMulti = !!MULTI_ROLES[k];
+    const isFixed = isMulti && MULTI_ROLES[k].min===MULTI_ROLES[k].max; // threebrothers, twosisters
+    const isWerewolf = k==='werewolf';
     const isVillager = k==='villager';
-    // Base werewolf and villager are auto-managed — always locked
-    const autoManaged = isBaseWolf || isVillager;
-    const checked = cfg.roles.includes(k) ? 'checked' : '';
-    const dis = (!canEdit || autoManaged) ? 'disabled' : '';
-    const autoLabel = isBaseWolf
-      ? `<span style="font-size:.68rem;color:var(--moon);margin-left:.3rem">(auto)</span>`
-      : isVillager
-      ? `<span style="font-size:.68rem;color:var(--moon);margin-left:.3rem">(filler)</span>`
-      : '';
-    return `<label class="rc t-${r.team}" style="${autoManaged?'opacity:.6;cursor:default':''}">
-      <input type="checkbox" value="${k}" ${checked} ${dis} onchange="toggleRole('${k}',this.checked)">
+
+    // Werewolf and villager are always in the list — always checked
+    const alwaysOn = isWerewolf || isVillager;
+    const checked = alwaysOn ? true : cfg.roles.includes(k);
+    const dis = !canEdit ? 'disabled' : '';
+    const chkDis = (!canEdit || alwaysOn) ? 'disabled' : '';
+
+    const count = isMulti ? (cfg.roleCounts[k] ?? MULTI_ROLES[k].min) : 1;
+
+    // Qty spinner for multi-roles (werewolf, villager)
+    let qtyHtml = '';
+    if(isMulti && !isFixed && canEdit){
+      const mn=MULTI_ROLES[k].min, mx=MULTI_ROLES[k].max;
+      qtyHtml=`<span style="display:flex;align-items:center;gap:2px;margin-left:auto;flex-shrink:0">
+        <button onclick="event.preventDefault();changeCount('${k}',-1)" style="width:18px;height:18px;border:1px solid var(--moon);background:var(--void);color:var(--moon-pale);border-radius:2px;cursor:pointer;font-size:.85rem;line-height:1;padding:0;font-family:inherit" ${!canEdit?'disabled':''}>−</button>
+        <span id="cnt_${k}" style="min-width:16px;text-align:center;color:var(--moon-pale);font-weight:700;font-size:.82rem">${count}</span>
+        <button onclick="event.preventDefault();changeCount('${k}',1)" style="width:18px;height:18px;border:1px solid var(--moon);background:var(--void);color:var(--moon-pale);border-radius:2px;cursor:pointer;font-size:.85rem;line-height:1;padding:0;font-family:inherit" ${!canEdit?'disabled':''}>+</button>
+      </span>`;
+    } else if(isMulti && !isFixed && !canEdit){
+      // Guest: show count read-only
+      qtyHtml=`<span style="margin-left:auto;color:var(--moon-pale);font-weight:700;font-size:.82rem;flex-shrink:0">×${count}</span>`;
+    } else if(isFixed && checked){
+      qtyHtml=`<span style="margin-left:auto;color:var(--moon);font-size:.72rem;flex-shrink:0">(${count})</span>`;
+    }
+
+    return `<label class="rc t-${r.team}" style="${alwaysOn?'opacity:.75;cursor:default':''}">
+      <input type="checkbox" value="${k}" ${checked?'checked':''} ${chkDis} onchange="toggleRole('${k}',this.checked)">
       <span class="rc-emoji">${r.e}</span>
-      <span>${tr(k)}${autoLabel}</span>
+      <span style="flex:1">${tr(k)}</span>
+      ${qtyHtml}
     </label>`;
   }).join('');
 
   updateRolePreview();
 }
 
+function changeCount(role, delta){
+  if(!isLeader) return;
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const mn=MULTI_ROLES[role]?.min??1;
+  const mx=MULTI_ROLES[role]?.max??10;
+  const cur=cfg.roleCounts[role]??mn;
+  cfg.roleCounts[role]=Math.max(mn, Math.min(mx, cur+delta));
+  // Update spinner display immediately
+  const el=document.getElementById('cnt_'+role);
+  if(el) el.textContent=cfg.roleCounts[role];
+  updateRolePreview();
+  pushCfg();
+}
+
 function updateRolePreview(){
-  // Show or create the preview banner
   let preview=document.getElementById('rolePreview');
   if(!preview){
     preview=document.createElement('div');
@@ -880,37 +918,38 @@ function updateRolePreview(){
     grid?.parentNode?.insertBefore(preview, grid.nextSibling);
   }
 
-  const n = cfg.numPlayers || 6;
-  const wolfCount = wolfCountForPlayers(n);
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const wCount = cfg.roleCounts.werewolf ?? 1;
+  const vCount = cfg.roleCounts.villager ?? 1;
 
   const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
   let checkedRoles = cfg.roles;
   if(!Array.isArray(checkedRoles)) checkedRoles = checkedRoles ? Object.values(checkedRoles) : [];
   const specialRoles = checkedRoles.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
-  const extraWolves = checkedRoles.filter(r=>WOLF_ROLES.includes(r)&&r!=='werewolf');
-  const specialCount = Math.min(specialRoles.length, n - wolfCount);
-  const villagerCount = n - wolfCount - specialCount;
 
-  const wolfLine = wolfCount===1
-    ? `1× 🐺 ${tr('werewolf')}`
-    : `${wolfCount}× 🐺 ${tr('werewolf')}`;
-  const specialLine = specialCount>0
-    ? specialRoles.slice(0,specialCount).map(r=>`${ROLES_DEF[r]?.e||'?'} ${tr(r)}`).join(', ')
-    : '';
-  const villagerLine = villagerCount>0
-    ? `${villagerCount}× 🧑‍🌾 ${tr('villager')}`
-    : '';
+  // Count fixed-size multi roles
+  let fixedExtras = 0;
+  if(checkedRoles.includes('threebrothers')) fixedExtras+=3;
+  if(checkedRoles.includes('twosisters')) fixedExtras+=2;
+  const otherSpecials = specialRoles.filter(r=>r!=='threebrothers'&&r!=='twosisters');
 
-  const lines = [wolfLine, specialLine, villagerLine].filter(Boolean);
+  const total = wCount + vCount + fixedExtras + otherSpecials.length;
+
+  const parts=[];
+  parts.push(`${wCount}× 🐺 ${tr('werewolf')}`);
+  if(checkedRoles.includes('threebrothers')) parts.push(`3× 👬 ${tr('threebrothers')}`);
+  if(checkedRoles.includes('twosisters')) parts.push(`2× 👯 ${tr('twosisters')}`);
+  otherSpecials.forEach(r=> parts.push(`${ROLES_DEF[r]?.e||'?'} ${tr(r)}`));
+  if(vCount>0) parts.push(`${vCount}× 🧑‍🌾 ${tr('villager')}`);
 
   preview.innerHTML=`
     <div style="color:var(--moon-pale);font-family:'Cinzel',serif;font-size:.8rem;margin-bottom:.4rem">
-      ${lang==='ar'?`📋 توزيع الأدوار (${n} لاعبين)`:lang==='fr'?`📋 Composition (${n} joueurs)`:`📋 Role Composition (${n} players)`}
+      📋 ${lang==='ar'?`توزيع الأدوار — إجمالي: ${total} لاعب`:lang==='fr'?`Composition — Total : ${total} joueurs`:`Role Composition — Total: ${total} players`}
     </div>
-    <div style="color:var(--ghost)">${lines.join(' &nbsp;·&nbsp; ')}</div>
-    ${specialCount < specialRoles.length
-      ? `<div style="color:var(--moon);font-size:.75rem;margin-top:.3rem">⚠️ ${specialRoles.length - specialCount} ${lang==='ar'?'دور مختار لن يُستخدم (عدد اللاعبين قليل)':lang==='fr'?'rôle(s) sélectionné(s) ignoré(s) (pas assez de joueurs)':'selected role(s) ignored — not enough players'}</div>`
-      : ''}
+    <div style="color:var(--ghost)">${parts.join(' &nbsp;·&nbsp; ')}</div>
+    <div style="color:var(--moon);font-size:.75rem;margin-top:.3rem">
+      ${lang==='ar'?'💡 يجب أن يتطابق العدد مع اللاعبين المتصلين':lang==='fr'?'💡 Le total doit correspondre au nombre de joueurs connectés':'💡 Total must match the number of connected players'}
+    </div>
   `;
 }
 
@@ -993,6 +1032,8 @@ async function enterRoom(){
         cfg=gameState.config;
         // Firebase can convert arrays to objects — fix roles
         if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
+        // Ensure roleCounts exists
+        if(!cfg.roleCounts) cfg.roleCounts={werewolf:1,villager:1};
       }
       // Derive leader status from Firebase data
       if(gameState?.leader===myId) isLeader=true;
@@ -1053,7 +1094,6 @@ function doLeave(){
 // ════════════════════════════════════════════
 function cfgChanged(){
   if(!isLeader) return;
-  cfg.numPlayers=parseInt(document.getElementById('cfgNum').value)||6;
   cfg.dayTimer=parseInt(document.getElementById('cfgDay').value)||60;
   cfg.nightTimer=parseInt(document.getElementById('cfgNight').value)||45;
   updateRolePreview();
@@ -1064,17 +1104,44 @@ function cfgChanged(){
 // START
 // ════════════════════════════════════════════
 function doStartGame(){
-  // Robust leader check: use both local flag and Firebase data
   const amLeader = isLeader || (gameState?.leader === myId);
   if(!amLeader){ console.warn('Not leader, cannot start'); return; }
   const players = gameState?.players ? Object.values(gameState.players) : [];
-  if(players.length < 2){
+  const n = players.length;
+  if(n < 2){
     alert(lang==='ar'?'تحتاج لاعبَين على الأقل':lang==='fr'?'Minimum 2 joueurs':'Need at least 2 players');
     return;
   }
-  // Ensure isLeader is set for future checks
+
+  // Calculate how many roles will be assigned
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const wCount = cfg.roleCounts.werewolf ?? 1;
+  const vCount = cfg.roleCounts.villager ?? 1;
+  let checkedRoles = cfg.roles;
+  if(!Array.isArray(checkedRoles)) checkedRoles = checkedRoles ? Object.values(checkedRoles) : [];
+  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  const specialRoles = checkedRoles.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
+  let specialTotal = 0;
+  specialRoles.forEach(r=>{
+    if(r==='threebrothers') specialTotal+=3;
+    else if(r==='twosisters') specialTotal+=2;
+    else specialTotal+=1;
+  });
+  const configuredTotal = wCount + specialTotal + vCount;
+  // The actual total used is wCount + specialTotal, then pad/trim villagers to reach n
+  // Just warn if mismatch is large
+  if(wCount >= n){
+    alert(lang==='ar'?'عدد الذئاب أكبر من عدد اللاعبين!':lang==='fr'?'Trop de loups par rapport aux joueurs !':'Too many wolves for the number of players!');
+    return;
+  }
+  if(specialTotal >= n){
+    alert(lang==='ar'?'الأدوار الخاصة تملأ كل الأماكن، لا يوجد مكان للذئاب!':lang==='fr'?'Les rôles spéciaux remplissent toutes les places !':'Special roles fill all slots — no room for wolves!');
+    return;
+  }
+
   isLeader = true;
-  const roles = assignRoles(players.length);
+  const roles = assignRoles(n);
+
   if(fbOk && db && roomCode){
     const upd={};
     players.forEach((p,i)=>{ upd[`games/${roomCode}/players/${p.id}/role`]=roles[i]; });
@@ -1082,7 +1149,6 @@ function doStartGame(){
     upd[`games/${roomCode}/phase`]='night';
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
-    // Reset witch potions: each witch gets 1 life + 1 death potion
     upd[`games/${roomCode}/witchPotions`]=null;
     players.forEach((p,i)=>{
       if(roles[i]==='witch') upd[`games/${roomCode}/witchPotions/${p.id}`]={life:true,death:true};
@@ -1117,56 +1183,34 @@ function doStartGame(){
   }
 }
 
-// ── Wolf count scaling (classic Loup-Garou balance) ──
-function wolfCountForPlayers(n){
-  if(n<=6)  return 1;
-  if(n<=9)  return 2;
-  if(n<=12) return 3;
-  if(n<=15) return 4;
-  if(n<=18) return 5;
-  return 6;
-}
-
 function assignRoles(n){
-  // Ensure cfg.roles is always a proper array (Firebase can return objects)
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const wCount = cfg.roleCounts.werewolf ?? 1;
+  const vCount = cfg.roleCounts.villager ?? 1;
+
   let checkedRoles = cfg.roles;
-  if(!Array.isArray(checkedRoles)){
-    checkedRoles = checkedRoles ? Object.values(checkedRoles) : [];
-  }
+  if(!Array.isArray(checkedRoles)) checkedRoles = checkedRoles ? Object.values(checkedRoles) : [];
 
-  // Separate what the host checked into wolf-team and special village/solo roles
-  const WOLF_ROLES = ['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
-  const specialRoles = checkedRoles.filter(r => r!=='werewolf' && r!=='villager' && !WOLF_ROLES.includes(r));
-  const extraWolfRoles = checkedRoles.filter(r => WOLF_ROLES.includes(r) && r!=='werewolf'); // non-standard wolf variants
+  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  const specialRoles = checkedRoles.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
 
-  // How many wolves do we need?
-  const wolfCount = wolfCountForPlayers(n);
+  const out=[];
 
-  // Build the final pool:
-  // 1. Always start with base werewolves
-  const out = [];
-  for(let i=0;i<wolfCount;i++) out.push('werewolf');
+  // Add werewolves
+  for(let i=0;i<wCount;i++) out.push('werewolf');
 
-  // 2. Replace some base werewolves with special wolf variants if host chose them
-  // (e.g. 1 alphawolf can replace 1 werewolf slot)
-  let wolfSlotsLeft = wolfCount;
-  const wolfVariantsToUse = [];
-  for(const wr of extraWolfRoles){
-    if(wolfVariantsToUse.length < wolfCount - 1){ // always keep at least 1 base werewolf
-      wolfVariantsToUse.push(wr);
-    }
-  }
-  // Replace base werewolves with variants
-  wolfVariantsToUse.forEach((wr,i)=>{ out[i+1]=wr; });
+  // Add special roles (threebrothers×3, twosisters×2, others×1)
+  specialRoles.forEach(r=>{
+    if(r==='threebrothers'){ out.push('threebrothers','threebrothers','threebrothers'); }
+    else if(r==='twosisters'){ out.push('twosisters','twosisters'); }
+    else { out.push(r); }
+  });
 
-  // 3. Fill remaining slots with special roles (shuffled), then villagers
-  const slotsLeft = n - wolfCount;
-  // Shuffle and trim special roles to fit
-  const shuffledSpecial = [...specialRoles].sort(()=>Math.random()-.5).slice(0, slotsLeft);
-  shuffledSpecial.forEach(r=>out.push(r));
+  // Pad with villagers to reach n
+  while(out.length<n) out.push('villager');
 
-  // 4. Pad with villagers
-  while(out.length < n) out.push('villager');
+  // Trim if over (shouldn't happen with proper UI validation)
+  while(out.length>n) out.pop();
 
   return out.sort(()=>Math.random()-.5);
 }
@@ -1193,16 +1237,37 @@ function renderGame(){
     // Sync config inputs for non-leaders
     if(gameState.config){
       const c=gameState.config;
-      document.getElementById('cfgNum').value=c.numPlayers||6;
       document.getElementById('cfgDay').value=c.dayTimer||60;
       document.getElementById('cfgNight').value=c.nightTimer||45;
+      if(c.roleCounts){
+        if(!cfg.roleCounts) cfg.roleCounts={};
+        Object.assign(cfg.roleCounts, c.roleCounts);
+      }
     }
     // disable/enable inputs for guests
-    ['cfgNum','cfgDay','cfgNight'].forEach(id=>{
+    ['cfgDay','cfgNight'].forEach(id=>{
       document.getElementById(id).disabled=!isLeader;
     });
     buildRolesGrid();
     renderStats(players);
+    // Show helper: connected players vs configured total
+    const helperEl=document.getElementById('startHelperMsg');
+    if(helperEl&&isLeader){
+      if(!cfg.roleCounts) cfg.roleCounts={};
+      const wc=cfg.roleCounts.werewolf??1;
+      const vc=cfg.roleCounts.villager??1;
+      let checkedR=cfg.roles; if(!Array.isArray(checkedR)) checkedR=checkedR?Object.values(checkedR):[];
+      const WOLF_R=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+      const specR=checkedR.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_R.includes(r));
+      let specT=0; specR.forEach(r=>{ specT+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
+      const configured=wc+specT+vc;
+      const connected=players.length;
+      const match=configured===connected;
+      helperEl.style.color=match?'var(--green)':'var(--moon)';
+      helperEl.textContent=match
+        ?`✅ ${connected} ${lang==='ar'?'لاعبين جاهزون':lang==='fr'?'joueurs prêts':'players ready — good to go!'}`
+        :`⚠️ ${lang==='ar'?`الأدوار الإجمالية: ${configured} · المتصلون: ${connected}`:lang==='fr'?`Total rôles: ${configured} · Connectés: ${connected}`:`Total roles: ${configured} · Connected: ${connected}`}`;
+    }
   } else if(gameState.status==='playing'){
     document.getElementById('setupView').style.display='none';
     document.getElementById('playView').style.display='flex';
