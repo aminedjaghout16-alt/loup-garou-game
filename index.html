@@ -923,6 +923,8 @@ async function enterRoom(){
     ref.on('value', snap=>{
       gameState=snap.val();
       if(gameState?.config) cfg=gameState.config;
+      // Derive leader status from Firebase data
+      if(gameState?.leader===myId) isLeader=true;
       // Check if maire requested skip day
       if(isLeader && gameState?.maireSkipDay && gameState?.phase==='day'){
         doMaireSkipDay();
