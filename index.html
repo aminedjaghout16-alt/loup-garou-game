@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loup-Garou — Multiplayer Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --void:#0a0a1a; --abyss:#0d0d24; --purple:#1a0a2e; --blood:#8b0000;
+  --blood-glow:#b91c1c; --moon:#d4a017; --moon-pale:#e8c44a;
+  --ghost:#e8e8e8; --fog:rgba(232,232,232,.06); --mist:rgba(232,232,232,.12);
+}
+html { scroll-behavior:smooth; }
+body {
+  font-family:'Cormorant Garamond',Georgia,serif; background:var(--void); color:var(--ghost);
+  line-height:1.7; min-height:100vh;
+}
+.container { max-width:1200px; margin:0 auto; padding:1.5rem; }
+
+/* ===== LOGIN SCREEN ===== */
+.login-screen { position:fixed; inset:0; background:var(--void); z-index:1000; display:flex; align-items:center; justify-content:center; padding:2rem; }
+.login-screen.hidden { display:none; }
+.login-box { background:var(--abyss); border:1px solid var(--moon); border-radius:8px; padding:2rem; max-width:400px; width:100%; text-align:center; box-shadow:0 0 40px rgba(212,160,23,.2); }
+.login-box h1 { font-family:'Cinzel Decorative',serif; font-size:2.5rem; color:var(--moon); margin-bottom:1rem; }
+.login-box p { color:var(--ghost); margin-bottom:1.5rem; }
+.form-group { margin-bottom:1.5rem; text-align:left; }
+.form-group label { display:block; margin-bottom:.5rem; color:var(--moon); font-weight:600; }
+.form-group input, .form-group select { width:100%; padding:.8rem; background:var(--purple); border:1px solid var(--moon); color:var(--ghost); border-radius:4px; font-family:inherit; }
+.form-group input:focus, .form-group select:focus { outline:none; border-color:var(--moon-pale); box-shadow:0 0 8px rgba(212,160,23,.3); }
+.btn { padding:.8rem 2rem; background:var(--blood-glow); color:var(--ghost); border:none; border-radius:4px; cursor:pointer; font-weight:600; transition:.3s; font-size:1rem; }
+.btn:hover { background:var(--blood); box-shadow:0 0 20px rgba(139,0,0,.5); }
+.lang-selector { position:absolute; top:1rem; right:1rem; display:flex; gap:.5rem; }
+.lang-btn { padding:.5rem 1rem; background:var(--purple); border:1px solid var(--moon); color:var(--ghost); cursor:pointer; border-radius:4px; transition:.3s; }
+.lang-btn.active { background:var(--moon); color:var(--void); }
+
+/* ===== GAME SCREEN ===== */
+.game-screen { position:fixed; inset:0; background:var(--void); z-index:999; overflow:hidden; display:flex; flex-direction:column; }
+.game-screen.hidden { display:none; }
+
+/* Header */
+.game-header { padding:1rem; background:rgba(10,10,26,.95); border-bottom:1px solid var(--moon); display:flex; justify-content:space-between; align-items:center; }
+.game-title { font-family:'Cinzel Decorative',serif; color:var(--moon); }
+.game-info { display:flex; gap:2rem; font-size:.9rem; }
+.game-info div { display:flex; flex-direction:column; }
+
+/* Main content */
+.game-content { flex:1; overflow-y:auto; padding:1.5rem; display:flex; gap:2rem; }
+
+/* Left panel - Game info */
+.game-panel { flex:0 0 300px; background:var(--abyss); border:1px solid var(--moon); border-radius:8px; padding:1.5rem; }
+.game-panel h3 { color:var(--moon); margin-bottom:1rem; font-family:'Cinzel',serif; }
+.game-panel .info-row { display:flex; justify-content:space-between; margin-bottom:.8rem; font-size:.9rem; padding-bottom:.5rem; border-bottom:1px solid var(--fog); }
+.game-panel .info-row strong { color:var(--moon-pale); }
+
+/* Center - Game view */
+.game-view { flex:1; background:var(--abyss); border:1px solid var(--moon); border-radius:8px; padding:2rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.phase-title { font-family:'Cinzel Decorative',serif; font-size:2.5rem; color:var(--moon-pale); margin-bottom:1rem; }
+.phase-description { color:var(--ghost); margin-bottom:2rem; font-size:1.1rem; }
+.phase-timer { font-family:'Cinzel',serif; font-size:3rem; color:var(--blood-glow); margin-bottom:1rem; }
+.action-buttons { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
+.btn-action { padding:1rem 2rem; background:var(--purple); border:1px solid var(--moon); color:var(--ghost); cursor:pointer; border-radius:4px; transition:.3s; }
+.btn-action:hover { background:var(--moon); color:var(--void); }
+.btn-action.selected { background:var(--blood-glow); border-color:var(--blood-glow); }
+
+/* Players list */
+.players-list { margin-top:2rem; width:100%; max-width:600px; }
+.player-item { display:flex; align-items:center; gap:1rem; padding:.8rem; background:var(--purple); border:1px solid var(--moon); border-radius:4px; margin-bottom:.5rem; }
+.player-status { width:12px; height:12px; border-radius:50%; }
+.player-status.alive { background:#10b981; }
+.player-status.dead { background:#ef4444; }
+.player-name { flex:1; color:var(--ghost); }
+.player-role { color:var(--moon); font-size:.8rem; }
+
+/* Right panel - Chat */
+.chat-panel { flex:0 0 250px; background:var(--abyss); border:1px solid var(--moon); border-radius:8px; padding:1.5rem; display:flex; flex-direction:column; }
+.chat-header { color:var(--moon); margin-bottom:1rem; font-family:'Cinzel',serif; }
+.chat-messages { flex:1; overflow-y:auto; margin-bottom:1rem; }
+.chat-message { margin-bottom:.8rem; padding:.6rem; background:var(--purple); border-left:3px solid var(--moon); border-radius:2px; font-size:.85rem; }
+.chat-message .player-name { color:var(--moon-pale); font-weight:600; }
+.chat-message .message-text { color:var(--ghost); margin-top:.3rem; }
+.chat-input { display:flex; gap:.5rem; }
+.chat-input input { flex:1; padding:.6rem; background:var(--purple); border:1px solid var(--moon); color:var(--ghost); border-radius:2px; }
+.chat-input button { padding:.6rem 1rem; background:var(--blood-glow); border:none; color:var(--ghost); border-radius:2px; cursor:pointer; }
+
+/* Rules setup */
+.rules-panel { flex:1; background:var(--abyss); border:1px solid var(--moon); border-radius:8px; padding:2rem; }
+.rules-panel h2 { color:var(--moon); margin-bottom:1.5rem; }
+.rule-group { margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--fog); }
+.rule-group label { display:flex; align-items:center; gap:1rem; margin-bottom:.8rem; cursor:pointer; }
+.rule-group input[type="checkbox"] { width:20px; height:20px; cursor:pointer; }
+.rule-group input[type="number"] { width:100px; padding:.5rem; background:var(--purple); border:1px solid var(--moon); color:var(--ghost); border-radius:4px; }
+
+/* Modal */
+.modal { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:2000; display:flex; align-items:center; justify-content:center; padding:2rem; }
+.modal.hidden { display:none; }
+.modal-content { background:var(--abyss); border:2px solid var(--moon); border-radius:8px; padding:2rem; max-width:500px; max-height:90vh; overflow-y:auto; }
+.modal-content h2 { color:var(--moon); margin-bottom:1.5rem; }
+.modal-content .btn { width:100%; margin-top:1rem; }
+
+/* Responsive */
+@media(max-width:768px) {
+  .game-content { flex-direction:column; gap:1rem; }
+  .game-panel, .chat-panel { flex:1; }
+  .game-info { gap:1rem; font-size:.8rem; }
+}
+
+/* Animations */
+@keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:.7; } }
+.pulsing { animation:pulse 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="lang-selector" id="langSelector"></div>
+  <div class="login-box">
+    <h1 id="loginTitle">Loup-Garou</h1>
+    <p id="loginSubtitle">Join the game of deception and survival</p>
+    <div class="form-group">
+      <label id="labelName">Your Name</label>
+      <input type="text" id="playerName" placeholder="Enter your name...">
+    </div>
+    <div class="form-group">
+      <label id="labelRoom">Room Code</label>
+      <input type="text" id="roomCode" placeholder="Enter room code...">
+    </div>
+    <button class="btn" onclick="joinGame()" id="btnJoin">Join Game</button>
+    <hr style="margin:1.5rem 0; border:1px solid var(--moon); opacity:.3;">
+    <button class="btn" style="background:var(--purple);border:1px solid var(--moon);" onclick="createGame()" id="btnCreate">Create Room</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="game-screen" id="gameScreen">
+  <div class="game-header">
+    <h1 class="game-title" id="gameTitle">Loup-Garou</h1>
+    <div class="game-info">
+      <div>
+        <strong id="labelPhase">Phase:</strong>
+        <span id="currentPhase">Waiting...</span>
+      </div>
+      <div>
+        <strong id="labelPlayers">Players:</strong>
+        <span id="playerCount">0/12</span>
+      </div>
+      <div>
+        <strong id="labelStatus">Status:</strong>
+        <span id="gameStatus">Setup</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-content">
+    <!-- Left Panel: Game Info -->
+    <div class="game-panel">
+      <h3 id="panelTitle">Game Info</h3>
+      <div class="info-row">
+        <strong id="labelAlive">Alive:</strong>
+        <span id="aliveCount">0</span>
+      </div>
+      <div class="info-row">
+        <strong id="labelDead">Dead:</strong>
+        <span id="deadCount">0</span>
+      </div>
+      <div class="info-row">
+        <strong id="labelWolves">Wolves:</strong>
+        <span id="wolfCount">0</span>
+      </div>
+      <div class="info-row">
+        <strong id="labelVillagers">Villagers:</strong>
+        <span id="villagerCount">0</span>
+      </div>
+      
+      <h3 id="yourRoleTitle" style="margin-top:1.5rem;">Your Role</h3>
+      <div style="padding:1rem; background:var(--purple); border:1px solid var(--moon); border-radius:4px; text-align:center;">
+        <div id="roleIcon" style="font-size:3rem; margin-bottom:.5rem;"></div>
+        <div id="roleName" style="color:var(--moon-pale); font-weight:600; margin-bottom:.5rem;"></div>
+        <div id="roleDesc" style="font-size:.9rem; color:var(--ghost);"></div>
+      </div>
+    </div>
+
+    <!-- Center: Game View -->
+    <div class="game-view">
+      <div id="setupView" style="width:100%;">
+        <h2 id="setupTitle" style="color:var(--moon); margin-bottom:1.5rem;">Game Setup</h2>
+        <div class="rules-panel" style="background:transparent; border:none; padding:0;">
+          <div class="rule-group">
+            <label id="labelNumPlayers">Number of Players (4-12)</label>
+            <input type="number" id="numPlayers" min="4" max="12" value="6" onchange="updateGameConfig()">
+          </div>
+          
+          <div class="rule-group">
+            <h4 style="color:var(--moon); margin-bottom:1rem;" id="labelRoles">Select Roles</h4>
+            <label><input type="checkbox" value="werewolf" checked onchange="updateRoles()"> 🐺 <span id="roleWerewolf">Werewolf</span></label>
+            <label><input type="checkbox" value="seer" checked onchange="updateRoles()"> 🔮 <span id="roleSeer">Seer</span></label>
+            <label><input type="checkbox" value="witch" checked onchange="updateRoles()"> 🧪 <span id="roleWitch">Witch</span></label>
+            <label><input type="checkbox" value="hunter" onchange="updateRoles()"> 🏹 <span id="roleHunter">Hunter</span></label>
+            <label><input type="checkbox" value="cupid" onchange="updateRoles()"> 💘 <span id="roleCupid">Cupid</span></label>
+            <label><input type="checkbox" value="littlegirl" onchange="updateRoles()"> 👧 <span id="roleLittleGirl">Little Girl</span></label>
+            <label><input type="checkbox" value="thief" onchange="updateRoles()"> 🎭 <span id="roleThief">Thief</span></label>
+          </div>
+
+          <div class="rule-group">
+            <label id="labelDayTimer">Day Phase Duration (seconds)</label>
+            <input type="number" id="dayTimer" min="10" max="300" value="60" onchange="updateGameConfig()">
+          </div>
+
+          <div class="rule-group">
+            <label id="labelNightTimer">Night Phase Duration (seconds)</label>
+            <input type="number" id="nightTimer" min="10" max="300" value="45" onchange="updateGameConfig()">
+          </div>
+        </div>
+
+        <div id="readySection" style="margin-top:2rem;">
+          <button class="btn" id="btnStartGame" onclick="startGame()" style="width:100%; padding:1rem; font-size:1.1rem;">Start Game</button>
+        </div>
+      </div>
+
+      <div id="gameplayView" style="width:100%; display:none;">
+        <div class="phase-title" id="phaseTitle">Night</div>
+        <div class="phase-description" id="phaseDescription"></div>
+        <div class="phase-timer" id="timer">45</div>
+        <div class="action-buttons" id="actionButtons"></div>
+        
+        <div class="players-list" id="playersList"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Chat -->
+    <div class="chat-panel">
+      <div class="chat-header" id="chatTitle">Game Chat</div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Type message..." onkeypress="if(event.key==='Enter') sendChat()">
+        <button onclick="sendChat()" id="btnSend">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FIREBASE CONFIG -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+
+<script>
+// ===== TRANSLATIONS =====
+const TRANSLATIONS = {
+  en: {
+    loginTitle: 'Loup-Garou', loginSubtitle: 'Join the game of deception and survival',
+    labelName: 'Your Name', labelRoom: 'Room Code', btnJoin: 'Join Game', btnCreate: 'Create Room',
+    labelPhase: 'Phase:', labelPlayers: 'Players:', labelStatus: 'Status:',
+    currentPhase: 'Waiting...', labelAlive: 'Alive:', labelDead: 'Dead:', labelWolves: 'Wolves:', labelVillagers: 'Villagers:',
+    yourRoleTitle: 'Your Role', setupTitle: 'Game Setup', labelNumPlayers: 'Number of Players (4-12)',
+    labelRoles: 'Select Roles', labelDayTimer: 'Day Phase Duration (seconds)', labelNightTimer: 'Night Phase Duration (seconds)',
+    btnStartGame: 'Start Game', chatTitle: 'Game Chat', btnSend: 'Send', gameTitle: 'Loup-Garou',
+    panelTitle: 'Game Info', phaseNight: 'Night Phase', phaseDay: 'Day Phase',
+    roleWerewolf: 'Werewolf', roleSeer: 'Seer', roleWitch: 'Witch', roleHunter: 'Hunter',
+    roleCupid: 'Cupid', roleLittleGirl: 'Little Girl', roleThief: 'Thief', roleVillager: 'Villager',
+  },
+  fr: {
+    loginTitle: 'Loup-Garou', loginSubtitle: 'Rejoignez le jeu de la tromperie et la survie',
+    labelName: 'Votre nom', labelRoom: 'Code de la salle', btnJoin: 'Rejoindre', btnCreate: 'Créer une salle',
+    labelPhase: 'Phase:', labelPlayers: 'Joueurs:', labelStatus: 'État:',
+    currentPhase: 'En attente...', labelAlive: 'Vivants:', labelDead: 'Morts:', labelWolves: 'Loups:', labelVillagers: 'Villageois:',
+    yourRoleTitle: 'Votre rôle', setupTitle: 'Configuration du jeu', labelNumPlayers: 'Nombre de joueurs (4-12)',
+    labelRoles: 'Sélectionner les rôles', labelDayTimer: 'Durée phase jour (secondes)', labelNightTimer: 'Durée phase nuit (secondes)',
+    btnStartGame: 'Démarrer le jeu', chatTitle: 'Chat du jeu', btnSend: 'Envoyer', gameTitle: 'Loup-Garou',
+    panelTitle: 'Infos du jeu', phaseNight: 'Phase de nuit', phaseDay: 'Phase de jour',
+    roleWerewolf: 'Loup-Garou', roleSeer: 'Voyante', roleWitch: 'Sorcière', roleHunter: 'Chasseur',
+    roleCupid: 'Cupidon', roleLittleGirl: 'Petite Fille', roleThief: 'Voleur', roleVillager: 'Villageois',
+  },
+  ar: {
+    loginTitle: 'ذئب البشر', loginSubtitle: 'انضم إلى لعبة الخداع والبقاء',
+    labelName: 'اسمك', labelRoom: 'كود الغرفة', btnJoin: 'انضم', btnCreate: 'إنشاء غرفة',
+    labelPhase: 'المرحلة:', labelPlayers: 'اللاعبون:', labelStatus: 'الحالة:',
+    currentPhase: 'قيد الانتظار...', labelAlive: 'أحياء:', labelDead: 'أموات:', labelWolves: 'ذئاب:', labelVillagers: 'القرويون:',
+    yourRoleTitle: 'دورك', setupTitle: 'إعداد اللعبة', labelNumPlayers: 'عدد اللاعبين (4-12)',
+    labelRoles: 'اختر الأدوار', labelDayTimer: 'مدة مرحلة النهار (ثواني)', labelNightTimer: 'مدة مرحلة الليل (ثواني)',
+    btnStartGame: 'ابدأ اللعبة', chatTitle: 'دردشة اللعبة', btnSend: 'أرسل', gameTitle: 'ذئب البشر',
+    panelTitle: 'معلومات اللعبة', phaseNight: 'مرحلة الليل', phaseDay: 'مرحلة النهار',
+    roleWerewolf: 'ذئب البشر', roleSeer: 'العرافة', roleWitch: 'الساحرة', roleHunter: 'الصياد',
+    roleCupid: 'كيوبيد', roleLittleGirl: 'الفتاة الصغيرة', roleThief: 'اللص', roleVillager: 'القروي',
+  }
+};
+
+const ROLE_DESCRIPTIONS = {
+  en: {
+    werewolf: 'Each night, you and other wolves choose a victim to eliminate. Stay hidden among villagers.',
+    seer: 'Each night, you can see the true role of one player.',
+    witch: 'You have a heal potion and a death potion. Use wisely.',
+    hunter: 'When you die, you kill another player with your last arrow.',
+    cupid: 'Choose two lovers at the start. If one dies, the other dies too.',
+    littlegirl: 'You can peek at wolves during the night, but be careful not to be seen.',
+    thief: 'At the start, swap your card with one of the remaining cards.',
+    villager: 'No special power. Use voting and deduction to find the wolves.'
+  },
+  fr: {
+    werewolf: 'Chaque nuit, vous et les autres loups choisissez une victime. Restez caché.',
+    seer: 'Chaque nuit, vous pouvez voir le vrai rôle d\'un joueur.',
+    witch: 'Vous avez une potion de guérison et une potion de mort.',
+    hunter: 'Quand vous mourez, vous tuez un autre joueur.',
+    cupid: 'Choisissez deux amoureux au début. Si l\'un meurt, l\'autre meurt aussi.',
+    littlegirl: 'Vous pouvez regarder les loups la nuit, mais attention à ne pas être vu.',
+    thief: 'Au début, échangez votre carte avec l\'une des cartes restantes.',
+    villager: 'Aucun pouvoir spécial. Votez et déduisez pour trouver les loups.'
+  },
+  ar: {
+    werewolf: 'كل ليلة، أنت والذئاب الآخرون تختارون ضحية. ابق مختبئاً.',
+    seer: 'كل ليلة، يمكنك رؤية الدور الحقيقي لاعب واحد.',
+    witch: 'لديك جرعة شفاء وجرعة وفاة.',
+    hunter: 'عندما تموت، تقتل لاعباً آخر بسهمك الأخير.',
+    cupid: 'اختر اثنين من العشاق في البداية. إذا مات أحدهما، يموت الآخر أيضاً.',
+    littlegirl: 'يمكنك النظر إلى الذئاب في الليل، لكن احذر من أن يراك أحد.',
+    thief: 'في البداية، استبدل بطاقتك بإحدى البطاقات المتبقية.',
+    villager: 'لا توجد قوة خاصة. صوت واستنتج لإيجاد الذئاب.'
+  }
+};
+
+const ROLES = {
+  werewolf: { emoji: '🐺', team: 'werewolf' },
+  seer: { emoji: '🔮', team: 'village' },
+  witch: { emoji: '🧪', team: 'village' },
+  hunter: { emoji: '🏹', team: 'village' },
+  cupid: { emoji: '💘', team: 'village' },
+  littlegirl: { emoji: '👧', team: 'village' },
+  thief: { emoji: '🎭', team: 'village' },
+  villager: { emoji: '🧑‍🌾', team: 'village' }
+};
+
+// ===== STATE =====
+let lang = 'en';
+let db = null;
+let playerId = null;
+let playerName = null;
+let roomCode = null;
+let gameState = null;
+let myRole = null;
+let isLeader = false;
+let gameConfig = { numPlayers: 6, roles: ['werewolf', 'seer', 'witch', 'villager'], dayTimer: 60, nightTimer: 45 };
+
+// ===== FIREBASE INIT =====
+function initFirebase() {
+  const config = {
+    apiKey: "AIzaSyBwGygunwwrPa60-qp9MFVo6EoUZFFOw1E",
+    authDomain: "aminestore-42df8.firebaseapp.com",
+    databaseURL: "https://aminestore-42df8-default-rtdb.firebaseio.com",
+    projectId: "aminestore-42df8",
+  };
+  
+  if (!firebase.apps.length) {
+    firebase.initializeApp(config);
+  }
+  db = firebase.database();
+}
+
+// ===== LANGUAGE =====
+function setLanguage(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+  updateUI();
+}
+
+function t(key) {
+  return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key] || key;
+}
+
+function updateUI() {
+  document.getElementById('loginTitle').textContent = t('loginTitle');
+  document.getElementById('loginSubtitle').textContent = t('loginSubtitle');
+  document.getElementById('labelName').textContent = t('labelName');
+  document.getElementById('labelRoom').textContent = t('labelRoom');
+  document.getElementById('btnJoin').textContent = t('btnJoin');
+  document.getElementById('btnCreate').textContent = t('btnCreate');
+  // Add more translations as needed
+}
+
+// ===== LOGIN =====
+function showLoginScreen() {
+  const langSel = document.getElementById('langSelector');
+  langSel.innerHTML = ['en', 'fr', 'ar'].map(l => 
+    `<button class="lang-btn${l === lang ? ' active' : ''}" onclick="setLanguage('${l}')">${l.toUpperCase()}</button>`
+  ).join('');
+  
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  updateUI();
+}
+
+function createGame() {
+  playerId = 'player_' + Date.now();
+  playerName = document.getElementById('playerName').value.trim();
+  if (!playerName) { alert(t('labelName')); return; }
+  
+  roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  isLeader = true;
+  joinGameRoom();
+}
+
+function joinGame() {
+  playerId = 'player_' + Date.now();
+  playerName = document.getElementById('playerName').value.trim();
+  roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
+  if (!playerName || !roomCode) { alert('Please fill all fields'); return; }
+  
+  isLeader = false;
+  joinGameRoom();
+}
+
+async function joinGameRoom() {
+  initFirebase();
+  
+  const roomRef = db.ref(`games/${roomCode}`);
+  roomRef.once('value', async (snap) => {
+    if (!snap.exists() && !isLeader) {
+      alert('Room not found!');
+      return;
+    }
+    
+    if (!snap.exists()) {
+      // Create new game
+      await roomRef.set({
+        code: roomCode,
+        leader: playerId,
+        status: 'setup',
+        phase: 'setup',
+        players: {},
+        config: gameConfig,
+        chat: [],
+        createdAt: Date.now()
+      });
+    }
+    
+    // Add player
+    await roomRef.child(`players/${playerId}`).set({
+      id: playerId,
+      name: playerName,
+      alive: true,
+      role: null,
+      joinedAt: Date.now()
+    });
+    
+    // Listen to game updates
+    roomRef.on('value', (snap) => {
+      gameState = snap.val();
+      updateGameView();
+    });
+    
+    // Show game screen
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+  });
+}
+
+// ===== GAME CONFIG =====
+function updateGameConfig() {
+  const numPlayers = parseInt(document.getElementById('numPlayers').value);
+  const dayTimer = parseInt(document.getElementById('dayTimer').value);
+  const nightTimer = parseInt(document.getElementById('nightTimer').value);
+  
+  gameConfig = { ...gameConfig, numPlayers, dayTimer, nightTimer };
+  
+  if (isLeader) {
+    db.ref(`games/${roomCode}/config`).set(gameConfig);
+  }
+}
+
+function updateRoles() {
+  const selected = [];
+  document.querySelectorAll('.rule-group input[type="checkbox"]:checked').forEach(cb => {
+    if (cb.value) selected.push(cb.value);
+  });
+  gameConfig.roles = selected;
+  
+  if (isLeader) {
+    db.ref(`games/${roomCode}/config`).set(gameConfig);
+  }
+}
+
+// ===== GAME START =====
+function startGame() {
+  if (!isLeader) return;
+  if (Object.keys(gameState.players).length < 4) { alert('Need at least 4 players'); return; }
+  
+  const players = Object.values(gameState.players);
+  const roles = assignRoles(players.length);
+  
+  players.forEach((p, idx) => {
+    db.ref(`games/${roomCode}/players/${p.id}/role`).set(roles[idx]);
+  });
+  
+  db.ref(`games/${roomCode}`).update({
+    status: 'playing',
+    phase: 'night',
+    phaseStart: Date.now(),
+    dayNum: 0
+  });
+}
+
+function assignRoles(numPlayers) {
+  let availableRoles = [...gameConfig.roles];
+  const roles = [];
+  
+  // Ensure at least 1 werewolf
+  if (availableRoles.includes('werewolf')) {
+    roles.push('werewolf');
+    availableRoles = availableRoles.filter(r => r !== 'werewolf');
+  }
+  
+  // Fill rest with random roles, default to villager
+  while (roles.length < numPlayers) {
+    if (availableRoles.length > 0) {
+      const r = availableRoles[Math.floor(Math.random() * availableRoles.length)];
+      roles.push(r);
+      availableRoles = availableRoles.filter(x => x !== r);
+    } else {
+      roles.push('villager');
+    }
+  }
+  
+  return roles.sort(() => Math.random() - 0.5);
+}
+
+// ===== GAME VIEW UPDATE =====
+function updateGameView() {
+  if (!gameState) return;
+  
+  // Update header
+  document.getElementById('playerCount').textContent = `${Object.keys(gameState.players).length}/12`;
+  
+  // Show setup or gameplay
+  if (gameState.status === 'setup') {
+    document.getElementById('setupView').style.display = 'block';
+    document.getElementById('gameplayView').style.display = 'none';
+    document.getElementById('gameStatus').textContent = 'Setup';
+    
+    if (isLeader) {
+      document.getElementById('readySection').style.display = 'block';
+    } else {
+      document.getElementById('readySection').style.display = 'none';
+    }
+  } else if (gameState.status === 'playing') {
+    document.getElementById('setupView').style.display = 'none';
+    document.getElementById('gameplayView').style.display = 'flex';
+    document.getElementById('gameStatus').textContent = 'Playing';
+    
+    const myPlayer = gameState.players[playerId];
+    if (myPlayer?.role) {
+      myRole = myPlayer.role;
+      const role = ROLES[myRole];
+      document.getElementById('roleIcon').textContent = role.emoji;
+      document.getElementById('roleName').textContent = t(`role${myRole.charAt(0).toUpperCase() + myRole.slice(1)}`);
+      document.getElementById('roleDesc').textContent = ROLE_DESCRIPTIONS[lang][myRole];
+    }
+    
+    // Update players list
+    updatePlayersList();
+    updateStats();
+    updatePhaseInfo();
+    updateTimer();
+  }
+  
+  // Update chat
+  updateChat();
+}
+
+function updatePlayersList() {
+  const list = document.getElementById('playersList');
+  const players = Object.values(gameState.players);
+  
+  list.innerHTML = `<h3 style="color:var(--moon); margin-bottom:1rem;">${t('labelPlayers')}</h3>` + 
+    players.map(p => `
+      <div class="player-item">
+        <div class="player-status${p.alive ? ' alive' : ' dead'}"></div>
+        <div class="player-name">${p.name}</div>
+        ${playerId === p.id ? '<div style="color:var(--moon); font-size:.8rem;">(You)</div>' : ''}
+      </div>
+    `).join('');
+}
+
+function updateStats() {
+  const players = Object.values(gameState.players);
+  const alive = players.filter(p => p.alive);
+  const dead = players.filter(p => !p.alive);
+  const wolves = alive.filter(p => ROLES[p.role]?.team === 'werewolf');
+  const villagers = alive.filter(p => ROLES[p.role]?.team === 'village');
+  
+  document.getElementById('aliveCount').textContent = alive.length;
+  document.getElementById('deadCount').textContent = dead.length;
+  document.getElementById('wolfCount').textContent = wolves.length;
+  document.getElementById('villagerCount').textContent = villagers.length;
+}
+
+function updatePhaseInfo() {
+  const phase = gameState.phase;
+  const phaseTitle = document.getElementById('phaseTitle');
+  const phaseDesc = document.getElementById('phaseDescription');
+  
+  if (phase === 'night') {
+    phaseTitle.textContent = t('phaseNight');
+    phaseDesc.textContent = myRole === 'werewolf' ? 
+      'Choose a victim to eliminate' : 
+      myRole === 'seer' ? 'Choose a player to investigate' :
+      myRole === 'witch' ? 'Use your potions' :
+      'The night unfolds...';
+  } else if (phase === 'day') {
+    phaseTitle.textContent = t('phaseDay');
+    phaseDesc.textContent = 'Vote to eliminate a player';
+  }
+}
+
+function updateTimer() {
+  if (!gameState.phaseStart) return;
+  const elapsed = (Date.now() - gameState.phaseStart) / 1000;
+  const duration = gameState.phase === 'night' ? gameConfig.nightTimer : gameConfig.dayTimer;
+  const remaining = Math.max(0, Math.ceil(duration - elapsed));
+  document.getElementById('timer').textContent = remaining;
+  
+  if (remaining > 0) {
+    setTimeout(updateTimer, 1000);
+  }
+}
+
+function updateChat() {
+  const chatEl = document.getElementById('chatMessages');
+  if (!gameState.chat) return;
+  
+  chatEl.innerHTML = gameState.chat.map(msg => `
+    <div class="chat-message">
+      <div class="player-name">${msg.player}</div>
+      <div class="message-text">${msg.text}</div>
+    </div>
+  `).join('');
+  
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const messages = gameState.chat || [];
+  messages.push({ player: playerName, text, time: Date.now() });
+  
+  db.ref(`games/${roomCode}/chat`).set(messages);
+  input.value = '';
+}
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  initFirebase();
+  showLoginScreen();
+});
+</script>
+</body>
+</html>

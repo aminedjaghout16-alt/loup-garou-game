@@ -1,0 +1,20 @@
+{
+  "name": "loup-garou-game",
+  "version": "1.0.0",
+  "description": "Multiplayer Loup-Garou (Werewolf) game with real-time Firebase sync",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "echo 'Open index.html in browser'"
+  },
+  "keywords": [
+    "game",
+    "loup-garou",
+    "werewolf",
+    "multiplayer",
+    "firebase",
+    "real-time"
+  ],
+  "author": "",
+  "license": "MIT"
+}
