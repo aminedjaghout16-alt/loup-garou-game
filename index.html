@@ -1,146 +1,3 @@
-
-
-
-
-New Task
-⌘K
-
-Search
-
-Studio
-Beta
-
-CLI
-Beta
-
-Computer
-
-Drive
-
-Toolbox
-
-Your Tasks
-
-Mafia Game Mechanics and Features Development
-
-there stil
-
-Web Preview
-
-Share
-
-Save to Knowledge
-
-359.05
-
-Amine Dja
-there still a problems after the first vote we cant vote again, and i told u when the role finish his jjob the timer stops and goes to the next role , i want to add a village president idk how to say it on french we pronounce it as mire this can skip the day phase and skip vote he has 2 votes to choose this mire we have to vote for him and to يترشح for the mire he has to press a bottun this can be anyone it doesnt metter if hes against the village or not , and i want to add a special chat for the teams for example the wolves can chat together on the chat but the village cant see it do this for all the roles that plays together except the villagers
-
-3:51 PM
-
-
-index (10).html
-
-HTML
-
-
-8 Actions
-I've read the entire file. Let me analyze the issues and implement all the changes. There are several things to fix and add:
-
-Voting bug - Day votes are stored in nightActions causing conflicts; _lastStepId prevents re-advancement
-Timer should stop when role finishes - Need to advance immediately when a role acts
-Add Maire (Mayor) - Election, 2 votes, can skip day phase
-Team chat - Private channels for wolves, sisters, brothers
-Let me build the complete fix.
-
-
-Copy
-Bash
-Now I'll make the changes systematically. This is a large refactor, so I'll work through it section by section.
-
-
-65 Actions
-All changes have been implemented. Let me verify the file and serve it for preview.
-
-
-4 Actions
-Let me also verify the key code sections are correct by checking a few critical parts.
-
-
-5 Actions
-Grep
-Skipped
-Grep
-Skipped
-Grep
-Skipped
-Grep
-Skipped
-Bash
-All the features are properly integrated. Here's a summary of everything that was changed:
-
-Bug Fixes
-Voting bug fixed: Day votes now use a dedicated dayVotes object instead of sharing nightActions. This prevents conflicts between night actions and day votes across rounds.
-_lastStepId reset: Now properly resets when a new night begins, preventing the turn system from getting stuck.
-Leader detection for turn completion: The Firebase listener now calls checkTurnComplete() (night) and checkDayVoteComplete() (day) so turns advance immediately when all players act, not just when the timer expires.
-Maire (Mayor) Feature
-Any alive player can press "Se présenter" to run for Maire
-Players vote to elect the Maire (leader can also skip the election)
-The Maire's vote counts as 2 votes during elimination
-The Maire can skip the entire day phase (no elimination)
-When the Maire dies, they choose a successor
-A crown icon appears next to the Maire's name in the player list
-Full translations in EN/FR/AR
-Team Chat
-Tabbed chat system with color-coded channels:
-General (gold) - all players, day phase only
-Wolves (red) - werewolf team only, always available
-Sisters (green) - Two Sisters only
-Brothers (blue) - Three Brothers only
-Each team can strategize privately without other players seeing their messages
-Chat tabs only appear for channels the player has access to
-
-Copy
-How was this result?
-
-
-
-
-
-did u change only the code? if yes send only the code
-
-4:05 PM
-
-Yes, it's all in the single HTML file (HTML + CSS + JS together, same structure as before). Here it is:
-
-
-index.html
-
-HTML
-
-That's the complete file with all changes embedded - same single-file structure as your original.
-
-How was this result?
-
-
-
-
-
-All files
-Reply...
-
-
-
-AI may produce inaccurate information. Please verify important details.
-
-index.html
-
-
-
-Download
-
-Share
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -816,9 +673,14 @@ async function enterRoom(){
     ref.on('value', snap=>{
       gameState=snap.val();
       if(gameState?.config) cfg=gameState.config;
-      renderGame();
-      if(isLeader && gameState?.phase==='night') checkTurnComplete();
-      if(isLeader && gameState?.phase==='day') checkDayVoteComplete();
+      try{ renderGame(); }catch(e){ console.error('renderGame error',e); }
+      try{
+        if(isLeader && gameState?.status==='playing'){
+          if(gameState.phase==='night') checkTurnComplete();
+          else if(gameState.phase==='day') checkDayVoteComplete();
+          if(gameState.maireSkipDay) skipToNight();
+        }
+      }catch(e){ console.error('turn check error',e); }
     });
     showGame();
   }catch(ex){
@@ -890,11 +752,18 @@ function doStartGame(){
     upd[`games/${roomCode}/phase`]='night';
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
-    db.ref().update(upd);
+    upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+    upd[`games/${roomCode}/nightActions`]={};
+    upd[`games/${roomCode}/dayVotes`]=null;
+    upd[`games/${roomCode}/maireElectionDone`]=true;
+    db.ref().update(upd,()=>{
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },500);
+    });
   } else {
     players.forEach((p,i)=>{ gameState.players[p.id].role=roles[i]; });
-    Object.assign(gameState,{status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1});
+    Object.assign(gameState,{status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},nightActions:{},dayVotes:null,maireElectionDone:true});
     renderGame();
+    setTimeout(()=>advanceNightTurn(0),500);
   }
 }
 
@@ -1322,6 +1191,7 @@ function submitWitch(type, targetId){
 // TURN ADVANCEMENT (leader only)
 // ════════════════════════════════════════════
 let _lastStepId=null; // prevent re-triggering
+let _advancingNight=false; // prevent racing calls
 
 function checkTurnComplete(){
   if(!isLeader) return;
@@ -1329,8 +1199,14 @@ function checkTurnComplete(){
 
   const turn=gameState.nightTurn||{};
   const stepId=turn.stepId;
-  if(!stepId) { advanceNightTurn(0); return; }
+  if(!stepId) {
+    if(_advancingNight) return;
+    _advancingNight=true;
+    advanceNightTurn(0);
+    return;
+  }
   if(stepId===_lastStepId) return; // already processed
+  _advancingNight=false;
 
   const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
   if(!step) { advanceNightTurnFromCurrent(); return; }
@@ -1356,12 +1232,13 @@ function advanceNightTurn(idx, queue){
   if(!queue) queue=buildNightQueue(gameState, gameState.dayNum||1);
   if(idx===0) _lastStepId=null;
   if(idx>=queue.length){
-    // All turns done → resolve night → go to day
+    _advancingNight=false;
     resolveNightAndAdvance();
     return;
   }
   const step=queue[idx];
   const update={ stepId:step.id, stepIndex:idx, turnStart:Date.now() };
+  _advancingNight=false;
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/nightTurn`).set(update);
   } else if(gameState){
@@ -1437,7 +1314,7 @@ function resolveNightAndAdvance(){
   upd[`games/${roomCode}/dayNum`]=nextDay;
   upd[`games/${roomCode}/nightTurn`]={stepId:null};
   upd[`games/${roomCode}/dayVotes`]=null;
-  upd[`games/${roomCode}/maireElectionDone`]=null;
+  upd[`games/${roomCode}/maireElectionDone`]=false;
   upd[`games/${roomCode}/maireElection`]=null;
   // If maire was killed during the night, trigger successor choice
   if(gs.maire && killSet.has(gs.maire)){
@@ -1454,7 +1331,7 @@ function resolveNightAndAdvance(){
     db.ref().update(upd);
   } else {
     killSet.forEach(id=>{ if(gs.players[id]) gs.players[id].alive=false; });
-    Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},dayVotes:null,maireElectionDone:null,maireElection:null,nightActions:{
+    Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},dayVotes:null,maireElectionDone:false,maireElection:null,nightActions:{
       _saviorLast: saviorAction?.target||null,
       _bodyguardLast: bodyguardProtected||null,
       _fluteEnchanted: actions._fluteEnchanted||[],
@@ -1488,35 +1365,10 @@ function renderDayVoting(){
     return;
   }
 
-  // Maire election phase (only if no alive maire and no election completed yet this day)
+  // Maire election phase (only if no alive maire and election not yet done this day)
   if(!maireAlive && !gameState.maireElectionDone){
-    if(!election.phase){
-      // Show option to start candidacy
-      ab.innerHTML=`<div class="maire-section"><h4>👑 ${tr('maire_election')}</h4>`;
-      ab.innerHTML+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="runForMaire()">${tr('maire_run')}</button>`;
-      if(isLeader) ab.innerHTML+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="startMaireVote()">${tr('maire_start_vote')}</button>`;
-      if(isLeader) ab.innerHTML+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="skipMaireElection()">${tr('maire_skip_election')}</button>`;
-      // Show current candidates
-      const candidates=election.candidates||[];
-      if(candidates.length){
-        const names=candidates.map(id=>gameState.players?.[id]?.name||'?').join(', ');
-        ab.innerHTML+=`<div style="margin-top:.5rem;font-size:.85rem;color:var(--moon-pale)">${tr('maire_candidates')} ${names}</div>`;
-      }
-      ab.innerHTML+=`</div>`;
-      return;
-    }
-    if(election.phase==='candidacy'){
-      const candidates=election.candidates||[];
-      const names=candidates.map(id=>gameState.players?.[id]?.name||'?').join(', ');
-      ab.innerHTML=`<div class="maire-section"><h4>👑 ${tr('maire_election')}</h4>`;
-      ab.innerHTML+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="runForMaire()">${tr('maire_run')}</button>`;
-      if(isLeader) ab.innerHTML+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="startMaireVote()">${tr('maire_start_vote')}</button>`;
-      if(isLeader) ab.innerHTML+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="skipMaireElection()">${tr('maire_skip_election')}</button>`;
-      if(candidates.length) ab.innerHTML+=`<div style="margin-top:.5rem;font-size:.85rem;color:var(--moon-pale)">${tr('maire_candidates')} ${names}</div>`;
-      ab.innerHTML+=`</div>`;
-      return;
-    }
     if(election.phase==='voting'){
+      // Active voting for maire — blocks elimination vote
       const candidates=election.candidates||[];
       const votes=election.votes||{};
       const myVote=votes[myId];
@@ -1524,17 +1376,30 @@ function renderDayVoting(){
         const votedName=gameState.players?.[myVote]?.name||'?';
         ab.innerHTML=`<div class="maire-section"><h4>👑 ${tr('maire_election')}</h4><div style="color:var(--green)">✓ ${tr('maire_vote_for')}: ${votedName}</div></div>`;
       } else {
-        ab.innerHTML=`<div class="maire-section"><h4>👑 ${tr('maire_vote_for')}</h4><div class="candidate-list"></div></div>`;
-        const cl=ab.querySelector('.candidate-list');
+        const wrapper=document.createElement('div');
+        wrapper.className='maire-section';
+        wrapper.innerHTML=`<h4>👑 ${tr('maire_vote_for')}</h4><div class="candidate-list"></div>`;
+        ab.appendChild(wrapper);
+        const cl=wrapper.querySelector('.candidate-list');
         candidates.forEach(id=>{
           const name=gameState.players?.[id]?.name||'?';
           addBtn(cl,name,'special',()=>voteMaire(id));
         });
       }
-      // Check if all voted
       if(isLeader) checkMaireVoteComplete();
-      return;
+      return; // block elimination vote while maire voting is active
     }
+    // Candidacy or no phase yet — show as a small section, does NOT block voting below
+    const candidates=election.candidates||[];
+    const names=candidates.map(id=>gameState.players?.[id]?.name||'?').join(', ');
+    let maireHtml=`<div class="maire-section"><h4>👑 ${tr('maire_election')}</h4>`;
+    maireHtml+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="runForMaire()">${tr('maire_run')}</button>`;
+    if(isLeader && candidates.length>0) maireHtml+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="startMaireVote()">${tr('maire_start_vote')}</button>`;
+    if(isLeader) maireHtml+=`<button class="btn btn-secondary" style="font-size:.82rem;margin:.3rem" onclick="skipMaireElection()">${tr('maire_skip_election')}</button>`;
+    if(candidates.length) maireHtml+=`<div style="margin-top:.5rem;font-size:.85rem;color:var(--moon-pale)">${tr('maire_candidates')} ${names}</div>`;
+    maireHtml+=`</div>`;
+    ab.innerHTML=maireHtml;
+    // Do NOT return — fall through to show elimination voting below
   }
 
   // Normal elimination voting
@@ -1714,8 +1579,7 @@ function skipToNight(){
   upd[`games/${roomCode}/dayNum`]=nextNight;
   upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
   upd[`games/${roomCode}/dayVotes`]=null;
-  upd[`games/${roomCode}/maireElectionDone`]=null;
-  upd[`games/${roomCode}/maireSkipDay`]=null;
+  upd[`games/${roomCode}/maireElectionDone`]=false;
   upd[`games/${roomCode}/nightActions`]={
     _saviorLast: actions._saviorLast||null,
     _bodyguardLast: actions._bodyguardLast||null,
@@ -1727,7 +1591,7 @@ function skipToNight(){
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     });
   } else {
-    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},dayVotes:null,maireElectionDone:null,maireSkipDay:null});
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},dayVotes:null,maireElectionDone:false,maireSkipDay:null});
     gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
     renderGame();
     setTimeout(()=>advanceNightTurn(0),800);
@@ -1806,7 +1670,7 @@ function resolveDayAndAdvance(){
   upd[`games/${roomCode}/dayNum`]=nextNight;
   upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
   upd[`games/${roomCode}/dayVotes`]=null;
-  upd[`games/${roomCode}/maireElectionDone`]=null;
+  upd[`games/${roomCode}/maireElectionDone`]=false;
   upd[`games/${roomCode}/nightActions`]={
     _saviorLast: actions._saviorLast||null,
     _bodyguardLast: actions._bodyguardLast||null,
@@ -1820,7 +1684,7 @@ function resolveDayAndAdvance(){
     });
   } else {
     Object.entries(upd).forEach(([k,v])=>{});
-    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},dayVotes:null,maireElectionDone:null});
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},dayVotes:null,maireElectionDone:false});
     gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
     renderGame();
     setTimeout(()=>advanceNightTurn(0),800);
@@ -1856,7 +1720,15 @@ function tick(){
     if(ph==='night'){
       if(isLeader) autoSkipTurn();
     } else {
-      if(isLeader) checkDayVoteComplete() || resolveDayAndAdvance();
+      if(isLeader){
+        checkDayVoteComplete();
+        // If not all voted, force resolve anyway (timer expired)
+        const dayVotes=gameState.dayVotes||{};
+        const players=Object.values(gameState.players||{});
+        const alive=players.filter(p=>p.alive);
+        const allVoted=alive.every(p=>!!dayVotes[p.id]);
+        if(!allVoted) resolveDayAndAdvance();
+      }
     }
   }
 }
