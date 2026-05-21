@@ -129,6 +129,21 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
   .left-panel,.right-panel{flex:none}
   .roles-grid{max-height:260px}
 }
+
+/* ── DEATH ANIMATION OVERLAY ── */
+#deathOverlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0);pointer-events:none}
+#deathOverlay.active{display:flex;pointer-events:all;animation:deathBgIn .6s ease forwards}
+@keyframes deathBgIn{to{background:rgba(0,0,0,.85)}}
+.death-card{text-align:center;transform:scale(0);opacity:0;animation:deathCardIn .7s .3s ease forwards}
+@keyframes deathCardIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.1) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+.death-card .death-emoji{font-size:5rem;margin-bottom:.8rem;filter:grayscale(1);animation:deathSkull 1.5s .8s ease infinite}
+@keyframes deathSkull{0%,100%{filter:grayscale(1) drop-shadow(0 0 10px rgba(139,0,0,.5))}50%{filter:grayscale(0) drop-shadow(0 0 25px rgba(139,0,0,.9))}}
+.death-card .death-name{font-family:'Cinzel Decorative',serif;font-size:2.4rem;color:var(--blood-glow);margin-bottom:.5rem;text-shadow:0 0 20px rgba(139,0,0,.6)}
+.death-card .death-role{font-size:1.1rem;color:var(--moon-pale);margin-bottom:.3rem;opacity:0;animation:deathFadeIn .5s 1.2s ease forwards}
+.death-card .death-label{font-size:1rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1s ease forwards;margin-bottom:.4rem}
+.death-card .death-rip{font-family:'Cinzel',serif;font-size:1.4rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1.5s ease forwards;letter-spacing:.15em;margin-top:.6rem}
+@keyframes deathFadeIn{to{opacity:1}}
+.death-card .death-blood-line{width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--blood-glow),transparent);margin:.5rem auto;opacity:0;animation:deathFadeIn .5s 1.4s ease forwards}
 </style>
 </head>
 <body>
@@ -170,6 +185,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
       <div><span id="t_lplayers">Players:</span> <span id="hPlayers">0</span></div>
       <div><span id="t_lroom">Room:</span> <span id="hRoom" style="font-family:monospace;letter-spacing:.12em;color:var(--moon-pale)">—</span></div>
       <div><span id="t_lstatus">Status:</span> <span id="hStatus">—</span></div>
+      <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
     </div>
     <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
   </div>
@@ -236,6 +252,17 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 </div>
 
 <!-- Firebase compat (exposes global `firebase`) -->
+<!-- ══ DEATH OVERLAY ══ -->
+<div id="deathOverlay">
+  <div class="death-card">
+    <div class="death-emoji" id="deathEmoji">💀</div>
+    <div class="death-label" id="deathLabel">Eliminated</div>
+    <div class="death-name" id="deathName"></div>
+    <div class="death-blood-line"></div>
+    <div class="death-role" id="deathRole"></div>
+    <div class="death-rip">R.I.P.</div>
+  </div>
+</div>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script>
@@ -541,6 +568,8 @@ let myId=null, myName=null, roomCode=null, gameState=null, myRole=null, isLeader
 let cfg={numPlayers:6, roles:['werewolf','seer','witch','villager'], dayTimer:60, nightTimer:45};
 let timerTO=null;
 let activeChatTab='general'; // 'general', 'wolves', 'twosisters', 'threebrothers'
+let _previousAlive={}; // track alive states for death animation
+let _gameOver=false; // prevent actions after game end
 
 // ════════════════════════════════════════════
 // PLAYER COLORS — unique color per player
@@ -556,6 +585,98 @@ function getPlayerColor(playerId){
   const ids=Object.keys(gameState.players).sort();
   const idx=ids.indexOf(playerId);
   return PLAYER_COLORS[idx % PLAYER_COLORS.length];
+}
+
+// ════════════════════════════════════════════
+// DEATH ANIMATION
+// ════════════════════════════════════════════
+function showDeathAnimation(playerName, playerRole){
+  const overlay=document.getElementById('deathOverlay');
+  const rd=ROLES_DEF[playerRole];
+  document.getElementById('deathEmoji').textContent='💀';
+  document.getElementById('deathName').textContent=playerName;
+  document.getElementById('deathRole').textContent=(rd?.e||'')+ ' ' + tr(playerRole||'villager');
+  document.getElementById('deathLabel').textContent=
+    lang==='ar'?'تم إقصاؤه':lang==='fr'?'Éliminé':'Eliminated';
+  overlay.classList.add('active');
+  setTimeout(()=>{
+    overlay.classList.remove('active');
+  }, 4000);
+}
+
+// Detect newly dead players and trigger animation
+function checkForDeaths(players){
+  if(!players||!gameState||gameState.status!=='playing') return;
+  const newDead=[];
+  players.forEach(p=>{
+    if(!p.alive && _previousAlive[p.id]===true){
+      newDead.push(p);
+    }
+  });
+  // Update tracking
+  players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
+  // Show animation for first newly dead player (queue if multiple)
+  if(newDead.length>0){
+    let delay=0;
+    newDead.forEach(p=>{
+      setTimeout(()=>showDeathAnimation(p.name, p.role), delay);
+      delay+=4200;
+    });
+  }
+}
+
+// ════════════════════════════════════════════
+// WIN CONDITION CHECK
+// ════════════════════════════════════════════
+function checkWinCondition(){
+  if(!gameState||gameState.status!=='playing') return null;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const wolves=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
+  const nonWolves=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+
+  // Wolves win: wolves >= non-wolves
+  if(wolves.length>0 && wolves.length>=nonWolves.length){
+    return {winner:'werewolf',
+      msg:lang==='ar'?'🐺 فاز الذئاب! سيطروا على القرية!':
+          lang==='fr'?'🐺 Les Loups-Garous gagnent ! Ils ont pris le contrôle du village !':
+                      '🐺 Werewolves win! They have taken over the village!'};
+  }
+  // Village wins: all wolves dead
+  if(wolves.length===0 && alive.length>0){
+    return {winner:'village',
+      msg:lang==='ar'?'🏘️ فاز القرويون! تم القضاء على جميع الذئاب!':
+          lang==='fr'?'🏘️ Les Villageois gagnent ! Tous les loups sont éliminés !':
+                      '🏘️ Villagers win! All werewolves have been eliminated!'};
+  }
+  return null;
+}
+
+function showGameOver(result){
+  _gameOver=true;
+  const playView=document.getElementById('playView');
+  playView.innerHTML=`
+    <div style="text-align:center;padding:2rem">
+      <div style="font-size:4rem;margin-bottom:1rem">${result.winner==='werewolf'?'🐺':'🏘️'}</div>
+      <div class="phase-title" style="color:${result.winner==='werewolf'?'var(--blood-glow)':'var(--green)'}">
+        ${result.winner==='werewolf'?(lang==='ar'?'فوز الذئاب!':lang==='fr'?'Victoire des Loups !':'Werewolves Win!'):(lang==='ar'?'فوز القرويين!':lang==='fr'?'Victoire du Village !':'Village Wins!')}
+      </div>
+      <div style="font-size:1.1rem;color:var(--ghost);margin:1rem 0">${result.msg}</div>
+      <div style="margin-top:1.5rem;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
+        <div style="color:var(--moon);font-family:'Cinzel',serif;margin-bottom:.6rem">${lang==='ar'?'جميع اللاعبين:':lang==='fr'?'Tous les joueurs :':'All Players:'}</div>
+        ${Object.values(gameState.players||{}).map(p=>{
+          const rd=ROLES_DEF[p.role];
+          return `<div class="pi" style="opacity:${p.alive?1:.5}">
+            <div class="pstatus ${p.alive?'alive':'dead'}"></div>
+            <span>${rd?.e||'?'}</span>
+            <div style="flex:1;font-weight:700">${p.name}</div>
+            <span style="color:var(--moon-pale);font-size:.8rem">${tr(p.role||'villager')}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn" style="margin-top:1.5rem;padding:.8rem 2rem" onclick="doLeave()">${lang==='ar'?'خروج':lang==='fr'?'Quitter':'Leave Game'}</button>
+    </div>`;
+  playView.style.display='flex';
 }
 
 // ════════════════════════════════════════════
@@ -731,6 +852,7 @@ function showGame(){
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
   document.getElementById('hRoom').textContent=roomCode;
+  document.getElementById('hPlayerName').textContent=myName||'';
   buildRolesGrid();
   applyTranslations();
 }
@@ -834,6 +956,23 @@ function renderGame(){
     document.getElementById('hStatus').textContent=tr('st_playing');
     document.getElementById('hPhase').textContent=gameState.phase==='night'?tr('ph_night'):tr('ph_day');
 
+    // Initialize alive tracking on first render
+    if(Object.keys(_previousAlive).length===0){
+      players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
+    }
+
+    // Check for newly dead players and show death animation
+    checkForDeaths(players);
+
+    // Check win condition
+    const winResult=checkWinCondition();
+    if(winResult){
+      showGameOver(winResult);
+      renderChat();
+      applyTranslations();
+      return;
+    }
+
     const me=gameState.players?.[myId];
     if(me?.role){
       myRole=me.role;
@@ -873,11 +1012,11 @@ function renderPlayerList(players){
     players.map(p=>{
       const pc=getPlayerColor(p.id);
       return `
-      <div class="pi">
+      <div class="pi" style="${p.id===myId?'border:1px solid var(--moon-pale);background:rgba(212,160,23,.12)':''}">
         <div class="pstatus ${p.alive?'alive':'dead'}"></div>
         <div style="width:12px;height:12px;border-radius:50%;background:${pc};flex-shrink:0;border:1px solid rgba(255,255,255,.2)"></div>
-        <div style="flex:1">${p.name}</div>
-        ${p.id===myId?`<span style="color:var(--moon);font-size:.75rem">${tr('you')}</span>`:''}
+        <div style="flex:1;font-weight:${p.id===myId?'700':'400'};font-size:${p.id===myId?'.95rem':'.88rem'};color:${p.id===myId?'var(--moon-pale)':'var(--ghost)'}">${p.name}</div>
+        ${p.id===myId?`<span style="color:var(--moon);font-size:.75rem;font-weight:700">${tr('you')}</span>`:''}
       </div>`;
     }).join('');
 }
@@ -1533,11 +1672,23 @@ function resolveDayAndAdvance(){
   upd[`games/${roomCode}/maireVotes`]=null;
 
   if(fbOk&&db&&roomCode){
+    // Also apply elimination locally before Firebase write for immediate feedback
+    Object.entries(upd).forEach(([path,val])=>{
+      const m=path.match(/players\/([^/]+)\/alive/);
+      if(m && val===false && gs.players[m[1]]) gs.players[m[1]].alive=false;
+    });
     db.ref().update(upd,()=>{
       // After write, kick off first night turn
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     });
   } else {
+    // Apply eliminations locally
+    Object.entries(upd).forEach(([path,val])=>{
+      const m=path.match(/players\/([^/]+)\/alive/);
+      if(m && val===false && gs.players[m[1]]) gs.players[m[1]].alive=false;
+      const m2=path.match(/players\/([^/]+)\/idiotRevealed/);
+      if(m2 && gs.players[m2[1]]) gs.players[m2[1]].idiotRevealed=true;
+    });
     Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
     gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
     gs.dayVotes={};
