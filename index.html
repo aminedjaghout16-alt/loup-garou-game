@@ -259,8 +259,37 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
     <div class="death-rip">R.I.P.</div>
   </div>
 </div>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+// Load Firebase with fallback CDNs
+(function(){
+  function loadScript(src, onload, onerror){
+    var s=document.createElement('script');
+    s.src=src; s.onload=onload; s.onerror=onerror;
+    document.head.appendChild(s);
+  }
+  var CDN1_APP='https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js';
+  var CDN2_APP='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-app-compat.min.js';
+  var CDN1_DB ='https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js';
+  var CDN2_DB ='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-database-compat.min.js';
+
+  function loadDB(onload){
+    loadScript(CDN1_DB, onload, function(){
+      console.warn('gstatic DB failed, trying jsDelivr');
+      loadScript(CDN2_DB, onload, function(){ console.error('All Firebase DB CDNs failed'); window._fbLoadFailed=true; });
+    });
+  }
+  loadScript(CDN1_APP,
+    function(){ loadDB(function(){ window._fbReady=true; }); },
+    function(){
+      console.warn('gstatic APP failed, trying jsDelivr');
+      loadScript(CDN2_APP,
+        function(){ loadDB(function(){ window._fbReady=true; }); },
+        function(){ console.error('All Firebase APP CDNs failed'); window._fbLoadFailed=true; }
+      );
+    }
+  );
+})();
+</script>
 <script>
 // ════════════════════════════════════════════
 // ROLES  (key → { emoji, team, default })
@@ -793,8 +822,7 @@ const FB_CONFIG={
 function initFB(){
   if(db) return; // already initialized
   try{
-    if(typeof firebase==='undefined'){
-      console.warn('Firebase SDK not loaded yet — will retry');
+    if(typeof firebase==='undefined' || !window._fbReady){
       fbOk=false; db=null;
       return;
     }
@@ -812,13 +840,21 @@ function initFB(){
 
 // Try to init Firebase once scripts have loaded
 function initFBWithRetry(callback, tries=0){
-  if(typeof firebase!=='undefined'){
+  // Use _fbReady flag set by our loader script
+  if(window._fbReady && typeof firebase!=='undefined'){
     initFB();
     if(callback) callback();
     return;
   }
-  if(tries>20){ // give up after ~2s, run callback anyway (offline mode)
-    console.warn('Firebase never loaded — running in offline mode');
+  // CDN completely failed — go offline
+  if(window._fbLoadFailed){
+    console.warn('Firebase CDN failed — running in offline mode');
+    if(callback) callback();
+    return;
+  }
+  // Still loading — wait up to 10 seconds (100 tries × 100ms)
+  if(tries>100){
+    console.warn('Firebase took too long — running in offline mode');
     if(callback) callback();
     return;
   }
