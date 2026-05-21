@@ -241,9 +241,9 @@ body {
   </div>
 </div>
 
-<!-- FIREBASE CONFIG -->
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+<!-- FIREBASE CONFIG (compat mode — exposes global `firebase` object) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
 <script>
 // ===== TRANSLATIONS =====
@@ -427,8 +427,6 @@ function joinGame() {
 }
 
 async function joinGameRoom() {
-  initFirebase();
-  
   if (!db || useLocalStorage) {
     // Use localStorage for offline mode
     useLocalStorageMode();
@@ -528,7 +526,7 @@ function updateGameConfig() {
   
   gameConfig = { ...gameConfig, numPlayers, dayTimer, nightTimer };
   
-  if (isLeader) {
+  if (isLeader && db && !useLocalStorage) {
     db.ref(`games/${roomCode}/config`).set(gameConfig);
   }
 }
@@ -540,7 +538,7 @@ function updateRoles() {
   });
   gameConfig.roles = selected;
   
-  if (isLeader) {
+  if (isLeader && db && !useLocalStorage) {
     db.ref(`games/${roomCode}/config`).set(gameConfig);
   }
 }
@@ -553,16 +551,19 @@ function startGame() {
   const players = Object.values(gameState.players);
   const roles = assignRoles(players.length);
   
-  players.forEach((p, idx) => {
-    db.ref(`games/${roomCode}/players/${p.id}/role`).set(roles[idx]);
-  });
-  
-  db.ref(`games/${roomCode}`).update({
-    status: 'playing',
-    phase: 'night',
-    phaseStart: Date.now(),
-    dayNum: 0
-  });
+  if (db && !useLocalStorage) {
+    players.forEach((p, idx) => {
+      db.ref(`games/${roomCode}/players/${p.id}/role`).set(roles[idx]);
+    });
+    db.ref(`games/${roomCode}`).update({
+      status: 'playing', phase: 'night', phaseStart: Date.now(), dayNum: 0
+    });
+  } else {
+    players.forEach((p, idx) => { gameState.players[p.id].role = roles[idx]; });
+    Object.assign(gameState, { status: 'playing', phase: 'night', phaseStart: Date.now(), dayNum: 0 });
+    localStorage.setItem(`game_${roomCode}`, JSON.stringify(gameState));
+    updateGameView();
+  }
 }
 
 function assignRoles(numPlayers) {
