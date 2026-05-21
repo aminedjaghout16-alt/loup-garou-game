@@ -212,8 +212,8 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
       <div class="setup-wrap" id="setupView">
         <h2 id="t_setup">Game Setup</h2>
         <div class="s-section">
-          <h4 id="t_nplayers">Number of Players (4–20)</h4>
-          <input type="number" id="cfgNum" min="4" max="20" value="6" onchange="cfgChanged()">
+          <h4 id="t_nplayers">Number of Players (2–20)</h4>
+          <input type="number" id="cfgNum" min="2" max="20" value="6" onchange="cfgChanged()">
         </div>
         <div class="s-section">
           <h4 id="t_roles">Select Roles</h4>
@@ -909,6 +909,8 @@ async function enterRoom(){
       // Sync config from existing room
       const d=snap.val();
       if(d.config) cfg=d.config;
+      // If I'm the original leader, restore leader status
+      if(d.leader===myId) isLeader=true;
       console.log('✅ Room joined',roomCode);
     }
     // Add self
@@ -990,8 +992,8 @@ function cfgChanged(){
 function doStartGame(){
   if(!isLeader) return;
   const players=gameState?.players?Object.values(gameState.players):[];
-  if(players.length<4){
-    alert(lang==='ar'?'تحتاج 4 لاعبين على الأقل':lang==='fr'?'Minimum 4 joueurs':'Need at least 4 players');
+  if(players.length<2){
+    alert(lang==='ar'?'تحتاج لاعبَين على الأقل':lang==='fr'?'Minimum 2 joueurs':'Need at least 2 players');
     return;
   }
   const roles=assignRoles(players.length);
