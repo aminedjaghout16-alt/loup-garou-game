@@ -1375,26 +1375,28 @@ function renderDayVoting(){
   const maireId=gameState.maire;
   const maireAlive=maireId && gameState.players?.[maireId]?.alive;
 
+  // Build all HTML as a single string to avoid innerHTML vs appendChild conflicts
+  let html='';
+
   // ── STEP 1: Maire election (always shown first) ──
-  renderMaireSection(ab, players);
+  html+=buildMaireHtml(players);
 
   // ── STEP 2: Block elimination vote until maire is elected or no candidates ──
   const candidates=gameState.maireCandidates||{};
   const candidateIds=Object.keys(candidates);
   const maireElectionPending=!maireAlive && candidateIds.length>0;
   if(maireElectionPending){
-    // Maire election in progress — don't show elimination vote yet
-    ab.innerHTML+=`<div style="font-size:.82rem;opacity:.6;margin-top:.6rem">${
+    html+=`<div style="font-size:.82rem;opacity:.6;margin-top:.6rem">${
       lang==='ar'?'⏳ انتظر انتهاء انتخاب العمدة قبل التصويت للإقصاء':
       lang==='fr'?'⏳ Attendez la fin de l\'élection du Maire avant de voter':'⏳ Wait for the Mayor election to finish before voting'
     }</div>`;
+    ab.innerHTML=html;
     return;
   }
 
   // ── STEP 3: Elimination vote with colored dots ──
-  // Build tally with voter tracking
-  const tally={};       // targetId → total weight
-  const voterMap={};    // targetId → [{id, name, color, weight}]
+  const tally={};
+  const voterMap={};
   Object.entries(dayVotes).forEach(([pid,a])=>{
     if(a?.type==='vote'&&a.target){
       const w=a.voteWeight||1;
@@ -1404,51 +1406,50 @@ function renderDayVoting(){
       voterMap[a.target].push({id:pid, name:pName, color:getPlayerColor(pid), weight:w});
     }
   });
-  // Crow bonus
   const crowAccused=(gameState.nightActions||{})._crowAccused;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
 
-  ab.innerHTML+=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.88rem;margin:.6rem 0 .3rem">${
+  html+=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.88rem;margin:.6rem 0 .3rem">${
     lang==='ar'?'🗳 تصويت الإقصاء':lang==='fr'?'🗳 Vote d\'élimination':'🗳 Elimination Vote'
   }</div>`;
 
   if(voted){
     const myVote=players.find(p=>p.id===dayVotes[myId]?.target);
-    ab.innerHTML+=`<div style="color:var(--green);font-size:.9rem;margin-top:.3rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
+    html+=`<div style="color:var(--green);font-size:.9rem;margin-top:.3rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
   } else {
     aliveOthers.forEach(p=>{
       const votes=tally[p.id]||0;
-      addBtn(ab, `${p.name}${votes>0?' ('+votes+')':''}`, 'kill', ()=>doVote(p.id));
+      html+=`<button class="btn" style="font-size:.82rem;padding:.45rem .9rem;margin:.2rem" onclick="doVote('${p.id}')">${p.name}${votes>0?' ('+votes+')':''}</button>`;
     });
   }
 
   // Show detailed tally with colored voter dots
   if(Object.keys(tally).length){
-    let tallyHtml='<div style="margin-top:.7rem;width:100%">';
+    html+='<div style="margin-top:.7rem;width:100%">';
     Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([id,v])=>{
       const name=players.find(p=>p.id===id)?.name||'?';
       const voters=voterMap[id]||[];
       const dots=voters.map(vt=>{
-        let dotHtml=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`;
-        if(vt.weight>1) dotHtml+=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name} (x2)"></span>`;
-        return dotHtml;
+        let d=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`;
+        if(vt.weight>1) d+=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name} (x2)"></span>`;
+        return d;
       }).join('');
-      tallyHtml+=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.82rem">
+      html+=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.82rem">
         <span style="color:var(--moon-pale);min-width:80px">${name}: <strong>${v}</strong></span>
         <span>${dots}</span>
       </div>`;
     });
-    tallyHtml+='</div>';
-    ab.innerHTML+=tallyHtml;
+    html+='</div>';
 
     // Voter color legend
-    let legendHtml='<div class="voter-legend">';
+    html+='<div class="voter-legend">';
     alive.filter(p=>!!dayVotes[p.id]).forEach(p=>{
-      legendHtml+=`<span><span class="vote-dot" style="background:${getPlayerColor(p.id)}"></span>${p.name}</span>`;
+      html+=`<span><span class="vote-dot" style="background:${getPlayerColor(p.id)}"></span>${p.name}</span>`;
     });
-    legendHtml+='</div>';
-    ab.innerHTML+=legendHtml;
+    html+='</div>';
   }
+
+  ab.innerHTML=html;
 }
 
 function doVote(targetId){
@@ -1604,9 +1605,9 @@ function autoSkipTurn(){
 // ════════════════════════════════════════════
 // MAIRE (Mayor) SYSTEM
 // ════════════════════════════════════════════
-function renderMaireSection(container, players){
+function buildMaireHtml(players){
   const me=gameState.players?.[myId];
-  if(!me?.alive) return;
+  if(!me?.alive) return '';
   const maireId=gameState.maire;
   const maireName=maireId?gameState.players?.[maireId]?.name:null;
   const alive=players.filter(p=>p.alive);
@@ -1619,13 +1620,12 @@ function renderMaireSection(container, players){
       html+=`<button class="btn" style="font-size:.8rem;padding:.35rem .7rem;margin-top:.3rem;background:var(--moon);color:var(--void)" onclick="maireSkipDay()">⏭ ${tr('skipDay')}</button>`;
     }
     html+=`</div>`;
-    container.innerHTML+=html;
-    return;
+    return html;
   }
 
   // No maire yet — show candidacy / voting
   const candidates=gameState.maireCandidates||{};
-  const candidateIds=Object.keys(candidates);
+  const candidateIds=Object.keys(candidates).filter(cId=>gameState.players?.[cId]?.alive);
   const maireVotes=gameState.maireVotes||{};
   const iAmCandidate=!!candidates[myId];
   const iVotedMaire=!!maireVotes[myId];
@@ -1690,11 +1690,13 @@ function renderMaireSection(container, players){
     html+=`<div style="font-size:.78rem;opacity:.5;margin-top:.2rem">${tr('noCandidates')}</div>`;
   }
   html+=`</div>`;
-  container.innerHTML+=html;
+  return html;
 }
 
 function runForMaire(){
   if(!myId) return;
+  const me=gameState?.players?.[myId];
+  if(!me?.alive) return; // dead can't run
   const candidates=gameState?.maireCandidates||{};
   if(Object.keys(candidates).length>=3) return; // max 3
   if(candidates[myId]) return; // already a candidate
@@ -1709,6 +1711,8 @@ function runForMaire(){
 
 function voteMaire(candidateId){
   if(!myId) return;
+  const me=gameState?.players?.[myId];
+  if(!me?.alive) return; // dead can't vote
   const vote={target:candidateId,by:myId,ts:Date.now()};
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/maireVotes/${myId}`).set(vote);
@@ -1726,13 +1730,18 @@ function checkMaireElection(){
   if(!isLeader) return;
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
+  const aliveIds=new Set(alive.map(p=>p.id));
   const maireVotes=gameState.maireVotes||{};
-  const totalVoted=Object.keys(maireVotes).length;
+  // Only count votes from alive players
+  const aliveVoters=Object.keys(maireVotes).filter(pid=>aliveIds.has(pid));
   // Elect when all alive players have voted
-  if(totalVoted<alive.length) return;
-  // Tally
+  if(aliveVoters.length<alive.length) return;
+  // Tally (only alive votes)
   const tally={};
-  Object.values(maireVotes).forEach(v=>{ if(v?.target) tally[v.target]=(tally[v.target]||0)+1; });
+  aliveVoters.forEach(pid=>{
+    const v=maireVotes[pid];
+    if(v?.target) tally[v.target]=(tally[v.target]||0)+1;
+  });
   const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
   if(!sorted.length) return;
   const winnerId=sorted[0][0];
