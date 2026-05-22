@@ -3495,32 +3495,16 @@ function renderDayVoting(){
     return;
   }
 
-  html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:1rem;margin:1rem 0 .5rem;letter-spacing:.05em;text-align:center">🗳 ${
-    lang==='ar'?'تصويت الإقصاء':lang==='fr'?'Vote d\'élimination':'Elimination Vote'
-  }</div>`;
+  {
+    const myVoteName=voted?players.find(p=>p.id===dayVotes[myId]?.target)?.name:null;
+    html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:1rem;margin:1rem 0 .5rem;letter-spacing:.05em;text-align:center">🗳 ${
+      lang==='ar'?'تصويت الإقصاء':lang==='fr'?'Vote d\'élimination':'Elimination Vote'
+    }${myVoteName?` <span style="color:var(--green);font-size:.82rem;font-weight:700">✓ ${myVoteName}</span>`:''}`;
+    html+=`</div>`;
+  }
 
   if(voted){
-    const myVote=players.find(p=>p.id===dayVotes[myId]?.target);
-    html+=`<div class="voted-confirm">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: ${myVote?.name||'?'}</div>`;
-    // Still show read-only tally
-    if(Object.keys(tally).length){
-      html+=`<div class="vote-grid" style="pointer-events:none;margin-top:.6rem">`;
-      aliveOthers.forEach(p=>{
-        const v=tally[p.id]||0;
-        const isCrowAccused=crowAccused&&crowAccused===p.id;
-        const regularVoters=(voterMap[p.id]||[]).filter(vt=>!vt.isCrow);
-        const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-        const crowBadge=isCrowAccused?`<span style="color:#f59e0b;font-size:.85rem;font-weight:700;display:block;margin-top:.15rem">🐦‍⬛ +2</span>`:'';
-        html+=`<div class="vote-card${v>0||isCrowAccused?' has-votes':''}" style="cursor:default;${isCrowAccused?'border:2px solid #f59e0b;box-shadow:0 0 10px rgba(245,158,11,.3);':''}">
-          <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
-          <span class="vc-name">${p.name}</span>
-          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):isCrowAccused?'2 votes':''}</div>
-          ${crowBadge}
-          <div class="vc-dots">${dots}</div>
-        </div>`;
-      });
-      html+=`</div>`;
-    }
+    // nothing extra — name shown in label above
   } else {
     // Circle voting — prompt player to tap a player in the circle
     html+=`<div style="text-align:center;padding:.5rem .8rem;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;margin:.3rem 0;font-size:.85rem;color:var(--moon-pale)">
