@@ -1556,7 +1556,8 @@ async function enterRoom(){
     showGame();
   }catch(ex){
     console.error(ex);
-    alert('⚠️ '+(lang==='ar'?'خطأ في الاتصال':lang==='fr'?'Erreur de connexion':'Connection error'));
+    // Silently fall back to offline mode instead of showing a scary error
+    console.warn('Firebase connection failed — falling back to offline mode');
     offlineEnter();
   }
 }
