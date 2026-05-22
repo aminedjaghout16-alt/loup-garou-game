@@ -2073,6 +2073,8 @@ function renderPhase(){
   else if(stepId==='witch'){
     const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
     const wolfVictimId=gameState.nightActions?._wolfVictim;
+    const bigbadVictimId=gameState.nightActions?._bigbadVictim;
+    const infectionHappened=Object.values(gameState.nightActions||{}).some(a=>a?.type==='wolffather_infect');
     let hasBtns=false;
     // Show potion status
     const lifeIcon=potions.life?'🟢':'⚫';
@@ -2081,9 +2083,23 @@ function renderPhase(){
     potionLabel.style.cssText='font-size:.82rem;color:var(--moon-pale);margin-bottom:.5rem';
     potionLabel.innerHTML=`${lifeIcon} ${lang==='ar'?'جرعة الحياة':lang==='fr'?'Potion de vie':'Life Potion'}: ${potions.life?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')} &nbsp;|&nbsp; ${deathIcon} ${lang==='ar'?'جرعة الموت':lang==='fr'?'Potion de mort':'Death Potion'}: ${potions.death?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')}`;
     ab.appendChild(potionLabel);
-    if(potions.life&&wolfVictimId){
-      const v=players.find(p=>p.id===wolfVictimId);
-      if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name,'save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
+    // Show infection info to witch
+    if(infectionHappened){
+      const infectInfo=document.createElement('div');
+      infectInfo.style.cssText='font-size:.82rem;color:#f59e0b;margin-bottom:.5rem;padding:.4rem .6rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:4px';
+      infectInfo.innerHTML=`🦠 ${lang==='ar'?'حدثت عدوى الليلة!':lang==='fr'?'Une infection a eu lieu cette nuit !':'An infection occurred tonight!'}`;
+      ab.appendChild(infectInfo);
+    }
+    // Show save options for BOTH wolf victim and big bad wolf victim
+    if(potions.life){
+      if(wolfVictimId){
+        const v=players.find(p=>p.id===wolfVictimId);
+        if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name+' 🐺','save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
+      }
+      if(bigbadVictimId && bigbadVictimId!==wolfVictimId){
+        const bv=players.find(p=>p.id===bigbadVictimId);
+        if(bv){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+bv.name+' 🐺🐺','save',()=>submitWitch('save',bigbadVictimId)); hasBtns=true; }
+      }
     }
     if(potions.death){
       alive.forEach(p=>{ addBtn(ab,(lang==='ar'?'سمّ ':lang==='fr'?'Empoisonner ':'Poison ')+p.name,'kill',()=>submitWitch('poison',p.id)); hasBtns=true; });
@@ -2950,12 +2966,19 @@ function resolveDayAndAdvance(){
     if(wcDay) upd[`games/${roomCode}/players/${wcDay.id}/role`]='werewolf';
   }
 
-  // Elder: if voted out by village, all villagers lose special powers
+  // Elder: if voted out by village, all villagers lose special powers (become plain villager)
   const elderElim=Object.entries(upd).find(([path,val])=>path.includes('/alive')&&val===false);
   if(elderElim){
     const elderElimId=elderElim[0].match(/players\/([^/]+)\/alive/)?.[1];
     if(elderElimId && gs.players[elderElimId]?.role==='elder'){
       upd[`games/${roomCode}/elderVotedOut`]=true;
+      // Strip all living village-team special roles to plain villager
+      const villageSpecialRoles=['seer','witch','hunter','cupid','littlegirl','bodyguard','savior','crow','fox','beartamer','devotedservant','rustyswordknight','gypsy','judge','actor','threebrothers','twosisters','sleepwalker','apprenticeseer','hermit','berserker','kamikaze','gravedigger','scapegoat','villageidiot','wildchild','thief'];
+      Object.values(gs.players||{}).forEach(p=>{
+        if(p.alive && p.id!==elderElimId && villageSpecialRoles.includes(p.role)){
+          upd[`games/${roomCode}/players/${p.id}/role`]='villager';
+        }
+      });
     }
   }
 
@@ -3453,6 +3476,7 @@ window.addEventListener('load',()=>{
   setTimeout(()=>initFB(), 200);
 });
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
