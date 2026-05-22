@@ -2324,6 +2324,7 @@ function advanceNightTurn(idx, queue){
   }
   const step=queue[idx];
   const update={ stepId:step.id, stepIndex:idx, turnStart:Date.now() };
+  invalidateTimerKey(); // Force timer to restart for new turn
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/nightTurn`).set(update);
   } else if(gameState){
@@ -2394,6 +2395,7 @@ function resolveNightAndAdvance(){
 
   // Advance to day
   const nextDay=(gs.dayNum||1);
+  invalidateTimerKey(); // Force timer to restart
   upd[`games/${roomCode}/phase`]='day';
   upd[`games/${roomCode}/phaseStart`]=Date.now();
   upd[`games/${roomCode}/dayNum`]=nextDay;
@@ -2583,7 +2585,10 @@ function checkDayVoteComplete(){
   const alive=players.filter(p=>p.alive);
   const dayVotes=gameState.dayVotes||{};
   const allVoted=alive.every(p=>!!dayVotes[p.id]);
-  if(allVoted && alive.length>0) resolveDayAndAdvance();
+  if(allVoted && alive.length>0){ 
+    invalidateTimerKey();
+    resolveDayAndAdvance();
+  }
 }
 
 function resolveDayAndAdvance(){
@@ -2626,6 +2631,7 @@ function resolveDayAndAdvance(){
 
   // Advance to next night
   _lastStepId=null; // Reset so night turns can advance properly
+  invalidateTimerKey(); // Force timer to restart
   const nextNight=(gs.dayNum||1)+1;
   upd[`games/${roomCode}/phase`]='night';
   upd[`games/${roomCode}/phaseStart`]=Date.now();
@@ -2712,11 +2718,16 @@ function resolveDayAndAdvance(){
 // TIMER — per turn during night, per phase during day
 // ════════════════════════════════════════════
 let _lastTimerKey = null;
+function invalidateTimerKey(){
+  // Force timer to restart on next tick
+  _lastTimerKey = null;
+}
 function startTimerIfNeeded(){
   // Build a key representing what the timer is currently counting for
   const ph = gameState?.phase;
   const turnId = gameState?.nightTurn?.stepId;
-  const key = ph==='night' ? ('night:'+turnId) : ('day:'+gameState?.dayNum);
+  const dayNum = gameState?.dayNum;
+  const key = ph==='night' ? ('night:'+turnId) : ('day:'+dayNum);
   if(key !== _lastTimerKey){
     _lastTimerKey = key;
     startTimer();
