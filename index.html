@@ -1070,6 +1070,16 @@ async function enterRoom(){
       if(d.config) cfg=d.config;
       // If I'm the original leader, restore leader status
       if(d.leader===myId) isLeader=true;
+      // If room is stuck in gameover, reset to setup
+      if(typeof d.status==='string' && d.status.startsWith('gameover')){
+        await ref.update({
+          status:'setup', phase:'setup',
+          nightTurn:null, nightActions:null, dayVotes:null,
+          maireCandidates:null, maireVotes:null, maireSkipDay:null,
+          maire:null, readyPlayers:null, teamChat:null
+        });
+        console.log('🔄 Room reset from gameover to setup');
+      }
       console.log('✅ Room joined',roomCode);
     }
     // Add self
@@ -1130,6 +1140,15 @@ function doLeave(){
   if(fbOk&&db&&roomCode&&myId){
     db.ref(`games/${roomCode}/players/${myId}`).remove();
     db.ref(`games/${roomCode}/readyPlayers`).off();
+    // If the room is in gameover state, reset it to setup so the next session starts clean
+    if(gameState?.status && gameState.status.startsWith('gameover')){
+      db.ref(`games/${roomCode}`).update({
+        status:'setup', phase:'setup',
+        nightTurn:null, nightActions:null, dayVotes:null,
+        maireCandidates:null, maireVotes:null, maireSkipDay:null,
+        maire:null, readyPlayers:null, teamChat:null
+      });
+    }
     db.ref(`games/${roomCode}`).off();
   }
   // Reset all local state
