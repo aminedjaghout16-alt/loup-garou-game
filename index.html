@@ -2966,12 +2966,16 @@ function resolveDayAndAdvance(){
     if(wcDay) upd[`games/${roomCode}/players/${wcDay.id}/role`]='werewolf';
   }
 
-  // Elder: if voted out by village, all villagers lose special powers (become plain villager)
+
+  // Elder: if elder is eliminated, all villagers lose special powers (become plain villager)
   const elderElim=Object.entries(upd).find(([path,val])=>path.includes('/alive')&&val===false);
   if(elderElim){
     const elderElimId=elderElim[0].match(/players\/([^/]+)\/alive/)?.[1];
-    if(elderElimId && gs.players[elderElimId]?.role==='elder'){
-      upd[`games/${roomCode}/elderVotedOut`]=true;
+    const eliminatedPlayer=gs.players[elderElimId];
+    
+    if(elderElimId && eliminatedPlayer?.role==='elder'){
+      upd[`games/${roomCode}/elderDead`]=true;
+      
       // Strip all living village-team special roles to plain villager
       const villageSpecialRoles=['seer','witch','hunter','cupid','littlegirl','bodyguard','savior','crow','fox','beartamer','devotedservant','rustyswordknight','gypsy','judge','actor','threebrothers','twosisters','sleepwalker','apprenticeseer','hermit','berserker','kamikaze','gravedigger','scapegoat','villageidiot','wildchild','thief'];
       Object.values(gs.players||{}).forEach(p=>{
