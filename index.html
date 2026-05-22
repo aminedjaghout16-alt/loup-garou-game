@@ -2967,23 +2967,24 @@ function resolveDayAndAdvance(){
   }
 
 
-  // Elder: if elder is eliminated, all villagers lose special powers (become plain villager)
-  const elderElim=Object.entries(upd).find(([path,val])=>path.includes('/alive')&&val===false);
-  if(elderElim){
-    const elderElimId=elderElim[0].match(/players\/([^/]+)\/alive/)?.[1];
-    const eliminatedPlayer=gs.players[elderElimId];
+  // Elder: if elder is voted out by village, all villagers lose special powers
+  const elderId=Object.entries(upd)
+    .filter(([path,val])=>path.includes('/alive')&&val===false)
+    .map(([path])=>path.match(/players\/([^/]+)\/alive/)?.[1])
+    .find(id=>id && gs.players[id]?.role==='elder');
+  
+  if(elderId){
+    // Elder was eliminated - strip all special village roles
+    upd[`games/${roomCode}/elderDead`]=true;
     
-    if(elderElimId && eliminatedPlayer?.role==='elder'){
-      upd[`games/${roomCode}/elderDead`]=true;
-      
-      // Strip all living village-team special roles to plain villager
-      const villageSpecialRoles=['seer','witch','hunter','cupid','littlegirl','bodyguard','savior','crow','fox','beartamer','devotedservant','rustyswordknight','gypsy','judge','actor','threebrothers','twosisters','sleepwalker','apprenticeseer','hermit','berserker','kamikaze','gravedigger','scapegoat','villageidiot','wildchild','thief'];
-      Object.values(gs.players||{}).forEach(p=>{
-        if(p.alive && p.id!==elderElimId && villageSpecialRoles.includes(p.role)){
-          upd[`games/${roomCode}/players/${p.id}/role`]='villager';
-        }
-      });
-    }
+    const villageSpecialRoles=['seer','witch','hunter','cupid','littlegirl','bodyguard','savior','crow','fox','beartamer','devotedservant','rustyswordknight','gypsy','judge','actor','threebrothers','twosisters','sleepwalker','apprenticeseer','hermit','berserker','kamikaze','gravedigger','scapegoat','villageidiot','wildchild','thief'];
+    
+    Object.entries(gs.players||{}).forEach(([playerId,player])=>{
+      // Must be alive, not the elder, and have a special role
+      if(player.alive && playerId!==elderId && villageSpecialRoles.includes(player.role)){
+        upd[`games/${roomCode}/players/${playerId}/role`]='villager';
+      }
+    });
   }
 
   // Advance to next night
