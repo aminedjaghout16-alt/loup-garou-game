@@ -218,6 +218,37 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .kill-shard{position:absolute;background:var(--blood-glow);transform-origin:center;animation:shardFly .8s ease-out forwards}
 @keyframes shardFly{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(0) translate(var(--tx),var(--ty)) rotate(var(--tr))}}
 
+
+#hunterOverlay{position:fixed;inset:0;z-index:9997;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.92);pointer-events:none}
+#hunterOverlay.active{display:flex;pointer-events:all}
+.hunter-card{text-align:center;padding:2rem;max-width:420px;width:90%;background:var(--abyss);border:2px solid var(--blood-glow);border-radius:12px;box-shadow:0 0 60px rgba(139,0,0,.5);transform:scale(0);animation:hunterCardIn .6s .1s cubic-bezier(.17,.67,.1,1.4) forwards}
+@keyframes hunterCardIn{to{transform:scale(1)}}
+.hunter-title{font-family:'Creepster',cursive;font-size:2rem;color:var(--blood-glow);text-shadow:0 0 20px rgba(185,28,28,.6);margin-bottom:.4rem}
+.hunter-sub{font-size:.95rem;color:var(--ghost);opacity:.8;margin-bottom:1.2rem}
+.hunter-targets{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1rem}
+.hunter-target-btn{padding:.6rem 1.2rem;background:transparent;border:2px solid var(--blood-glow);color:var(--ghost);border-radius:8px;cursor:pointer;font-family:'Creepster',cursive;font-size:1rem;letter-spacing:.05em;transition:.2s}
+.hunter-target-btn:hover{background:var(--blood-glow);color:#fff;box-shadow:0 0 20px rgba(185,28,28,.5)}
+.hunter-skip-btn{padding:.4rem 1rem;background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.4);border-radius:6px;cursor:pointer;font-family:'Creepster',cursive;font-size:.85rem;margin-top:.5rem;transition:.2s}
+.hunter-skip-btn:hover{border-color:rgba(255,255,255,.5);color:rgba(255,255,255,.7)}
+
+/* ── GHOST SPECTATOR MODE ── */
+.ghost-overlay{position:absolute;inset:0;pointer-events:none;z-index:1}
+#playView.spectating{opacity:.55;filter:grayscale(.6)}
+#playView.spectating .center-panel{position:relative}
+.spectator-badge{position:sticky;top:0;z-index:5;text-align:center;padding:.4rem;background:rgba(139,0,0,.25);border:1px solid rgba(185,28,28,.4);border-radius:6px;margin-bottom:.8rem;font-family:'Creepster',cursive;font-size:.9rem;color:rgba(255,255,255,.6);letter-spacing:.08em;backdrop-filter:blur(4px)}
+
+/* ── VOTE PLAYER CARDS ── */
+.vote-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem;width:100%;margin:.5rem 0}
+.vote-card{position:relative;padding:.7rem .6rem;background:var(--purple);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:.2s;user-select:none;overflow:hidden}
+.vote-card:hover{border-color:var(--blood-glow);background:rgba(139,0,0,.2);transform:translateY(-2px);box-shadow:0 4px 20px rgba(185,28,28,.3)}
+.vote-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 60%)}
+.vote-card .vc-dot{width:14px;height:14px;border-radius:50%;margin:0 auto .4rem;border:2px solid rgba(255,255,255,.3)}
+.vote-card .vc-name{font-family:'Creepster',cursive;font-size:1rem;color:var(--ghost);letter-spacing:.04em;display:block}
+.vote-card .vc-count{font-size:.75rem;color:var(--blood-glow);margin-top:.2rem;font-weight:700;min-height:1em}
+.vote-card .vc-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:.3rem;min-height:14px}
+.vote-card.has-votes{border-color:rgba(185,28,28,.4)}
+.voted-confirm{text-align:center;padding:.6rem;background:rgba(16,185,129,.1);border:1px solid var(--green);border-radius:8px;color:var(--green);font-family:'Creepster',cursive;font-size:1rem;letter-spacing:.05em}
+
 </style>
 </head>
 <body>
@@ -359,6 +390,16 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   </div>
 </div>
 
+<!-- ══ HUNTER SHOT OVERLAY ══ -->
+<div id="hunterOverlay">
+  <div class="hunter-card">
+    <div class="hunter-title">🏹 Hunter's Last Shot</div>
+    <div class="hunter-sub" id="hunterSub">You have been eliminated. Choose your final target.</div>
+    <div class="hunter-targets" id="hunterTargets"></div>
+    <button class="hunter-skip-btn" onclick="hunterSkip()">— Pass —</button>
+  </div>
+</div>
+
 <!-- ══ KILL FLASH OVERLAY ══ -->
 <div id="killOverlay"><div class="kill-shards" id="killShards"></div></div>
 <script>
@@ -376,14 +417,14 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 
   function loadDB(onload){
     loadScript(CDN1_DB, onload, function(){
-      console.warn('gstatic DB failed, trying jsDelivr');
+      console.debug('gstatic DB unavailable, using jsDelivr fallback');
       loadScript(CDN2_DB, onload, function(){ console.error('All Firebase DB CDNs failed'); window._fbLoadFailed=true; });
     });
   }
   loadScript(CDN1_APP,
     function(){ loadDB(function(){ window._fbReady=true; }); },
     function(){
-      console.warn('gstatic APP failed, trying jsDelivr');
+      console.debug('gstatic APP unavailable, using jsDelivr fallback');
       loadScript(CDN2_APP,
         function(){ loadDB(function(){ window._fbReady=true; }); },
         function(){ console.error('All Firebase APP CDNs failed'); window._fbLoadFailed=true; }
@@ -797,11 +838,15 @@ function checkForDeaths(players){
   });
   // Update tracking
   players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
-  // Show animation for first newly dead player (queue if multiple)
+  // Show animation for newly dead players (queue if multiple)
   if(newDead.length>0){
     let delay=0;
     newDead.forEach(p=>{
-      setTimeout(()=>showDeathAnimation(p.name, p.role), delay);
+      setTimeout(()=>{
+        showDeathAnimation(p.name, p.role);
+        // If this player is the hunter and it's MY role, show hunter shot overlay
+        maybeShowHunterShot(p.id, ()=>{});
+      }, delay);
       delay+=4200;
     });
   }
@@ -961,6 +1006,86 @@ function closeWinnerOverlay(){
     const sheet=document.getElementById('gameOverScoreSheet');
     if(sheet) sheet.style.display='block';
   }, 500);
+}
+
+// ════════════════════════════════════════════
+// HUNTER — last shot when eliminated
+// ════════════════════════════════════════════
+let _hunterPending=false;
+
+function maybeShowHunterShot(deadPlayerId, callback){
+  const p=gameState?.players?.[deadPlayerId];
+  if(!p || p.role!=='hunter') { callback(); return; }
+  // Only the hunter themselves sees and acts on this
+  if(myId!==deadPlayerId){ callback(); return; }
+  _hunterPending=true;
+  const ov=document.getElementById('hunterOverlay');
+  const targets=document.getElementById('hunterTargets');
+  const sub=document.getElementById('hunterSub');
+  sub.textContent=lang==='ar'?'لقد أُقصيت. اختر هدفك الأخير.':lang==='fr'?'Vous êtes éliminé. Choisissez votre cible finale.':'You have been eliminated. Choose your final target.';
+  targets.innerHTML='';
+  const alive=Object.values(gameState.players||{}).filter(x=>x.alive&&x.id!==deadPlayerId);
+  alive.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='hunter-target-btn';
+    btn.textContent=t.name;
+    btn.onclick=()=>{ hunterShoot(t.id, callback); };
+    targets.appendChild(btn);
+  });
+  ov.classList.add('active');
+}
+
+function hunterShoot(targetId, callback){
+  const ov=document.getElementById('hunterOverlay');
+  ov.classList.remove('active');
+  _hunterPending=false;
+  // Kill the target
+  const targetName=gameState?.players?.[targetId]?.name||'?';
+  const targetRole=gameState?.players?.[targetId]?.role||'villager';
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/players/${targetId}/alive`).set(false).then(()=>{
+      // Write hunter shot record
+      db.ref(`games/${roomCode}/nightActions/_hunterShot`).set({target:targetId,by:myId,ts:Date.now()});
+    });
+  } else if(gameState){
+    if(gameState.players[targetId]) gameState.players[targetId].alive=false;
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions._hunterShot={target:targetId,by:myId,ts:Date.now()};
+  }
+  // Show death anim for target, then continue
+  setTimeout(()=>showDeathAnimation(targetName, targetRole), 200);
+  setTimeout(()=>{ if(callback) callback(); }, 4600);
+}
+
+function hunterSkip(){
+  const ov=document.getElementById('hunterOverlay');
+  ov.classList.remove('active');
+  _hunterPending=false;
+}
+
+// ════════════════════════════════════════════
+// GHOST SPECTATOR — dead players see ghosted UI
+// ════════════════════════════════════════════
+function applyGhostMode(){
+  const me=gameState?.players?.[myId];
+  const pv=document.getElementById('playView');
+  const ab=document.getElementById('actionBtns');
+  if(!pv||!me) return;
+  if(!me.alive && gameState?.status==='playing'){
+    pv.classList.add('spectating');
+    // Inject spectator badge if not already there
+    if(!document.getElementById('spectatorBadge')){
+      const badge=document.createElement('div');
+      badge.id='spectatorBadge';
+      badge.className='spectator-badge';
+      badge.textContent=lang==='ar'?'👻 أنت تتفرج — لقد خرجت من اللعبة':lang==='fr'?'👻 Vous spectez — vous êtes éliminé':'👻 Spectating — you have been eliminated';
+      pv.insertBefore(badge, pv.firstChild);
+    }
+  } else {
+    pv.classList.remove('spectating');
+    const b=document.getElementById('spectatorBadge');
+    if(b) b.remove();
+  }
 }
 
 function doReady(){
@@ -1647,6 +1772,7 @@ function renderGame(){
     renderPlayerList(players);
     renderStats(players);
     renderPhase();
+    applyGhostMode();
     startTimerIfNeeded();
     // Leader checks for turn/vote completion on every state update
     if(isLeader){
@@ -2316,7 +2442,7 @@ function resolveNightAndAdvance(){
 function renderDayVoting(){
   const ab=document.getElementById('actionBtns');
   const me=gameState.players?.[myId];
-  if(!me?.alive){ ab.innerHTML=`<div style="opacity:.5">${lang==='ar'?'أنت خارج اللعبة':lang==='fr'?'Vous êtes éliminé':'You are eliminated'}</div>`; return; }
+  const iAmDead=!me?.alive;
 
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
@@ -2325,27 +2451,11 @@ function renderDayVoting(){
   const voted=!!dayVotes[myId];
   const maireId=gameState.maire;
   const maireAlive=maireId && gameState.players?.[maireId]?.alive;
-
-  // Build all HTML as a single string to avoid innerHTML vs appendChild conflicts
-  let html='';
-
-  // ── STEP 1: Maire election (always shown first) ──
-  html+=buildMaireHtml(players);
-
-  // ── STEP 2: Block elimination vote until maire is elected or no candidates ──
   const candidates=gameState.maireCandidates||{};
-  const candidateIds=Object.keys(candidates);
+  const candidateIds=Object.keys(candidates).filter(cId=>gameState.players?.[cId]?.alive);
   const maireElectionPending=!maireAlive && candidateIds.length>0;
-  if(maireElectionPending){
-    html+=`<div style="font-size:.82rem;opacity:.6;margin-top:.6rem">${
-      lang==='ar'?'⏳ انتظر انتهاء انتخاب العمدة قبل التصويت للإقصاء':
-      lang==='fr'?'⏳ Attendez la fin de l\'élection du Maire avant de voter':'⏳ Wait for the Mayor election to finish before voting'
-    }</div>`;
-    ab.innerHTML=html;
-    return;
-  }
 
-  // ── STEP 3: Elimination vote with colored dots ──
+  // Build tally for display
   const tally={};
   const voterMap={};
   Object.entries(dayVotes).forEach(([pid,a])=>{
@@ -2360,44 +2470,92 @@ function renderDayVoting(){
   const crowAccused=(gameState.nightActions||{})._crowAccused;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
 
-  html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:.88rem;margin:.6rem 0 .3rem">${
-    lang==='ar'?'🗳 تصويت الإقصاء':lang==='fr'?'🗳 Vote d\'élimination':'🗳 Elimination Vote'
+  let html='';
+
+  // ── DEAD PLAYER: ghost spectator view ──
+  if(iAmDead){
+    html+=`<div style="text-align:center;padding:.5rem 0">`;
+    // Show tally read-only
+    html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:.95rem;margin-bottom:.7rem;letter-spacing:.05em">🗳 ${lang==='ar'?'تصويت الإقصاء':lang==='fr'?'Vote d\'élimination':'Elimination Vote'}</div>`;
+    if(Object.keys(tally).length){
+      html+=`<div class="vote-grid" style="pointer-events:none;opacity:.6">`;
+      alive.forEach(p=>{
+        const v=tally[p.id]||0;
+        const dots=(voterMap[p.id]||[]).map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default">
+          <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
+          <span class="vc-name">${p.name}</span>
+          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}</div>
+          <div class="vc-dots">${dots}</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    } else {
+      html+=`<div style="opacity:.4;font-size:.85rem">${lang==='ar'?'لم يُصوَّت بعد':lang==='fr'?'Pas encore de votes':'No votes yet'}</div>`;
+    }
+    html+=`</div>`;
+    ab.innerHTML=html;
+    return;
+  }
+
+  // ── SECTION 1: MAYOR ──
+  html+=buildMaireHtml(players);
+
+  // ── SECTION 2: ELIMINATION — only shown after mayor is resolved ──
+  if(maireElectionPending){
+    html+=`<div style="font-size:.85rem;opacity:.55;margin-top:.8rem;text-align:center">
+      ⏳ ${lang==='ar'?'انتظر انتهاء انتخاب العمدة':lang==='fr'?'Attendez la fin de l\'élection du Maire':'Waiting for Mayor election to finish…'}
+    </div>`;
+    ab.innerHTML=html;
+    return;
+  }
+
+  html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:1rem;margin:1rem 0 .5rem;letter-spacing:.05em;text-align:center">🗳 ${
+    lang==='ar'?'تصويت الإقصاء':lang==='fr'?'Vote d\'élimination':'Elimination Vote'
   }</div>`;
 
   if(voted){
     const myVote=players.find(p=>p.id===dayVotes[myId]?.target);
-    html+=`<div style="color:var(--green);font-size:.9rem;margin-top:.3rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
+    html+=`<div class="voted-confirm">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: ${myVote?.name||'?'}</div>`;
+    // Still show read-only tally
+    if(Object.keys(tally).length){
+      html+=`<div class="vote-grid" style="pointer-events:none;margin-top:.6rem">`;
+      aliveOthers.forEach(p=>{
+        const v=tally[p.id]||0;
+        const dots=(voterMap[p.id]||[]).map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default">
+          <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
+          <span class="vc-name">${p.name}</span>
+          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}</div>
+          <div class="vc-dots">${dots}</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
   } else {
+    // Interactive vote cards
+    html+=`<div class="vote-grid">`;
     aliveOthers.forEach(p=>{
-      const votes=tally[p.id]||0;
-      html+=`<button class="btn" style="font-size:.82rem;padding:.45rem .9rem;margin:.2rem" onclick="doVote('${p.id}')">${p.name}${votes>0?' ('+votes+')':''}</button>`;
-    });
-  }
-
-  // Show detailed tally with colored voter dots
-  if(Object.keys(tally).length){
-    html+='<div style="margin-top:.7rem;width:100%">';
-    Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([id,v])=>{
-      const name=players.find(p=>p.id===id)?.name||'?';
-      const voters=voterMap[id]||[];
-      const dots=voters.map(vt=>{
-        let d=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`;
-        if(vt.weight>1) d+=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name} (x2)"></span>`;
-        return d;
-      }).join('');
-      html+=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.82rem">
-        <span style="color:var(--moon-pale);min-width:80px">${name}: <strong>${v}</strong></span>
-        <span>${dots}</span>
+      const v=tally[p.id]||0;
+      const dots=(voterMap[p.id]||[]).map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+      html+=`<div class="vote-card${v>0?' has-votes':''}" onclick="doVote('${p.id}')">
+        <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
+        <span class="vc-name">${p.name}</span>
+        <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}</div>
+        <div class="vc-dots">${dots}</div>
       </div>`;
     });
-    html+='</div>';
+    html+=`</div>`;
+  }
 
-    // Voter color legend
-    html+='<div class="voter-legend">';
-    alive.filter(p=>!!dayVotes[p.id]).forEach(p=>{
+  // Voter legend
+  const votedPlayers=alive.filter(p=>!!dayVotes[p.id]);
+  if(votedPlayers.length>0){
+    html+=`<div class="voter-legend" style="margin-top:.6rem">`;
+    votedPlayers.forEach(p=>{
       html+=`<span><span class="vote-dot" style="background:${getPlayerColor(p.id)}"></span>${p.name}</span>`;
     });
-    html+='</div>';
+    html+=`</div>`;
   }
 
   ab.innerHTML=html;
@@ -2501,7 +2659,25 @@ function resolveDayAndAdvance(){
     // Count how many players just got eliminated (for animation delay)
     const elimCount=Object.values(upd).filter(v=>v===false).length;
     const DEATH_ANIM_MS=4200;
-    const transDelay=elimCount>0 ? elimCount*DEATH_ANIM_MS + 800 : 400;
+
+    // Check if eliminated player is a hunter (who needs to shoot)
+    let eliminatedId=null;
+    Object.entries(upd).forEach(([path,val])=>{
+      const m=path.match(/players\/([^/]+)\/alive/);
+      if(m&&val===false) eliminatedId=m[1];
+    });
+    const eliminatedPlayer=eliminatedId?gs.players[eliminatedId]:null;
+    const isHunter=eliminatedPlayer?.role==='hunter';
+    const hunterExtraDelay=isHunter ? 5000 : 0; // wait for hunter to shoot
+
+    const transDelay=elimCount>0 ? elimCount*DEATH_ANIM_MS + 800 + hunterExtraDelay : 400;
+
+    // If eliminated player is the local hunter, show the overlay after their death anim
+    if(isHunter && eliminatedId){
+      setTimeout(()=>{
+        maybeShowHunterShot(eliminatedId, ()=>{});
+      }, DEATH_ANIM_MS + 300);
+    }
 
     setTimeout(()=>{
       db.ref().update(upd,()=>{
@@ -2603,7 +2779,7 @@ function autoSkipTurn(){
 // ════════════════════════════════════════════
 function buildMaireHtml(players){
   const me=gameState.players?.[myId];
-  if(!me?.alive) return '';
+  const iAmDead=!me?.alive;
   const maireId=gameState.maire;
   const maireName=maireId?gameState.players?.[maireId]?.name:null;
   const alive=players.filter(p=>p.alive);
@@ -2630,10 +2806,10 @@ function buildMaireHtml(players){
   let html=`<div class="maire-bar"><div class="maire-title">👑 ${tr('maire')}</div>`;
 
   // Run for maire button (max 3 candidates)
-  if(!iAmCandidate && !slotsFull){
+  if(!iAmDead && !iAmCandidate && !slotsFull){
     html+=`<button class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .7rem;margin:.3rem" onclick="runForMaire()">🏛 ${tr('runForMaire')}</button>`;
     html+=`<div class="slots-info">${candidateIds.length}/${MAX_CANDIDATES} ${lang==='ar'?'مرشحين':lang==='fr'?'candidats':'candidates'}</div>`;
-  } else if(iAmCandidate){
+  } else if(!iAmDead && iAmCandidate){
     html+=`<div style="color:var(--green);font-size:.8rem;margin:.2rem">✓ ${lang==='ar'?'أنت مرشح':lang==='fr'?'Vous êtes candidat':'You are a candidate'}</div>`;
   } else if(slotsFull && !iAmCandidate){
     html+=`<div style="font-size:.78rem;opacity:.6;margin:.2rem">${lang==='ar'?'اكتمل عدد المرشحين':lang==='fr'?'Places de candidature complètes':'Candidate slots full'}</div>`;
@@ -2665,7 +2841,7 @@ function buildMaireHtml(players){
       html+=`<div class="candidate-card">`;
       html+=`<div style="display:flex;align-items:center;gap:.3rem"><span class="vote-dot" style="background:${cColor};width:14px;height:14px"></span><span class="c-name">${cName}</span></div>`;
       html+=`<div class="c-votes">${votes} ${lang==='ar'?'أصوات':lang==='fr'?'votes':'votes'} ${dots}</div>`;
-      if(!iVotedMaire && cId!==myId){
+      if(!iAmDead && !iVotedMaire && cId!==myId){
         html+=`<button class="btn btn-secondary" style="font-size:.72rem;padding:.2rem .5rem;margin-top:.3rem" onclick="voteMaire('${cId}')">🗳 ${tr('voteMaire')}</button>`;
       }
       html+=`</div>`;
