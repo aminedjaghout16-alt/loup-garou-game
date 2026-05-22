@@ -929,11 +929,14 @@ function showGameOver(result){
 
   // Render the score-sheet behind the overlay (hidden until overlay closes)
   const playView=document.getElementById('playView');
+  const soloIcons={angel:'😇',assassin:'🗡️',sectleader:'📿',fluteplayer:'🎶'};
+  const winIcon=soloIcons[result.winner]||(result.winner==='werewolf'?'🐺':'🏘️');
+  const winColor=result.winner==='werewolf'?'var(--blood-glow)':'var(--green)';
   playView.innerHTML=`
     <div id="gameOverScoreSheet" style="text-align:center;padding:2rem;display:none">
-      <div style="font-size:4rem;margin-bottom:1rem">${result.winner==='werewolf'?'🐺':'🏘️'}</div>
-      <div class="phase-title" style="color:${result.winner==='werewolf'?'var(--blood-glow)':'var(--green)'}">
-        ${result.winner==='werewolf'?(lang==='ar'?'فوز الذئاب!':lang==='fr'?'Victoire des Loups !':'Werewolves Win!'):(lang==='ar'?'فوز القرويين!':lang==='fr'?'Victoire du Village !':'Village Wins!')}
+      <div style="font-size:4rem;margin-bottom:1rem">${winIcon}</div>
+      <div class="phase-title" style="color:${winColor}">
+        ${result.msg||'Game Over!'}
       </div>
       <div style="font-size:1.1rem;color:var(--ghost);margin:1rem 0">${result.msg}</div>
       <div style="margin-top:1.5rem;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
@@ -954,6 +957,7 @@ function showGameOver(result){
 
 function _showWinnerOverlay(result){
   const isWolves=result.winner==='werewolf';
+  const isSolo=['angel','assassin','sectleader','fluteplayer'].includes(result.winner);
   const ov=document.getElementById('winnerOverlay');
   const bg=document.getElementById('winnerBg');
   const icon=document.getElementById('winnerIcon');
@@ -964,25 +968,41 @@ function _showWinnerOverlay(result){
   const btn=document.getElementById('winnerCloseBtn');
 
   // Set class
-  bg.className='winner-bg '+(isWolves?'wolves':'village');
-  icon.textContent=isWolves?'🐺':'🏘️';
-  title.className='winner-title '+(isWolves?'wolves':'village');
-  title.textContent=isWolves
-    ?(lang==='ar'?'فاز الذئاب!':lang==='fr'?'VICTOIRE DES LOUPS !':'WEREWOLVES WIN!')
-    :(lang==='ar'?'فاز القرويون!':lang==='fr'?'VICTOIRE DU VILLAGE !':'VILLAGE WINS!');
-  sub.textContent=isWolves
-    ?(lang==='ar'?'سقطت القرية في الظلام…':lang==='fr'?'Le village est tombé…':'The village has fallen…')
-    :(lang==='ar'?'الذئاب أُبيدت!':lang==='fr'?'Les loups sont éliminés !':'The wolves are defeated!');
-  div.className='winner-divider '+(isWolves?'wolves':'village');
+  const themeClass=isWolves?'wolves':'village';
+  bg.className='winner-bg '+themeClass;
+  if(isSolo){
+    const soloIcons={angel:'😇',assassin:'🗡️',sectleader:'📿',fluteplayer:'🎶'};
+    icon.textContent=soloIcons[result.winner]||'🏆';
+  } else {
+    icon.textContent=isWolves?'🐺':'🏘️';
+  }
+  title.className='winner-title '+themeClass;
+  if(isSolo){
+    const soloTitles={
+      angel:{en:'ANGEL WINS!',fr:'L\'ANGE GAGNE !',ar:'فاز الملاك!'},
+      assassin:{en:'ASSASSIN WINS!',fr:'L\'ASSASSIN GAGNE !',ar:'فاز القاتل!'},
+      sectleader:{en:'SECT LEADER WINS!',fr:'LE MENEUR GAGNE !',ar:'فاز زعيم الطائفة!'},
+      fluteplayer:{en:'FLUTE PLAYER WINS!',fr:'LE JOUEUR DE FLÛTE GAGNE !',ar:'فاز عازف الناي!'}
+    };
+    const st=soloTitles[result.winner]||{en:result.winner+' WINS!'};
+    title.textContent=st[lang]||st.en;
+  } else {
+    title.textContent=isWolves
+      ?(lang==='ar'?'فاز الذئاب!':lang==='fr'?'VICTOIRE DES LOUPS !':'WEREWOLVES WIN!')
+      :(lang==='ar'?'فاز القرويون!':lang==='fr'?'VICTOIRE DU VILLAGE !':'VILLAGE WINS!');
+  }
+  sub.textContent=result.msg||'';
+  div.className='winner-divider '+themeClass;
 
   // Player chips
   const players=Object.values(gameState?.players||{});
   chips.innerHTML=players.map(p=>{
     const rd=ROLES_DEF[p.role];
-    const isWinner=isWolves
-      ? (ROLES_DEF[p.role]?.team==='werewolf')
-      : (p.alive);
-    return `<div class="winner-player-chip ${isWinner?(isWolves?'wolves':'village'):'loser'}">${rd?.e||'?'} ${p.name}</div>`;
+    let isWinner;
+    if(isSolo) isWinner=(p.role===result.winner);
+    else if(isWolves) isWinner=(ROLES_DEF[p.role]?.team==='werewolf');
+    else isWinner=p.alive;
+    return `<div class="winner-player-chip ${isWinner?themeClass:'loser'}">${rd?.e||'?'} ${p.name}</div>`;
   }).join('');
 
   btn.textContent=lang==='ar'?'متابعة':lang==='fr'?'Continuer':'Continue';
@@ -1241,6 +1261,30 @@ function doRestart(){
     upd[`games/${roomCode}/maireSkipDay`]=null;
     upd[`games/${roomCode}/readyPlayers`]=null;
     upd[`games/${roomCode}/teamChat`]=null;
+    // Clear new role-specific state
+    upd[`games/${roomCode}/tricksterUsed`]=null;
+    upd[`games/${roomCode}/puppeteerTarget`]=null;
+    upd[`games/${roomCode}/spiderWeb`]=null;
+    upd[`games/${roomCode}/blackCatPowerLoss`]=null;
+    upd[`games/${roomCode}/angelActive`]=null;
+    upd[`games/${roomCode}/assassinTargets`]=null;
+    upd[`games/${roomCode}/actorCards`]=null;
+    upd[`games/${roomCode}/judgeUsed`]=null;
+    upd[`games/${roomCode}/gypsyBlackCloud`]=null;
+    upd[`games/${roomCode}/gypsyFullMoon`]=null;
+    upd[`games/${roomCode}/butcherDisguise`]=null;
+    upd[`games/${roomCode}/sectRecruits`]=null;
+    upd[`games/${roomCode}/elderLives`]=null;
+    upd[`games/${roomCode}/rustyInfectedWolf`]=null;
+    upd[`games/${roomCode}/foxPowerLost`]=null;
+    upd[`games/${roomCode}/wolffatherUsed`]=null;
+    upd[`games/${roomCode}/alphawolfUsed`]=null;
+    upd[`games/${roomCode}/wildchildModel`]=null;
+    upd[`games/${roomCode}/loversIds`]=null;
+    upd[`games/${roomCode}/littleGirlPeeks`]=null;
+    upd[`games/${roomCode}/littleGirlCaught`]=null;
+    upd[`games/${roomCode}/bearSignal`]=null;
+    upd[`games/${roomCode}/crowAccused`]=null;
     db.ref().update(upd).then(()=>{
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     }).catch(err=>{
@@ -1694,6 +1738,23 @@ function _doStartWithPlayers(players){
       const shuffled=unusedPool.sort(()=>Math.random()-.5);
       upd[`games/${roomCode}/thiefCards`]=[shuffled[0]||'villager', shuffled[1]||'villager'];
     }
+    // Assassin: assign 2-3 random targets
+    if(roles.includes('assassin')){
+      const nonAssassinIds=players.filter((p,i)=>roles[i]!=='assassin').map(p=>p.id);
+      const shuffledTargets=nonAssassinIds.sort(()=>Math.random()-.5);
+      const targetCount=Math.min(Math.max(2,Math.floor(nonAssassinIds.length/3)),3);
+      upd[`games/${roomCode}/assassinTargets`]=shuffledTargets.slice(0,targetCount);
+    }
+    // Actor: assign 3 random role cards
+    if(roles.includes('actor')){
+      const actorPool=['seer','witch','hunter','bodyguard','savior','fox','crow','cupid','fluteplayer'];
+      const shuffledActor=actorPool.filter(r=>!roles.includes(r)).sort(()=>Math.random()-.5);
+      upd[`games/${roomCode}/actorCards`]=shuffledActor.slice(0,3);
+    }
+    // Angel: track that first elimination hasn't happened yet
+    if(roles.includes('angel')){
+      upd[`games/${roomCode}/angelActive`]=true;
+    }
     db.ref().update(upd).then(()=>{
       console.log('✅ Game started');
       _lastStepId=null;
@@ -1723,6 +1784,23 @@ function _doStartWithPlayers(players){
       const unusedPool=allPool.filter(r=>!roles.includes(r));
       const shuffled=unusedPool.sort(()=>Math.random()-.5);
       gameState.thiefCards=[shuffled[0]||'villager', shuffled[1]||'villager'];
+    }
+    // Assassin targets
+    if(roles.includes('assassin')){
+      const nonAssassinIds=players.filter((p,i)=>roles[i]!=='assassin').map(p=>p.id);
+      const shuffledTargets=nonAssassinIds.sort(()=>Math.random()-.5);
+      const targetCount=Math.min(Math.max(2,Math.floor(nonAssassinIds.length/3)),3);
+      gameState.assassinTargets=shuffledTargets.slice(0,targetCount);
+    }
+    // Actor cards
+    if(roles.includes('actor')){
+      const actorPool=['seer','witch','hunter','bodyguard','savior','fox','crow','cupid','fluteplayer'];
+      const shuffledActor=actorPool.filter(r=>!roles.includes(r)).sort(()=>Math.random()-.5);
+      gameState.actorCards=shuffledActor.slice(0,3);
+    }
+    // Angel
+    if(roles.includes('angel')){
+      gameState.angelActive=true;
     }
     _lastStepId=null;
     _advancingStep=false;
@@ -1765,9 +1843,14 @@ function renderGame(){
   if(typeof gameState.status==='string'&&gameState.status.startsWith('gameover:')){
     if(!_gameOver){
       const winner=gameState.status.split(':')[1];
-      const msg=winner==='werewolf'
-        ?(lang==='ar'?'🐺 فاز الذئاب! سيطروا على القرية!':lang==='fr'?'🐺 Les Loups-Garous gagnent ! Ils ont pris le contrôle du village !':'🐺 Werewolves win! They have taken over the village!')
-        :(lang==='ar'?'🏘️ فاز القرويون! تم القضاء على جميع الذئاب!':lang==='fr'?'🏘️ Les Villageois gagnent ! Tous les loups sont éliminés !':'🏘️ Villagers win! All werewolves have been eliminated!');
+      let msg;
+      if(winner==='werewolf') msg=lang==='ar'?'🐺 فاز الذئاب! سيطروا على القرية!':lang==='fr'?'🐺 Les Loups-Garous gagnent !':'🐺 Werewolves win! They have taken over the village!';
+      else if(winner==='village') msg=lang==='ar'?'🏘️ فاز القرويون! تم القضاء على جميع الذئاب!':lang==='fr'?'🏘️ Les Villageois gagnent !':'🏘️ Villagers win! All werewolves have been eliminated!';
+      else if(winner==='angel') msg=lang==='ar'?'😇 فاز الملاك! أول من أُقصي!':lang==='fr'?'😇 L\'Ange gagne ! Premier éliminé !':'😇 Angel wins! First to be eliminated!';
+      else if(winner==='assassin') msg=lang==='ar'?'🗡️ فاز القاتل! كل الأهداف أُقصيت!':lang==='fr'?'🗡️ L\'Assassin gagne ! Toutes les cibles éliminées !':'🗡️ Assassin wins! All targets eliminated!';
+      else if(winner==='sectleader') msg=lang==='ar'?'📿 فاز زعيم الطائفة! الجميع انضم!':lang==='fr'?'📿 Le Meneur de Secte gagne !':'📿 Sect Leader wins! All players recruited!';
+      else if(winner==='fluteplayer') msg=lang==='ar'?'🎶 فاز عازف الناي! الجميع مسحور!':lang==='fr'?'🎶 Le Joueur de Flûte gagne !':'🎶 Flute Player wins! All players enchanted!';
+      else msg=winner+' wins!';
       document.getElementById('setupView').style.display='none';
       document.getElementById('playView').style.display='flex';
       showGameOver({winner,msg}); // handles death anim + winner overlay internally
@@ -1916,6 +1999,10 @@ const NIGHT_SEQUENCE = [
   { id:'necromancer',roles:['necromancer'],                         label:{en:'Necromancer',fr:'Nécromancien',ar:'الساحر الأسود'} },
   { id:'gravedigger',roles:['gravedigger'],                         label:{en:'Grave Digger',fr:'Fossoyeur',ar:'حفار القبور'} },
   { id:'sectleader', roles:['sectleader'],                          label:{en:'Sect Leader',fr:'Meneur de Secte',ar:'زعيم الطائفة'} },
+  { id:'trickster',  roles:['trickster'],                            label:{en:'Trickster',fr:'Filou',ar:'المخادع'}, condition:(gs)=>!gs.tricksterUsed },
+  { id:'spiderwoman',roles:['spiderwoman'],                         label:{en:'Spider Woman',fr:'Femme-Araignée',ar:'المرأة العنكبوت'} },
+  { id:'gypsy',      roles:['gypsy'],                               label:{en:'Gypsy',fr:'Gitane',ar:'الغجرية'} },
+  { id:'actor',      roles:['actor'],                               label:{en:'Actor',fr:'Acteur',ar:'الممثل'}, condition:(gs)=>{ const ac=gs.actorCards||[]; return ac.length>0; } },
   { id:'twosisters', roles:['twosisters'],                          label:{en:'Two Sisters',fr:'Deux Sœurs',ar:'الأختان'} },
   { id:'threebrothers',roles:['threebrothers'],                     label:{en:'Three Brothers',fr:'Trois Frères',ar:'الإخوة الثلاثة'} },
 ];
@@ -1927,9 +2014,13 @@ function getAlive(gs){
 // Build the sequence for this night: skip roles not present or whose condition fails
 function buildNightQueue(gs, dayNum){
   const aliveRoles=new Set(getAlive(gs).map(p=>p.role));
+  const blackCatSuppression=!!gs.blackCatPowerLoss;
+  // Roles exempt from black cat suppression (wolves always act)
+  const exemptFromSuppression=['wolves','bigbadwolf','whitewerewolf','cupid','thief','wildchild','wolfhound'];
   return NIGHT_SEQUENCE.filter(step=>{
     if(step.onlyDay1 && dayNum!==1) return false;
     if(step.condition && !step.condition(gs, dayNum)) return false;
+    if(blackCatSuppression && !exemptFromSuppression.includes(step.id)) return false;
     return step.roles.some(r=>aliveRoles.has(r));
   });
 }
@@ -2008,6 +2099,17 @@ function renderPhase(){
           setTimeout(()=>alert(`🐺 ${lang==='ar'?'الذئاب هم:':lang==='fr'?'Les loups sont :':'Wolves are:'} ${wolfNames}${caughtMsg}`),100);
         });
       }
+    }
+    // Sleepwalker: automatically sees wolf names during wolves turn (faces, not roles)
+    else if(myRole==='sleepwalker' && iAmAlive && stepId==='wolves'){
+      ab.innerHTML='';
+      const wolves=Object.values(gameState.players||{}).filter(p=>p.alive&&isWolfRole(p.role,gameState));
+      const wolfNames=wolves.map(p=>p.name).join(', ')||'?';
+      ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem;padding:.6rem;background:rgba(159,127,255,.1);border:1px solid rgba(159,127,255,.3);border-radius:6px;text-align:center">
+        🌙 ${lang==='ar'?'استيقظت مع الذئاب! ترى وجوههم:':lang==='fr'?'Vous vous réveillez avec les loups ! Vous voyez leurs visages :':'You wake with the wolves! You see their faces:'}<br>
+        <strong style="color:var(--blood-glow)">${wolfNames}</strong><br>
+        <span style="font-size:.75rem;opacity:.7">${lang==='ar'?'لكنك لا تعرف أدوارهم':lang==='fr'?'Mais vous ne connaissez pas leurs rôles':'But you don\'t know their roles'}</span>
+      </div>`;
     } else {
       // Show "waiting" with subtle progress dots
       ab.innerHTML=`<div style="color:var(--ghost);opacity:.5;font-size:.85rem;margin-top:.5rem">
@@ -2038,6 +2140,14 @@ function renderPhase(){
   // ── WOLVES ──
   if(stepId==='wolves'){
     const nonWolves=alive.filter(p=>!isWolfRole(p.role,gameState));
+    // Hermit indicator
+    const hermitAlive=nonWolves.find(p=>p.role==='hermit');
+    if(hermitAlive){
+      const hermitLabel=document.createElement('div');
+      hermitLabel.style.cssText='font-size:.78rem;color:var(--moon-pale);margin-bottom:.4rem;padding:.3rem .5rem;background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.2);border-radius:4px;text-align:center';
+      hermitLabel.innerHTML=`🏚️ ${lang==='ar'?'الناسك — يمكنكم تجاوزه':lang==='fr'?'L\'Ermite — vous pouvez l\'ignorer':'The Hermit — you may choose to skip them'}`;
+      ab.appendChild(hermitLabel);
+    }
     if(myRole==='wolffather' && !gameState.wolffatherUsed){
       nonWolves.forEach(p=>{
         addBtn(ab,'🐺 '+p.name,'kill',()=>submitAction({type:'kill',target:p.id}));
@@ -2093,7 +2203,15 @@ function renderPhase(){
   else if(stepId==='seer'||stepId==='apprenticeseer'){
     alive.forEach(p=>addBtn(ab,p.name,'seer',()=>{
       const role=gameState.players[p.id]?.role||'unknown';
-      const isWolf=isWolfRole(role,gameState);
+      let isWolf=isWolfRole(role,gameState);
+      // Corrupted Butcher: appears innocent to the seer
+      if(role==='corruptedbutcher') isWolf=false;
+      // Gypsy Black Cloud: seer is blinded
+      if(gameState.gypsyBlackCloud){
+        setTimeout(()=>alert('🔮 '+p.name+': '+(lang==='ar'?'☁️ الرؤية مشوشة!':lang==='fr'?'☁️ Vision brouillée !':'☁️ Vision is clouded!')),100);
+        submitAction({type:'seer',target:p.id,result:'clouded'});
+        return;
+      }
       const result=lang==='ar'?(isWolf?'🐺 ذئب':'✓ بريء'):lang==='fr'?(isWolf?'🐺 Loup':'✓ Innocent'):(isWolf?'🐺 Werewolf':'✓ Innocent');
       submitAction({type:'seer',target:p.id,result});
       setTimeout(()=>alert('🔮 '+p.name+': '+result),100);
@@ -2365,13 +2483,25 @@ function renderPhase(){
   // ── NECROMANCER ──
   else if(stepId==='necromancer'){
     const dead=players.filter(p=>!p.alive);
-    dead.forEach(p=>addBtn(ab,(lang==='ar'?'استحضر ':lang==='fr'?'Invoquer ':'Channel ')+p.name,'special',()=>submitAction({type:'necro',target:p.id})));
+    dead.forEach(p=>{
+      const rd=ROLES_DEF[p.role]||{};
+      addBtn(ab,(lang==='ar'?'استحضر ':lang==='fr'?'Invoquer ':'Channel ')+ p.name,'special',()=>{
+        submitAction({type:'necro',target:p.id});
+        setTimeout(()=>alert('💀 '+p.name+': '+(rd.e||'?')+' '+tr(p.role||'villager')),100);
+      });
+    });
     addSkipBtn(ab);
   }
   // ── GRAVEDIGGER ──
   else if(stepId==='gravedigger'){
     const dead=players.filter(p=>!p.alive);
-    dead.forEach(p=>addBtn(ab,(lang==='ar'?'استخدم قدرة ':lang==='fr'?'Utiliser ':'Use ability of ')+p.name,'special',()=>submitAction({type:'grave',target:p.id})));
+    dead.forEach(p=>{
+      const rd=ROLES_DEF[p.role]||{};
+      addBtn(ab,(lang==='ar'?'استخدم قدرة ':lang==='fr'?'Utiliser ':'Use ability of ')+p.name,'special',()=>{
+        submitAction({type:'grave',target:p.id});
+        setTimeout(()=>alert('⛏️ '+p.name+': '+(rd.e||'?')+' '+tr(p.role||'villager')+' — '+(lang==='ar'?'قدرتهم متاحة لك هذه الليلة':lang==='fr'?'Leur pouvoir est à vous cette nuit':'Their power is yours tonight')),100);
+      });
+    });
     addSkipBtn(ab);
   }
   // ── SECT LEADER ──
@@ -2390,6 +2520,108 @@ function renderPhase(){
     const brothers=aliveAll.filter(p=>p.role==='threebrothers');
     ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem">👬 ${lang==='ar'?'إخوتك هم: ':lang==='fr'?'Vos frères sont : ':'Your brothers are: '} <strong>${brothers.filter(p=>p.id!==myId).map(p=>p.name).join(', ')||'?'}</strong></div>`;
     setTimeout(()=>submitAction({type:'brothers_meet'}),1500);
+  }
+  // ── TRICKSTER ──
+  else if(stepId==='trickster'){
+    const labelEl=document.createElement('div');
+    labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem;width:100%;text-align:center';
+    const trickChosen=gameState.nightActions?.['_trickster_first']||null;
+    if(!trickChosen){
+      labelEl.textContent=lang==='ar'?'اختر اللاعب الأول للتبديل':lang==='fr'?'Choisissez le 1er joueur à échanger':'Choose the 1st player to swap';
+      ab.appendChild(labelEl);
+      alive.forEach(p=>addBtn(ab,p.name,'special',()=>{
+        if(fbOk&&db&&roomCode){
+          db.ref(`games/${roomCode}/nightActions/_trickster_first`).set(p.id);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions['_trickster_first']=p.id;
+          renderGame();
+        }
+      }));
+    } else {
+      const p1=aliveAll.find(x=>x.id===trickChosen);
+      labelEl.textContent=(lang==='ar'?'اللاعب الأول: ':lang==='fr'?'1er joueur : ':'1st player: ')+(p1?.name||'?')+' — '+(lang==='ar'?'اختر الثاني':lang==='fr'?'Choisissez le 2e':'Choose the 2nd');
+      ab.appendChild(labelEl);
+      alive.filter(p=>p.id!==trickChosen).forEach(p=>addBtn(ab,p.name,'special',()=>{
+        submitAction({type:'trickster_swap',target1:trickChosen,target2:p.id});
+      }));
+    }
+    addSkipBtn(ab);
+  }
+  // ── SPIDER WOMAN ──
+  else if(stepId==='spiderwoman'){
+    const labelEl=document.createElement('div');
+    labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem;width:100%;text-align:center';
+    const webFirst=gameState.nightActions?.['_spider_first']||null;
+    if(!webFirst){
+      labelEl.textContent=lang==='ar'?'اختر اللاعب الأول لربطه':lang==='fr'?'Choisissez le 1er joueur à relier':'Choose the 1st player to web';
+      ab.appendChild(labelEl);
+      alive.forEach(p=>addBtn(ab,'🕸 '+p.name,'special',()=>{
+        if(fbOk&&db&&roomCode){
+          db.ref(`games/${roomCode}/nightActions/_spider_first`).set(p.id);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions['_spider_first']=p.id;
+          renderGame();
+        }
+      }));
+    } else {
+      const p1=aliveAll.find(x=>x.id===webFirst);
+      labelEl.textContent=(lang==='ar'?'مربوط: ':lang==='fr'?'Relié : ':'Webbed: ')+(p1?.name||'?')+' — '+(lang==='ar'?'اختر الثاني':lang==='fr'?'Choisissez le 2e':'Choose the 2nd');
+      ab.appendChild(labelEl);
+      alive.filter(p=>p.id!==webFirst).forEach(p=>addBtn(ab,'🕸 '+p.name,'special',()=>{
+        const data={type:'spider_web',target1:webFirst,target2:p.id,by:myId,ts:Date.now()};
+        if(fbOk&&db&&roomCode){
+          const upd={};
+          upd[`games/${roomCode}/nightActions/_spider_first`]=null;
+          upd[`games/${roomCode}/nightActions/${myId}`]=data;
+          upd[`games/${roomCode}/spiderWeb`]=[webFirst,p.id];
+          db.ref().update(upd);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions[myId]=data;
+          gameState.spiderWeb=[webFirst,p.id];
+          checkTurnComplete(); renderGame();
+        }
+      }));
+    }
+    addSkipBtn(ab);
+  }
+  // ── GYPSY ──
+  else if(stepId==='gypsy'){
+    const events=[
+      {id:'spiritism',label:{en:'🔮 Spiritism — Reveal a dead player\'s role',fr:'🔮 Spiritisme — Révéler le rôle d\'un mort',ar:'🔮 استحضار — كشف دور لاعب ميت'}},
+      {id:'fullmoon',label:{en:'🌕 Full Moon — Wolves must kill 2 tonight',fr:'🌕 Pleine Lune — Les loups doivent tuer 2 cette nuit',ar:'🌕 بدر — الذئاب تقتل 2 هذه الليلة'}},
+      {id:'blackcloud',label:{en:'☁️ Black Cloud — Seer is blinded tonight',fr:'☁️ Nuage Noir — La voyante est aveuglée',ar:'☁️ سحابة سوداء — العرافة معمية الليلة'}},
+      {id:'healing',label:{en:'💚 Healing — One random dead player revives',fr:'💚 Guérison — Un mort revient au hasard',ar:'💚 شفاء — لاعب ميت يعود عشوائياً'}}
+    ];
+    const labelEl=document.createElement('div');
+    labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem;width:100%;text-align:center';
+    labelEl.textContent=lang==='ar'?'اختر حدثاً خاصاً':lang==='fr'?'Choisissez un événement spécial':'Choose a special event';
+    ab.appendChild(labelEl);
+    events.forEach(ev=>{
+      addBtn(ab,ev.label[lang]||ev.label.en,'special',()=>{
+        submitAction({type:'gypsy_event',event:ev.id});
+        setTimeout(()=>alert('🔯 '+(lang==='ar'?'تم تفعيل الحدث!':lang==='fr'?'Événement activé !':'Event activated!')),100);
+      });
+    });
+    addSkipBtn(ab);
+  }
+  // ── ACTOR ──
+  else if(stepId==='actor'){
+    const actorCards=gameState.actorCards||[];
+    const labelEl=document.createElement('div');
+    labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem;width:100%;text-align:center';
+    labelEl.textContent=lang==='ar'?'اختر دوراً للتبديل إليه':lang==='fr'?'Choisissez un rôle à adopter':'Choose a role to switch to';
+    ab.appendChild(labelEl);
+    actorCards.forEach(r=>{
+      const rd=ROLES_DEF[r]||{};
+      addBtn(ab,(rd.e||'')+'  '+tr(r),'special',()=>{
+        submitAction({type:'actor_switch',take:r});
+        setTimeout(()=>alert('🎪 '+(lang==='ar'?'أصبحت: ':lang==='fr'?'Vous êtes maintenant : ':'You are now: ')+tr(r)),100);
+      });
+    });
+    addSkipBtn(ab);
   }
 }
 
@@ -2429,6 +2661,7 @@ function submitAction(action){
     if(action.type==='savior_save') upd[`games/${roomCode}/nightActions/_saviorProtected`]=action.target;
     if(action.type==='wildchild_model') upd[`games/${roomCode}/wildchildModel`]=action.target;
     if(action.type==='sect_recruit') upd[`games/${roomCode}/sectRecruits/${action.target}`]=true;
+    if(action.type==='trickster_swap') upd[`games/${roomCode}/tricksterUsed`]=true;
     db.ref().update(upd);
   } else if(gameState){
     if(!gameState.nightActions) gameState.nightActions={};
@@ -2439,6 +2672,7 @@ function submitAction(action){
     if(action.type==='savior_save') gameState.nightActions._saviorProtected=action.target;
     if(action.type==='wildchild_model') gameState.wildchildModel=action.target;
     if(action.type==='sect_recruit'){ if(!gameState.sectRecruits) gameState.sectRecruits={}; gameState.sectRecruits[action.target]=true; }
+    if(action.type==='trickster_swap') gameState.tricksterUsed=true;
     checkTurnComplete();
     renderGame();
   }
@@ -2683,6 +2917,115 @@ function resolveNightAndAdvance(){
     upd[`games/${roomCode}/foxPowerLost`]=true;
   }
 
+  // Trickster: swap roles of two players (once per game)
+  const tricksterAction=Object.values(actions).find(a=>a?.type==='trickster_swap');
+  if(tricksterAction?.target1 && tricksterAction?.target2){
+    const p1=players[tricksterAction.target1];
+    const p2=players[tricksterAction.target2];
+    if(p1 && p2){
+      const tempRole=p1.role;
+      upd[`games/${roomCode}/players/${tricksterAction.target1}/role`]=p2.role;
+      upd[`games/${roomCode}/players/${tricksterAction.target2}/role`]=tempRole;
+      players[tricksterAction.target1].role=p2.role;
+      players[tricksterAction.target2].role=tempRole;
+    }
+    upd[`games/${roomCode}/tricksterUsed`]=true;
+  }
+
+  // Spider Woman: if either webbed player is targeted, the other dies too
+  const spiderWeb=gs.spiderWeb||[];
+  if(spiderWeb.length===2){
+    const [sw1,sw2]=spiderWeb;
+    if(killSet.has(sw1) && players[sw2]?.alive) killSet.add(sw2);
+    if(killSet.has(sw2) && players[sw1]?.alive) killSet.add(sw1);
+  }
+
+  // Gypsy event resolution
+  const gypsyAction=Object.values(actions).find(a=>a?.type==='gypsy_event');
+  if(gypsyAction?.event){
+    if(gypsyAction.event==='healing'){
+      // Revive one random dead player
+      const deadPlayers=Object.values(players).filter(p=>!p.alive&&!killSet.has(p.id));
+      if(deadPlayers.length>0){
+        const revived=deadPlayers[Math.floor(Math.random()*deadPlayers.length)];
+        upd[`games/${roomCode}/players/${revived.id}/alive`]=true;
+        players[revived.id].alive=true;
+      }
+    }
+    // fullmoon and blackcloud are handled via flags checked elsewhere
+    if(gypsyAction.event==='fullmoon') upd[`games/${roomCode}/gypsyFullMoon`]=true;
+    if(gypsyAction.event==='blackcloud') upd[`games/${roomCode}/gypsyBlackCloud`]=true;
+    if(gypsyAction.event==='spiritism'){
+      // Spiritism result is shown client-side via alert, no server-side effect needed
+      upd[`games/${roomCode}/gypsySpiritismUsed`]=true;
+    }
+  }
+
+  // Actor: switch to chosen role card
+  const actorAction=Object.values(actions).find(a=>a?.type==='actor_switch');
+  if(actorAction?.take){
+    const actorPlayer=Object.values(players).find(p=>p.role==='actor'&&p.alive);
+    if(actorPlayer){
+      // Put current effective ability in actorCards, remove the taken one
+      const curCards=gs.actorCards||[];
+      const newCards=curCards.filter(r=>r!==actorAction.take);
+      upd[`games/${roomCode}/players/${actorPlayer.id}/role`]=actorAction.take;
+      upd[`games/${roomCode}/actorCards`]=newCards;
+      players[actorPlayer.id].role=actorAction.take;
+    }
+  }
+
+  // Puppeteer: track controlled player for day vote hijack
+  const puppeteerAction=Object.values(actions).find(a=>a?.type==='puppet');
+  if(puppeteerAction?.target){
+    upd[`games/${roomCode}/puppeteerTarget`]=puppeteerAction.target;
+  } else {
+    upd[`games/${roomCode}/puppeteerTarget`]=null;
+  }
+
+  // Necromancer: reveal dead player's role (effect is client-side alert, mark used)
+  const necroAction=Object.values(actions).find(a=>a?.type==='necro');
+  if(necroAction?.target){
+    upd[`games/${roomCode}/necromancerUsedOn`]=necroAction.target;
+  }
+
+  // Gravedigger: reveal dead player's role (effect is client-side alert)
+  const graveAction=Object.values(actions).find(a=>a?.type==='grave');
+  if(graveAction?.target){
+    upd[`games/${roomCode}/gravediggerUsedOn`]=graveAction.target;
+  }
+
+  // Demon Child: if wolf father infects the demon child specifically, they become a werewolf
+  if(wolffatherInfect?.target && players[wolffatherInfect.target]?.role==='demonchild'){
+    // Already handled by wolffather infection above — demonchild becomes werewolf
+  }
+
+  // Corrupted Butcher: mark a player to appear innocent to the seer
+  const butcherAction=Object.values(actions).find(a=>a?.type==='kill'&&a.by);
+  const corruptedButcher=Object.values(players).find(p=>p.role==='corruptedbutcher'&&p.alive);
+  if(corruptedButcher){
+    upd[`games/${roomCode}/butcherDisguise`]=corruptedButcher.id;
+  }
+
+  // Black Cat power suppression (from previous night flag)
+  if(gs.blackCatPowerLoss){
+    upd[`games/${roomCode}/blackCatPowerLoss`]=false; // Clear after one night
+  }
+
+  // Devoted Servant: if mayor is killed at night, devoted servant takes over
+  const nightMaireId=gs.maire;
+  if(nightMaireId && killSet.has(nightMaireId)){
+    const devotedServant=Object.values(players).find(p=>p.role==='devotedservant'&&p.alive&&!killSet.has(p.id));
+    if(devotedServant){
+      upd[`games/${roomCode}/maire`]=devotedServant.id;
+    } else {
+      upd[`games/${roomCode}/maire`]=null;
+    }
+  }
+
+  // Clear spider web each night (re-webbed each night)
+  upd[`games/${roomCode}/spiderWeb`]=null;
+
   // Mark dead
   killSet.forEach(id=>{ if(players[id]) upd[`games/${roomCode}/players/${id}/alive`]=false; });
 
@@ -2723,6 +3066,9 @@ function resolveNightAndAdvance(){
   upd[`games/${roomCode}/dayVotes`]=null;
   upd[`games/${roomCode}/maireCandidates`]=null;
   upd[`games/${roomCode}/maireVotes`]=null;
+  // Clear gypsy event flags after the night
+  upd[`games/${roomCode}/gypsyBlackCloud`]=null;
+  upd[`games/${roomCode}/gypsyFullMoon`]=null;
 
   // Check win after applying kills, write gameover status so all clients see it
   const _tempPlayers=Object.values(players);
@@ -2731,8 +3077,38 @@ function resolveNightAndAdvance(){
   const _wolvesAfter=_aliveAfter.filter(p=>isWolfRole(p.role,{...gs,players}));
   const _nonWolvesAfter=_aliveAfter.filter(p=>!isWolfRole(p.role,{...gs,players}));
   let _winResult=null;
-  if(_wolvesAfter.length>0&&_wolvesAfter.length>=_nonWolvesAfter.length) _winResult='werewolf';
-  else if(_wolvesAfter.length===0&&_aliveAfter.length>0) _winResult='village';
+
+  // Angel: check if angel was the first elimination (night kill counts too)
+  if(gs.angelActive && killSet.size>0){
+    const angelPlayer=Object.values(players).find(p=>p.role==='angel');
+    if(angelPlayer && killSet.has(angelPlayer.id)){
+      _winResult='angel';
+    } else {
+      // First elimination happened, angel loses special — becomes villager
+      upd[`games/${roomCode}/angelActive`]=false;
+      if(angelPlayer && angelPlayer.alive){
+        upd[`games/${roomCode}/players/${angelPlayer.id}/role`]='villager';
+        players[angelPlayer.id].role='villager';
+      }
+    }
+  }
+
+  // Assassin night check: all targets dead
+  if(!_winResult){
+    const _assassinTargets=gs.assassinTargets||[];
+    if(_assassinTargets.length>0){
+      const _assassinPlayer=Object.values(players).find(p=>p.role==='assassin'&&p.alive);
+      if(_assassinPlayer){
+        const allTargetsDead=_assassinTargets.every(tid=>!players[tid]?.alive);
+        if(allTargetsDead) _winResult='assassin';
+      }
+    }
+  }
+
+  if(!_winResult){
+    if(_wolvesAfter.length>0&&_wolvesAfter.length>=_nonWolvesAfter.length) _winResult='werewolf';
+    else if(_wolvesAfter.length===0&&_aliveAfter.length>0) _winResult='village';
+  }
   if(_winResult) upd[`games/${roomCode}/status`]='gameover:'+_winResult;
 
   // Sect Leader win: check if all alive players are recruited
@@ -2775,6 +3151,19 @@ function resolveNightAndAdvance(){
     if(upd[`games/${roomCode}/foxPowerLost`]) gs.foxPowerLost=true;
     if(upd[`games/${roomCode}/wolffatherUsed`]) gs.wolffatherUsed=true;
     if(upd[`games/${roomCode}/alphawolfUsed`]) gs.alphawolfUsed=true;
+    if(upd[`games/${roomCode}/tricksterUsed`]) gs.tricksterUsed=true;
+    if(upd[`games/${roomCode}/puppeteerTarget`]!==undefined) gs.puppeteerTarget=upd[`games/${roomCode}/puppeteerTarget`];
+    if(upd[`games/${roomCode}/spiderWeb`]!==undefined) gs.spiderWeb=upd[`games/${roomCode}/spiderWeb`];
+    if(upd[`games/${roomCode}/blackCatPowerLoss`]!==undefined) gs.blackCatPowerLoss=upd[`games/${roomCode}/blackCatPowerLoss`];
+    if(upd[`games/${roomCode}/angelActive`]!==undefined) gs.angelActive=upd[`games/${roomCode}/angelActive`];
+    if(upd[`games/${roomCode}/actorCards`]!==undefined) gs.actorCards=upd[`games/${roomCode}/actorCards`];
+    if(upd[`games/${roomCode}/gypsyBlackCloud`]!==undefined) gs.gypsyBlackCloud=upd[`games/${roomCode}/gypsyBlackCloud`];
+    if(upd[`games/${roomCode}/gypsyFullMoon`]!==undefined) gs.gypsyFullMoon=upd[`games/${roomCode}/gypsyFullMoon`];
+    // Apply alive changes from upd (for revived players from gypsy healing)
+    Object.entries(upd).forEach(([path,val])=>{
+      const mAlive=path.match(/players\/([^/]+)\/alive/);
+      if(mAlive && gs.players[mAlive[1]]) gs.players[mAlive[1]].alive=val;
+    });
     Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},nightActions:{
       _saviorLast: saviorAction?.target||null,
       _bodyguardLast: bodyguardProtected||null,
@@ -2866,6 +3255,23 @@ function renderDayVoting(){
 
   // ── SECTION 1: MAYOR ──
   html+=buildMaireHtml(players);
+
+  // ── JUDGE: force extra elimination vote (once per game) ──
+  if(myRole==='judge' && !iAmDead && !gameState.judgeUsed){
+    html+=`<div style="text-align:center;margin:.5rem 0"><button class="btn" style="font-size:.8rem;padding:.35rem .8rem;background:var(--purple);border:1px solid var(--moon)" onclick="judgeForceVote()">⚖️ ${lang==='ar'?'فرض تصويت إضافي':lang==='fr'?'Forcer un vote supplémentaire':'Force extra elimination vote'}</button></div>`;
+  }
+
+  // ── Assassin: show target list privately ──
+  if(myRole==='assassin' && !iAmDead){
+    const assassinTargets=gameState.assassinTargets||[];
+    if(assassinTargets.length>0){
+      const targetNames=assassinTargets.map(tid=>{
+        const tp=gameState.players?.[tid];
+        return tp?((tp.alive?'🎯 ':'💀 ')+tp.name):'?';
+      }).join(', ');
+      html+=`<div style="padding:.4rem .6rem;background:rgba(139,0,0,.15);border:1px solid var(--blood-glow);border-radius:6px;text-align:center;margin:.4rem 0;font-size:.8rem;color:var(--blood-glow)">🗡️ ${lang==='ar'?'أهدافك: ':lang==='fr'?'Vos cibles : ':'Your targets: '}${targetNames}</div>`;
+    }
+  }
 
   // ── SECTION 2: ELIMINATION — only shown after mayor is resolved ──
   if(maireElectionPending){
@@ -2980,6 +3386,24 @@ function resolveDayAndAdvance(){
   const crowAccused=gs.crowAccused||null;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
 
+  // Puppeteer vote hijack: override the controlled player's vote
+  const puppeteerTarget=gs.puppeteerTarget||null;
+  if(puppeteerTarget && dayVotes[puppeteerTarget]){
+    // Puppeteer redirects the target's vote to a random other alive player
+    const puppeteer=Object.values(gs.players||{}).find(p=>p.role==='puppeteer'&&p.alive);
+    if(puppeteer){
+      const oldTarget=dayVotes[puppeteerTarget]?.target;
+      const aliveOthers=players.filter(p=>p.alive&&p.id!==puppeteerTarget&&p.id!==oldTarget);
+      if(aliveOthers.length>0){
+        const newTarget=aliveOthers[Math.floor(Math.random()*aliveOthers.length)].id;
+        const oldWeight=dayVotes[puppeteerTarget]?.voteWeight||1;
+        // Adjust tally
+        if(oldTarget) tally[oldTarget]=Math.max(0,(tally[oldTarget]||0)-oldWeight);
+        tally[newTarget]=(tally[newTarget]||0)+oldWeight;
+      }
+    }
+  }
+
   // Find max
   const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
   const upd={};
@@ -3033,15 +3457,82 @@ function resolveDayAndAdvance(){
   if(elderId){
     // Elder was eliminated - strip all special village roles
     upd[`games/${roomCode}/elderDead`]=true;
-    
+
     const villageSpecialRoles=['seer','witch','hunter','cupid','littlegirl','bodyguard','savior','crow','fox','beartamer','devotedservant','rustyswordknight','gypsy','judge','actor','threebrothers','twosisters','sleepwalker','apprenticeseer','hermit','berserker','kamikaze','gravedigger','scapegoat','villageidiot','wildchild','thief'];
-    
+
     Object.entries(gs.players||{}).forEach(([playerId,player])=>{
       // Must be alive, not the elder, and have a special role
       if(player.alive && playerId!==elderId && villageSpecialRoles.includes(player.role)){
         upd[`games/${roomCode}/players/${playerId}/role`]='villager';
       }
     });
+  }
+
+  // Helper: collect all eliminated IDs from this resolution
+  const eliminatedIds=Object.entries(upd)
+    .filter(([path,val])=>path.includes('/alive')&&val===false)
+    .map(([path])=>path.match(/players\/([^/]+)\/alive/)?.[1])
+    .filter(Boolean);
+
+  // Angel: if angel is the first player eliminated in the game, angel wins
+  if(gs.angelActive){
+    const angelPlayer=players.find(p=>p.role==='angel');
+    if(angelPlayer && eliminatedIds.includes(angelPlayer.id)){
+      upd[`games/${roomCode}/status`]='gameover:angel';
+      upd[`games/${roomCode}/angelActive`]=false;
+    } else if(eliminatedIds.length>0){
+      // First elimination happened and it wasn't the angel — angel becomes villager
+      upd[`games/${roomCode}/angelActive`]=false;
+      if(angelPlayer && angelPlayer.alive){
+        upd[`games/${roomCode}/players/${angelPlayer.id}/role`]='villager';
+      }
+    }
+  }
+
+  // Black Cat: if eliminated by village vote, suppress powers for one night
+  const blackCatElim=eliminatedIds.find(id=>gs.players[id]?.role==='blackcat');
+  if(blackCatElim){
+    upd[`games/${roomCode}/blackCatPowerLoss`]=true;
+  }
+
+  // Kamikaze: if eliminated, reveal all werewolves via game chat
+  const kamikazeElim=eliminatedIds.find(id=>gs.players[id]?.role==='kamikaze');
+  if(kamikazeElim){
+    const wolves=players.filter(p=>p.alive&&isWolfRole(p.role,gs)&&!eliminatedIds.includes(p.id));
+    const wolfNames=wolves.map(p=>'🐺 '+p.name).join(', ')||'None';
+    const kamiMsg={n:'💥 Kamikaze',t:lang==='ar'?'كشف الذئاب: '+wolfNames:lang==='fr'?'Loups révélés : '+wolfNames:'Wolves revealed: '+wolfNames,ts:Date.now()};
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/chat`).push(kamiMsg);
+    } else if(gs){
+      if(!Array.isArray(gs.chat)) gs.chat=[];
+      gs.chat.push(kamiMsg);
+    }
+  }
+
+  // Devoted Servant: if the mayor is eliminated, devoted servant takes over as mayor
+  const maireId=gs.maire;
+  if(maireId && eliminatedIds.includes(maireId)){
+    const devotedServant=players.find(p=>p.role==='devotedservant'&&p.alive&&!eliminatedIds.includes(p.id));
+    if(devotedServant){
+      upd[`games/${roomCode}/maire`]=devotedServant.id;
+    } else {
+      upd[`games/${roomCode}/maire`]=null;
+    }
+  }
+
+  // Assassin: check if all targets are eliminated
+  const assassinTargets=gs.assassinTargets||[];
+  if(assassinTargets.length>0){
+    const assassinPlayer=players.find(p=>p.role==='assassin'&&p.alive);
+    if(assassinPlayer){
+      const allTargetsDead=assassinTargets.every(tid=>{
+        const tp=gs.players[tid];
+        return (tp && !tp.alive) || eliminatedIds.includes(tid);
+      });
+      if(allTargetsDead){
+        upd[`games/${roomCode}/status`]='gameover:assassin';
+      }
+    }
   }
 
   // Advance to next night
@@ -3429,6 +3920,30 @@ function doMaireSkipDay(){
 }
 
 // ════════════════════════════════════════════
+// JUDGE — force extra elimination vote
+// ════════════════════════════════════════════
+function judgeForceVote(){
+  if(!myId || myRole!=='judge') return;
+  if(gameState?.judgeUsed) return;
+  // Mark judge as used, reset day votes to force a new round
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    upd[`games/${roomCode}/judgeUsed`]=true;
+    upd[`games/${roomCode}/dayVotes`]=null;
+    upd[`games/${roomCode}/phaseStart`]=Date.now(); // reset timer
+    db.ref().update(upd);
+    db.ref(`games/${roomCode}/chat`).push({n:'⚖️ Judge',t:lang==='ar'?'فُرض تصويت إضافي!':lang==='fr'?'Vote supplémentaire forcé !':'Extra elimination vote forced!',ts:Date.now()});
+  } else if(gameState){
+    gameState.judgeUsed=true;
+    gameState.dayVotes={};
+    gameState.phaseStart=Date.now();
+    if(!Array.isArray(gameState.chat)) gameState.chat=[];
+    gameState.chat.push({n:'⚖️ Judge',t:'Extra elimination vote forced!',ts:Date.now()});
+    renderGame();
+  }
+}
+
+// ════════════════════════════════════════════
 // TEAM CHAT SYSTEM
 // ════════════════════════════════════════════
 const TEAM_CHANNELS={
@@ -3538,6 +4053,7 @@ window.addEventListener('load',()=>{
   setTimeout(()=>initFB(), 200);
 });
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
