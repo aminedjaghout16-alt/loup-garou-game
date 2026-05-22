@@ -2447,6 +2447,7 @@ function resolveNightAndAdvance(){
     _bodyguardLast: bodyguardProtected||null,
     _fluteEnchanted: actions._fluteEnchanted||[],
     _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
+    _crowAccused: actions._crowAccused||null,
   };
   upd[`games/${roomCode}/dayVotes`]=null;
   upd[`games/${roomCode}/maireCandidates`]=null;
@@ -2472,6 +2473,7 @@ function resolveNightAndAdvance(){
       _bodyguardLast: bodyguardProtected||null,
       _fluteEnchanted: actions._fluteEnchanted||[],
       _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
+      _crowAccused: actions._crowAccused||null,
     }});
     gs.dayVotes={};
     gs.maireCandidates=null;
