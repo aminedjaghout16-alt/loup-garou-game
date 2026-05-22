@@ -1427,9 +1427,7 @@ function updateRolePreview(){
   if(!cfg.roleCounts) cfg.roleCounts={};
   const wc=cfg.roleCounts.werewolf??1;
   const vc=cfg.roleCounts.villager??1;
-  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
-  let cr=cfg.roles; if(!Array.isArray(cr)) cr=cr?Object.values(cr):[];
-  const specials=cr.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
+  const specials=cr.filter(r=>r!=='werewolf'&&r!=='villager');
   let specTotal=0;
   specials.forEach(r=>{ specTotal+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
   const total=wc+specTotal+vc;
@@ -1723,8 +1721,7 @@ function assignRoles(n){
   const wc=cfg.roleCounts.werewolf??1;
   const vc=cfg.roleCounts.villager??1;
   let cr=cfg.roles; if(!Array.isArray(cr)) cr=cr?Object.values(cr):[];
-  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
-  const specials=cr.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
+  const specials=cr.filter(r=>r!=='werewolf'&&r!=='villager');
   const out=[];
   for(let i=0;i<wc;i++) out.push('werewolf');
   specials.forEach(r=>{
@@ -1794,8 +1791,7 @@ function renderGame(){
       const _wc=cfg.roleCounts.werewolf??1;
       const _vc=cfg.roleCounts.villager??1;
       let _cr=cfg.roles; if(!Array.isArray(_cr)) _cr=_cr?Object.values(_cr):[];
-      const _WR=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
-      const _sr=_cr.filter(r=>r!=='werewolf'&&r!=='villager'&&!_WR.includes(r));
+      const _sr=_cr.filter(r=>r!=='werewolf'&&r!=='villager');
       let _st=0; _sr.forEach(r=>{ _st+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
       const _total=_wc+_st+_vc;
       const _conn=players.length;
