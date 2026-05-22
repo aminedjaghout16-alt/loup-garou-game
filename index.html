@@ -147,7 +147,43 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 @keyframes deathFadeIn{to{opacity:1}}
 .death-card .death-blood-line{width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--blood-glow),transparent);margin:.5rem auto;opacity:0;animation:deathFadeIn .5s 1.4s ease forwards}
 
-/* ── PHASE TRANSITION OVERLAY ── */
+/* ── WINNER OVERLAY ── */
+#winnerOverlay{position:fixed;inset:0;z-index:10001;display:none;align-items:center;justify-content:center;overflow:hidden}
+#winnerOverlay.active{display:flex}
+.winner-bg{position:absolute;inset:0;opacity:0;animation:winBgIn .8s ease forwards}
+.winner-bg.wolves{background:radial-gradient(ellipse at center,#4a0000 0%,#0a0010 70%)}
+.winner-bg.village{background:radial-gradient(ellipse at center,#003320 0%,#0a0a1a 70%)}
+@keyframes winBgIn{to{opacity:1}}
+
+.winner-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.wparticle{position:absolute;border-radius:50%;animation:wpartFloat linear infinite}
+@keyframes wpartFloat{0%{transform:translateY(110vh) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-20px) rotate(720deg);opacity:0}}
+
+.winner-content{position:relative;z-index:2;text-align:center;opacity:0;transform:scale(.2) rotate(-15deg);animation:winContentIn .9s .5s cubic-bezier(.17,.67,.1,1.4) forwards}
+@keyframes winContentIn{to{opacity:1;transform:scale(1) rotate(0)}}
+
+.winner-big-icon{font-size:8rem;display:block;margin-bottom:.5rem;animation:winIconPop 1s 1.2s ease infinite alternate}
+@keyframes winIconPop{0%{transform:scale(1) rotate(-3deg);filter:drop-shadow(0 0 20px currentColor)}100%{transform:scale(1.12) rotate(3deg);filter:drop-shadow(0 0 55px currentColor)}}
+
+.winner-title{font-family:'Creepster',cursive;font-size:5rem;letter-spacing:.08em;display:block;text-shadow:0 0 30px currentColor,0 0 80px currentColor;opacity:0;animation:winFadeUp .6s 1s ease forwards}
+.winner-title.wolves{color:var(--blood-glow)}
+.winner-title.village{color:var(--green)}
+@keyframes winFadeUp{0%{opacity:0;transform:translateY(30px)}100%{opacity:1;transform:translateY(0)}}
+
+.winner-sub{font-family:'Creepster',cursive;font-size:1.5rem;letter-spacing:.2em;color:var(--ghost);display:block;margin-top:.5rem;opacity:0;animation:winFadeUp .6s 1.3s ease forwards}
+.winner-divider{width:300px;height:2px;margin:1rem auto;opacity:0;animation:winFadeUp .5s 1.6s ease forwards}
+.winner-divider.wolves{background:linear-gradient(90deg,transparent,var(--blood-glow),transparent)}
+.winner-divider.village{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+
+.winner-players{margin-top:1rem;display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;max-width:500px;opacity:0;animation:winFadeUp .6s 1.8s ease forwards}
+.winner-player-chip{padding:.4rem .9rem;border-radius:20px;font-family:'Creepster',cursive;font-size:1rem;letter-spacing:.05em;border:1px solid currentColor;opacity:.9}
+.winner-player-chip.wolves{background:rgba(139,0,0,.3);color:var(--blood-glow)}
+.winner-player-chip.village{background:rgba(16,185,129,.2);color:var(--green)}
+.winner-player-chip.loser{background:rgba(255,255,255,.05);color:var(--ghost);opacity:.45;border-color:rgba(255,255,255,.15)}
+
+.winner-close-btn{margin-top:1.5rem;padding:.7rem 2rem;font-family:'Creepster',cursive;font-size:1.1rem;letter-spacing:.08em;background:transparent;border:2px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;opacity:0;animation:winFadeUp .5s 2.2s ease forwards;transition:.2s}
+.winner-close-btn:hover{background:var(--moon);color:var(--void)}
+
 #phaseTransOverlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;pointer-events:none;overflow:hidden}
 #phaseTransOverlay.active{display:flex}
 .ptrans-bg{position:absolute;inset:0;background:var(--void);opacity:0}
@@ -295,6 +331,21 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
     <div class="death-blood-line"></div>
     <div class="death-role" id="deathRole"></div>
     <div class="death-rip">R.I.P.</div>
+  </div>
+</div>
+
+<!-- ══ WINNER OVERLAY ══ -->
+<div id="winnerOverlay">
+  <div class="winner-bg" id="winnerBg"></div>
+  <div class="winner-particles" id="winnerParticles"></div>
+  <div class="winner-content">
+    <span class="winner-big-icon" id="winnerIcon">🐺</span>
+    <span class="winner-title" id="winnerTitle">WEREWOLVES WIN</span>
+    <span class="winner-sub" id="winnerSub">The village has fallen…</span>
+    <div class="winner-divider" id="winnerDivider"></div>
+    <div class="winner-players" id="winnerPlayers"></div>
+    <button class="winner-close-btn" onclick="closeWinnerOverlay()"
+      id="winnerCloseBtn">Continue</button>
   </div>
 </div>
 
@@ -785,9 +836,32 @@ function checkWinCondition(){
 
 function showGameOver(result){
   _gameOver=true;
+
+  // Find the last player(s) who just died (not yet shown as dead in _previousAlive)
+  const players=Object.values(gameState?.players||{});
+  const newlyDead=players.filter(p=>!p.alive && _previousAlive[p.id]===true);
+  // Update tracking so checkForDeaths won't re-fire
+  players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
+
+  const DEATH_DUR=4200; // ms per death anim
+  const deathDelay=newlyDead.length>0 ? newlyDead.length*DEATH_DUR : 0;
+
+  // Show death animation(s) for the final victim(s)
+  let d=0;
+  newlyDead.forEach(p=>{
+    setTimeout(()=>showDeathAnimation(p.name, p.role), d);
+    d+=DEATH_DUR;
+  });
+
+  // After death anim(s), show winner overlay
+  setTimeout(()=>{
+    _showWinnerOverlay(result);
+  }, deathDelay + 400);
+
+  // Render the score-sheet behind the overlay (hidden until overlay closes)
   const playView=document.getElementById('playView');
   playView.innerHTML=`
-    <div style="text-align:center;padding:2rem">
+    <div id="gameOverScoreSheet" style="text-align:center;padding:2rem;display:none">
       <div style="font-size:4rem;margin-bottom:1rem">${result.winner==='werewolf'?'🐺':'🏘️'}</div>
       <div class="phase-title" style="color:${result.winner==='werewolf'?'var(--blood-glow)':'var(--green)'}">
         ${result.winner==='werewolf'?(lang==='ar'?'فوز الذئاب!':lang==='fr'?'Victoire des Loups !':'Werewolves Win!'):(lang==='ar'?'فوز القرويين!':lang==='fr'?'Victoire du Village !':'Village Wins!')}
@@ -805,9 +879,88 @@ function showGameOver(result){
           </div>`;
         }).join('')}
       </div>
-
     </div>`;
   playView.style.display='flex';
+}
+
+function _showWinnerOverlay(result){
+  const isWolves=result.winner==='werewolf';
+  const ov=document.getElementById('winnerOverlay');
+  const bg=document.getElementById('winnerBg');
+  const icon=document.getElementById('winnerIcon');
+  const title=document.getElementById('winnerTitle');
+  const sub=document.getElementById('winnerSub');
+  const div=document.getElementById('winnerDivider');
+  const chips=document.getElementById('winnerPlayers');
+  const btn=document.getElementById('winnerCloseBtn');
+
+  // Set class
+  bg.className='winner-bg '+(isWolves?'wolves':'village');
+  icon.textContent=isWolves?'🐺':'🏘️';
+  title.className='winner-title '+(isWolves?'wolves':'village');
+  title.textContent=isWolves
+    ?(lang==='ar'?'فاز الذئاب!':lang==='fr'?'VICTOIRE DES LOUPS !':'WEREWOLVES WIN!')
+    :(lang==='ar'?'فاز القرويون!':lang==='fr'?'VICTOIRE DU VILLAGE !':'VILLAGE WINS!');
+  sub.textContent=isWolves
+    ?(lang==='ar'?'سقطت القرية في الظلام…':lang==='fr'?'Le village est tombé…':'The village has fallen…')
+    :(lang==='ar'?'الذئاب أُبيدت!':lang==='fr'?'Les loups sont éliminés !':'The wolves are defeated!');
+  div.className='winner-divider '+(isWolves?'wolves':'village');
+
+  // Player chips
+  const players=Object.values(gameState?.players||{});
+  chips.innerHTML=players.map(p=>{
+    const rd=ROLES_DEF[p.role];
+    const isWinner=isWolves
+      ? (ROLES_DEF[p.role]?.team==='werewolf')
+      : (p.alive);
+    return `<div class="winner-player-chip ${isWinner?(isWolves?'wolves':'village'):'loser'}">${rd?.e||'?'} ${p.name}</div>`;
+  }).join('');
+
+  btn.textContent=lang==='ar'?'متابعة':lang==='fr'?'Continuer':'Continue';
+
+  // Spawn particles
+  const parts=document.getElementById('winnerParticles');
+  parts.innerHTML='';
+  const colors=isWolves?['#b91c1c','#7f1d1d','#ef4444','#fca5a5']:['#10b981','#065f46','#34d399','#d4a017'];
+  for(let i=0;i<40;i++){
+    const p=document.createElement('div');
+    p.className='wparticle';
+    const size=6+Math.random()*12;
+    const color=colors[Math.floor(Math.random()*colors.length)];
+    const dur=3+Math.random()*4;
+    const delay=Math.random()*3;
+    p.style.cssText=`left:${Math.random()*100}%;width:${size}px;height:${size}px;background:${color};animation-duration:${dur}s;animation-delay:${delay}s`;
+    parts.appendChild(p);
+  }
+
+  // Reset animation classes (force reflow)
+  const content=ov.querySelector('.winner-content');
+  content.style.animation='none';
+  content.offsetHeight;
+  content.style.animation='';
+
+  // Reset child opacities
+  [icon,title,sub,div,chips,btn].forEach(el=>{
+    el.style.animation='none';
+    el.offsetHeight;
+    el.style.animation='';
+  });
+
+  ov.classList.add('active');
+}
+
+function closeWinnerOverlay(){
+  const ov=document.getElementById('winnerOverlay');
+  ov.style.transition='opacity .5s';
+  ov.style.opacity='0';
+  setTimeout(()=>{
+    ov.classList.remove('active');
+    ov.style.opacity='';
+    ov.style.transition='';
+    // Reveal score sheet
+    const sheet=document.getElementById('gameOverScoreSheet');
+    if(sheet) sheet.style.display='block';
+  }, 500);
 }
 
 function doReady(){
@@ -1413,7 +1566,7 @@ function renderGame(){
         :(lang==='ar'?'🏘️ فاز القرويون! تم القضاء على جميع الذئاب!':lang==='fr'?'🏘️ Les Villageois gagnent ! Tous les loups sont éliminés !':'🏘️ Villagers win! All werewolves have been eliminated!');
       document.getElementById('setupView').style.display='none';
       document.getElementById('playView').style.display='flex';
-      showGameOver({winner,msg});
+      showGameOver({winner,msg}); // handles death anim + winner overlay internally
     }
     renderChat();
     applyTranslations();
@@ -2226,10 +2379,18 @@ function resolveDayAndAdvance(){
     if(wolvesD.length>0&&wolvesD.length>=nonWolvesD.length) winD={winner:'werewolf'};
     else if(wolvesD.length===0&&aliveD.length>0) winD={winner:'village'};
     if(winD) upd[`games/${roomCode}/status`]='gameover:'+(winD.winner);
-    db.ref().update(upd,()=>{
-      // After write, kick off first night turn (only if no win)
-      if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
-    });
+
+    // Count how many players just got eliminated (for animation delay)
+    const elimCount=Object.values(upd).filter(v=>v===false).length;
+    const DEATH_ANIM_MS=4200;
+    const transDelay=elimCount>0 ? elimCount*DEATH_ANIM_MS + 800 : 400;
+
+    setTimeout(()=>{
+      db.ref().update(upd,()=>{
+        // After write, kick off first night turn (only if no win)
+        if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+      });
+    }, transDelay);
   } else {
     // Apply eliminations locally
     Object.entries(upd).forEach(([path,val])=>{
@@ -2238,13 +2399,18 @@ function resolveDayAndAdvance(){
       const m2=path.match(/players\/([^/]+)\/idiotRevealed/);
       if(m2 && gs.players[m2[1]]) gs.players[m2[1]].idiotRevealed=true;
     });
-    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
-    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
-    gs.dayVotes={};
-    gs.maireCandidates=null;
-    gs.maireVotes=null;
-    renderGame();
-    setTimeout(()=>advanceNightTurn(0),800);
+    const elimCountOff=Object.entries(upd).filter(([p,v])=>p.includes('/alive')&&v===false).length;
+    const DEATH_ANIM_MS=4200;
+    const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 : 400;
+    setTimeout(()=>{
+      Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
+      gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+      gs.dayVotes={};
+      gs.maireCandidates=null;
+      gs.maireVotes=null;
+      renderGame();
+      setTimeout(()=>advanceNightTurn(0),800);
+    }, transDelayOff);
   }
 }
 
