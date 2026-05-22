@@ -1982,7 +1982,8 @@ function renderPhase(){
                  `Your turn! ${stepLabel}`;
 
   const actions=gameState.nightActions||{};
-  const alreadyActed = !!actions[myId];
+  // BigBadWolf step uses a separate action key since the player already acted in the wolves step
+  const alreadyActed = stepId==='bigbadwolf' ? !!actions._bigbadAction : !!actions[myId];
   if(alreadyActed){
     ab.innerHTML=`<div style="color:var(--green);font-size:.95rem;font-weight:700">✓ ${lang==='ar'?'تم تسجيل اختيارك':lang==='fr'?'Choix enregistré':'Choice recorded'}</div>`;
     return;
@@ -2014,9 +2015,32 @@ function renderPhase(){
     // Big Bad Wolf: extra kill (only non-wolf villagers, excluding wolf victim)
     const wolfVictimId=gameState.nightActions?._wolfVictim;
     alive.filter(p=>!isWolfRole(p.role,gameState)&&p.id!==wolfVictimId).forEach(p=>addBtn(ab,p.name,'kill',()=>{
-      submitAction({type:'bigbad_kill',target:p.id});
+      // Store under _bigbadAction so it doesn't conflict with the wolves-step action
+      const data={type:'bigbad_kill',target:p.id,by:myId,ts:Date.now()};
+      if(fbOk&&db&&roomCode){
+        const u={};
+        u[`games/${roomCode}/nightActions/_bigbadAction`]=data;
+        u[`games/${roomCode}/nightActions/_bigbadVictim`]=p.id;
+        db.ref().update(u);
+      } else if(gameState){
+        if(!gameState.nightActions) gameState.nightActions={};
+        gameState.nightActions._bigbadAction=data;
+        gameState.nightActions._bigbadVictim=p.id;
+        checkTurnComplete();
+        renderGame();
+      }
     }));
-    addSkipBtn(ab);
+    addBtn(ab, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>{
+      const data={type:'skip',by:myId,ts:Date.now()};
+      if(fbOk&&db&&roomCode){
+        db.ref(`games/${roomCode}/nightActions/_bigbadAction`).set(data);
+      } else if(gameState){
+        if(!gameState.nightActions) gameState.nightActions={};
+        gameState.nightActions._bigbadAction=data;
+        checkTurnComplete();
+        renderGame();
+      }
+    });
   }
   // ── WHITE WEREWOLF (kill own pack) ──
   else if(stepId==='whitewerewolf'){
@@ -2423,7 +2447,10 @@ function checkTurnComplete(){
     });
   }
   const actions=gameState.nightActions||{};
-  const allDone=actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]);
+  // BigBadWolf step uses _bigbadAction key since the player already has an action from wolves step
+  const allDone = stepId==='bigbadwolf'
+    ? (actingPlayers.length===0 || !!actions._bigbadAction)
+    : (actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]));
 
   if(allDone && stepId!==_lastStepId){
     _lastStepId=stepId;
@@ -3091,6 +3118,18 @@ function autoSkipTurn(){
     });
   }
   const actions=gameState.nightActions||{};
+  // BigBadWolf step uses _bigbadAction key since the player already acted in wolves step
+  if(turn.stepId==='bigbadwolf'){
+    if(actions._bigbadAction){ advanceNightTurnFromCurrent(); return; }
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/nightActions/_bigbadAction`).set({type:'skip',by:'auto',ts:Date.now(),auto:true},()=>advanceNightTurnFromCurrent());
+    } else {
+      if(!gameState.nightActions) gameState.nightActions={};
+      gameState.nightActions._bigbadAction={type:'skip',by:'auto',ts:Date.now(),auto:true};
+      advanceNightTurnFromCurrent();
+    }
+    return;
+  }
   const pending=actingPlayers.filter(p=>!actions[p.id]);
   if(pending.length===0){ advanceNightTurnFromCurrent(); return; }
   if(fbOk&&db&&roomCode){
@@ -3414,7 +3453,6 @@ window.addEventListener('load',()=>{
   setTimeout(()=>initFB(), 200);
 });
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
