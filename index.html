@@ -754,16 +754,18 @@ function renderReadyStatus(readyPlayers){
 function doRestart(){
   if(!isLeader) return;
   const players=Object.values(gameState?.players||{});
-  if(players.length<4) return;
+  if(players.length<2) return;
 
   // Reset state and assign new random roles
   _gameOver=false;
   _previousAlive={};
   _lastStepId=null;
+  _advancingStep=false;
 
   const roles=assignRoles(players.length);
 
   if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/readyPlayers`).off();
     const upd={};
     players.forEach((p,i)=>{
       upd[`games/${roomCode}/players/${p.id}/role`]=roles[i];
@@ -774,19 +776,24 @@ function doRestart(){
     upd[`games/${roomCode}/phase`]='night';
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
-    upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+    upd[`games/${roomCode}/nightTurn`]={stepId:'__init__',stepIndex:-1,turnStart:Date.now()};
     upd[`games/${roomCode}/nightActions`]=null;
     upd[`games/${roomCode}/dayVotes`]=null;
-    upd[`games/${roomCode}/witchPotions`]=null;
+    // Build witchPotions as single object to avoid ancestor/child path conflict
+    const witchPotions={};
+    players.forEach((p,i)=>{ if(roles[i]==='witch') witchPotions[p.id]={life:true,death:true}; });
+    upd[`games/${roomCode}/witchPotions`]=Object.keys(witchPotions).length ? witchPotions : null;
     upd[`games/${roomCode}/maire`]=null;
     upd[`games/${roomCode}/maireCandidates`]=null;
     upd[`games/${roomCode}/maireVotes`]=null;
     upd[`games/${roomCode}/maireSkipDay`]=null;
     upd[`games/${roomCode}/readyPlayers`]=null;
     upd[`games/${roomCode}/teamChat`]=null;
-    db.ref(`games/${roomCode}/readyPlayers`).off();
-    db.ref().update(upd,()=>{
+    db.ref().update(upd).then(()=>{
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    }).catch(err=>{
+      console.error('Restart error:', err);
+      alert('\u26a0\ufe0f Error restarting game: '+err.message);
     });
   } else {
     players.forEach((p,i)=>{
@@ -796,7 +803,7 @@ function doRestart(){
     });
     Object.assign(gameState,{
       status:'playing', phase:'night', phaseStart:Date.now(), dayNum:1,
-      nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},
+      nightTurn:{stepId:'__init__',stepIndex:-1,turnStart:Date.now()},
       nightActions:null, dayVotes:null, witchPotions:null,
       maire:null, maireCandidates:null, maireVotes:null, maireSkipDay:null,
       readyPlayers:null, teamChat:null
@@ -1117,9 +1124,20 @@ function showGame(){
 function doLeave(){
   if(fbOk&&db&&roomCode&&myId){
     db.ref(`games/${roomCode}/players/${myId}`).remove();
+    db.ref(`games/${roomCode}/readyPlayers`).off();
     db.ref(`games/${roomCode}`).off();
   }
+  // Reset all local state
   gameState=null; myRole=null; myId=null; roomCode=null; isLeader=false;
+  _gameOver=false; _previousAlive={}; _lastStepId=null; _advancingStep=false;
+  // Clear dynamic UI so stale content never shows on next login
+  const playView=document.getElementById('playView');
+  if(playView){
+    playView.innerHTML='<div class="phase-title" id="phaseTitle">Night</div><div class="phase-desc" id="phaseDesc"></div><div class="phase-timer" id="phaseTimer">—</div><div id="actionBtns" style="display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center"></div><div class="player-list" id="playerList"></div>';
+    playView.style.display='none';
+  }
+  const setupView=document.getElementById('setupView');
+  if(setupView) setupView.style.display='block';
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('createdCodeBox').style.display='none';
