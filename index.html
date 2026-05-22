@@ -1893,7 +1893,7 @@ const NIGHT_SEQUENCE = [
   { id:'fox',        roles:['fox'],                                 label:{en:'Fox',fr:'Renard',ar:'الثعلب'}              },
   { id:'bodyguard',  roles:['bodyguard'],                           label:{en:'Bodyguard',fr:'Garde du Corps',ar:'الحارس الشخصي'} },
   { id:'savior',     roles:['savior'],                              label:{en:'Savior',fr:'Sauveur',ar:'المنقذ'}          },
-  { id:'wolves',     roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher'], label:{en:'Werewolves',fr:'Loups-Garous',ar:'الذئاب'} },
+  { id:'wolves',     roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','wolfhound'], label:{en:'Werewolves',fr:'Loups-Garous',ar:'الذئاب'} },
   { id:'whitewerewolf', roles:['whitewerewolf'],                    label:{en:'White Werewolf',fr:'Loup Blanc',ar:'الذئب الأبيض'}, condition:(gs,dn)=>dn%2===0 },
   { id:'witch',      roles:['witch'],                               label:{en:'Witch',fr:'Sorcière',ar:'الساحرة'}         },
   { id:'fluteplayer',roles:['fluteplayer'],                         label:{en:'Flute Player',fr:'Joueur de Flûte',ar:'عازف الناي'} },
@@ -1945,7 +1945,9 @@ function renderPhase(){
   // Find the step definition
   const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
   const stepLabel=step ? (step.label[lang]||step.label.en) : '…';
-  const isMyTurn = step && step.roles.includes(myRole);
+  // wolfhound who chose werewolf wakes with wolves
+  const _wolfhoundIsWolf = myRole==='wolfhound' && isWolfRole('wolfhound',gameState);
+  const isMyTurn = step && (step.roles.includes(myRole) || (stepId==='wolves' && _wolfhoundIsWolf));
   const me=gameState.players?.[myId];
   const iAmAlive = me?.alive;
 
@@ -1990,7 +1992,7 @@ function renderPhase(){
   }
   // ── WHITE WEREWOLF (kill own pack) ──
   else if(stepId==='whitewerewolf'){
-    alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'ww_kill',target:p.id})));
+    alive.filter(p=>isWolfRole(p.role,gameState)&&p.role!=='whitewerewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'ww_kill',target:p.id})));
     addSkipBtn(ab);
   }
   // ── SEER / APPRENTICE SEER ──
@@ -2107,13 +2109,26 @@ function renderPhase(){
   }
   // ── FOX ──
   else if(stepId==='fox'){
-    // Fox sniffs a group of 3; simplified: pick one player to sniff
-    alive.forEach(p=>addBtn(ab,(lang==='ar'?'شمّ ':lang==='fr'?'Flairer ':'Sniff ')+p.name,'seer',()=>{
-      const role=gameState.players[p.id]?.role;
-      const isWolf=ROLES_DEF[role]?.team==='werewolf';
-      submitAction({type:'fox_sniff',target:p.id,found:isWolf});
-      setTimeout(()=>alert('🦊 '+(isWolf?(lang==='ar'?'🐺 ذئب بالقرب!':lang==='fr'?'🐺 Loup proche !':'🐺 Wolf nearby!'):(lang==='ar'?'لا ذئاب':lang==='fr'?'Pas de loup':'No wolf'))),100);
-    }));
+    // Fox sniffs a group of 3 adjacent alive players (target + neighbors)
+    alive.forEach(p=>{
+      addBtn(ab,(lang==='ar'?'شمّ ':lang==='fr'?'Flairer ':'Sniff ')+p.name,'seer',()=>{
+        // Get the index of the target in the alive list to find adjacent players
+        const aliveList=Object.values(gameState.players||{}).filter(x=>x.alive);
+        const idx=aliveList.findIndex(x=>x.id===p.id);
+        // Group of 3: previous, target, next (wrap around)
+        const len=aliveList.length;
+        const group=[
+          aliveList[(idx-1+len)%len],
+          aliveList[idx],
+          aliveList[(idx+1)%len]
+        ];
+        // Check if ANY of the 3 is a wolf (using isWolfRole for all wolf types)
+        const foundWolf=group.some(g=>isWolfRole(g.role,gameState));
+        submitAction({type:'fox_sniff',target:p.id,found:foundWolf});
+        const names=group.map(g=>g.name).join(', ');
+        setTimeout(()=>alert('🦊 '+names+': '+(foundWolf?(lang==='ar'?'🐺 ذئب بالقرب!':lang==='fr'?'🐺 Loup proche !':'🐺 Wolf nearby!'):(lang==='ar'?'لا ذئاب':lang==='fr'?'Pas de loup':'No wolf nearby'))),100);
+      });
+    });
     addSkipBtn(ab);
   }
   // ── FLUTE PLAYER ──
