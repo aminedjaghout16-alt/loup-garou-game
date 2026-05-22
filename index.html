@@ -1929,8 +1929,15 @@ function renderPhase(){
 
   if(ph==='day'){
     document.getElementById('phaseTitle').textContent=tr('ph_day');
-    document.getElementById('phaseDesc').textContent=
-      lang==='ar'?'صوّت لإقصاء لاعب':lang==='fr'?'Votez pour éliminer un joueur':'Vote to eliminate a player';
+    // Bear Tamer dawn signal
+    const bearMsg=gameState.bearSignal
+      ?(lang==='ar'?'🐻 الدب يزأر! هناك ذئب بجانب مروّض الدب!'
+       :lang==='fr'?'🐻 L\'ours grogne ! Un loup se trouve à côté du Montreur d\'Ours !'
+       :'🐻 The bear growls! A werewolf is next to the Bear Tamer!')
+      :'';
+    document.getElementById('phaseDesc').textContent=bearMsg
+      ? bearMsg
+      : (lang==='ar'?'صوّت لإقصاء لاعب':lang==='fr'?'Votez pour éliminer un joueur':'Vote to eliminate a player');
     renderDayVoting();
     return;
   }
@@ -2468,6 +2475,23 @@ function resolveNightAndAdvance(){
   // Update savior's last-saved memory (can't save same person twice)
   const saviorAction=Object.values(actions).find(a=>a?.type==='savior_save');
 
+  // Bear Tamer dawn signal: check if neighbors include a wolf
+  const _aliveForBear=Object.values(players).filter(p=>p.alive);
+  const bearTamer=_aliveForBear.find(p=>p.role==='beartamer');
+  let bearSignal=false;
+  if(bearTamer){
+    const idx=_aliveForBear.findIndex(p=>p.id===bearTamer.id);
+    const len=_aliveForBear.length;
+    if(len>1){
+      const leftNeighbor=_aliveForBear[(idx-1+len)%len];
+      const rightNeighbor=_aliveForBear[(idx+1)%len];
+      if(isWolfRole(leftNeighbor.role,{...gs,players})||isWolfRole(rightNeighbor.role,{...gs,players})){
+        bearSignal=true;
+      }
+    }
+  }
+  upd[`games/${roomCode}/bearSignal`]=bearSignal;
+
   // Advance to day
   const nextDay=(gs.dayNum||1);
   invalidateTimerKey(); // Force timer to restart
@@ -2510,6 +2534,7 @@ function resolveNightAndAdvance(){
     gs.dayVotes={};
     gs.maireCandidates=null;
     gs.maireVotes=null;
+    gs.bearSignal=bearSignal;
     renderGame();
   }
 }
