@@ -2780,7 +2780,8 @@ function resolveDayAndAdvance(){
 // ════════════════════════════════════════════
 let _lastTimerKey = null;
 function invalidateTimerKey(){
-  // Force timer to restart on next tick
+  // Stop running tick immediately so it cannot fire on the new step
+  if(timerTO){ clearTimeout(timerTO); timerTO=null; }
   _lastTimerKey = null;
 }
 function startTimerIfNeeded(){
@@ -2819,7 +2820,7 @@ function tick(){
   } else {
     // Timer expired for this turn
     if(ph==='night'){
-      if(isLeader) autoSkipTurn();
+      if(isLeader && !_advancingStep){ _advancingStep=true; autoSkipTurn(); setTimeout(()=>{ _advancingStep=false; },800); }
     } else {
       if(isLeader) resolveDayAndAdvance();
     }
@@ -2827,6 +2828,7 @@ function tick(){
 }
 
 function autoSkipTurn(){
+  invalidateTimerKey(); // Stop timer immediately
   // Force-submit skip for any acting players who haven't acted
   const turn=gameState.nightTurn||{};
   const step=NIGHT_SEQUENCE.find(s=>s.id===turn.stepId);
