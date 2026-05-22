@@ -1847,20 +1847,52 @@ function renderPhase(){
   }
   // ── CUPID ──
   else if(stepId==='cupid'){
-    const chosen=gameState.nightActions?.['_cupid_chosen']||[];
+    const chosen=(gameState.nightActions?.['_cupid_chosen']||[]);
+    const remaining=2-chosen.length;
+    const labelEl=document.createElement('div');
+    labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem;width:100%;text-align:center';
+    labelEl.textContent=lang==='ar'?`اختر ${remaining} لاعب(ين)`:lang==='fr'?`Choisissez ${remaining} joueur(s)`:`Choose ${remaining} player(s)`;
+    ab.appendChild(labelEl);
     if(chosen.length<2){
-      aliveAll.filter(p=>!chosen.includes(p.id)).forEach(p=>addBtn(ab,p.name,'special',()=>{
-        const cur=gameState.nightActions?.['_cupid_chosen']||[];
-        if(cur.length===0){
-          writeAction({'_cupid_chosen':[p.id]});
-        } else {
-          submitAction({type:'cupid',target:p.id,partner:cur[0]});
-          writeAction({'_cupid_chosen':[...cur,p.id]});
-          setTimeout(()=>alert('💘 '+lang==='ar'?'تم ربط العاشقَين':lang==='fr'?'Amoureux liés':'Lovers linked!'),100);
-        }
-      }));
-      ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem">${lang==='ar'?`اختر ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} لاعب(ين)`:lang==='fr'?`Choisissez ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} joueur(s)`:`Choose ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} player(s)`}</div>`+ab.innerHTML;
+      aliveAll.filter(p=>!chosen.includes(p.id)).forEach(p=>{
+        addBtn(ab,p.name,'special',()=>{
+          const cur=(gameState.nightActions?.['_cupid_chosen']||[]);
+          if(cur.length===0){
+            // First pick — write intermediate state only
+            if(fbOk&&db&&roomCode){
+              db.ref(`games/${roomCode}/nightActions/_cupid_chosen`).set([p.id]);
+            } else if(gameState){
+              if(!gameState.nightActions) gameState.nightActions={};
+              gameState.nightActions['_cupid_chosen']=[p.id];
+              renderGame();
+            }
+          } else if(cur.length===1){
+            // Second pick — finalize
+            const partner=cur[0];
+            const pair=[partner,p.id];
+            const data={type:'cupid',target:p.id,partner,by:myId,ts:Date.now()};
+            if(fbOk&&db&&roomCode){
+              const upd={};
+              upd[`games/${roomCode}/nightActions/_cupid_chosen`]=pair;
+              upd[`games/${roomCode}/nightActions/_loversIds`]=pair;
+              upd[`games/${roomCode}/nightActions/${myId}`]=data;
+              db.ref().update(upd);
+            } else if(gameState){
+              if(!gameState.nightActions) gameState.nightActions={};
+              gameState.nightActions['_cupid_chosen']=pair;
+              gameState.nightActions['_loversIds']=pair;
+              gameState.nightActions[myId]=data;
+              checkTurnComplete();
+              renderGame();
+            }
+            const p1=aliveAll.find(x=>x.id===partner);
+            const p2=aliveAll.find(x=>x.id===p.id);
+            setTimeout(()=>alert('💘 '+(lang==='ar'?`تم ربط ${p1?.name||'?'} و ${p2?.name||'?'}`:lang==='fr'?`${p1?.name||'?'} et ${p2?.name||'?'} sont amoureux`:`${p1?.name||'?'} & ${p2?.name||'?'} are lovers!`)),100);
+          }
+        });
+      });
     }
+    addSkipBtn(ab);
   }
   // ── THIEF ──
   else if(stepId==='thief'){
@@ -1894,29 +1926,115 @@ function renderPhase(){
   }
   // ── FLUTE PLAYER ──
   else if(stepId==='fluteplayer'){
-    let enchanted=(gameState.nightActions?._fluteEnchanted||[]);
+    const enchanted=(gameState.nightActions?._fluteEnchanted||[]);
+    const thisNight=(gameState.nightActions?._fluteThisNight||[]);
     const notYet=alive.filter(p=>!enchanted.includes(p.id));
-    const need=2-((gameState.nightActions?._fluteThisNight||[]).length);
-    if(need>0 && notYet.length){
-      notYet.forEach(p=>addBtn(ab,(lang==='ar'?'سحر ':lang==='fr'?'Envoûter ':'Enchant ')+p.name,'special',()=>{
-        const cur=gameState.nightActions?._fluteThisNight||[];
-        if(cur.length<2){
-          const upd={type:'flute',target:p.id};
-          writeAction({'_fluteThisNight':[...cur,p.id],'_fluteEnchanted':[...enchanted,p.id]});
-          if(cur.length===1) submitAction(upd);
+    const stillNeed=2-thisNight.length;
+
+    if(notYet.length===0 || stillNeed<=0){
+      // Nobody left to enchant or already picked 2 — auto-submit
+      if(!actions[myId]){
+        const data={type:'flute',target:thisNight[0]||null,by:myId,ts:Date.now()};
+        if(fbOk&&db&&roomCode){
+          db.ref(`games/${roomCode}/nightActions/${myId}`).set(data);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions[myId]=data;
+          checkTurnComplete(); renderGame();
         }
-      }));
-    } else { submitAction({type:'flute',target:null}); }
+      }
+    } else {
+      const labelEl=document.createElement('div');
+      labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem;width:100%;text-align:center';
+      labelEl.textContent=lang==='ar'?`سحر ${stillNeed} لاعب(ين) آخرين`:lang==='fr'?`Envoûtez encore ${stillNeed} joueur(s)`:`Enchant ${stillNeed} more player(s)`;
+      ab.appendChild(labelEl);
+      notYet.filter(p=>!thisNight.includes(p.id)).forEach(p=>{
+        addBtn(ab,(lang==='ar'?'سحر ':lang==='fr'?'Envoûter ':'Enchant ')+p.name,'special',()=>{
+          const curThisNight=(gameState.nightActions?._fluteThisNight||[]);
+          const curEnchanted=(gameState.nightActions?._fluteEnchanted||[]);
+          if(curThisNight.includes(p.id)) return; // already chosen
+          const newThisNight=[...curThisNight,p.id];
+          const newEnchanted=[...curEnchanted.filter(x=>x!==p.id),p.id];
+          if(newThisNight.length>=2){
+            // Done picking — submit
+            const data={type:'flute',target:newThisNight[0],by:myId,ts:Date.now()};
+            if(fbOk&&db&&roomCode){
+              const upd={};
+              upd[`games/${roomCode}/nightActions/_fluteThisNight`]=newThisNight;
+              upd[`games/${roomCode}/nightActions/_fluteEnchanted`]=newEnchanted;
+              upd[`games/${roomCode}/nightActions/${myId}`]=data;
+              db.ref().update(upd);
+            } else if(gameState){
+              if(!gameState.nightActions) gameState.nightActions={};
+              gameState.nightActions._fluteThisNight=newThisNight;
+              gameState.nightActions._fluteEnchanted=newEnchanted;
+              gameState.nightActions[myId]=data;
+              checkTurnComplete(); renderGame();
+            }
+          } else {
+            // First pick only
+            if(fbOk&&db&&roomCode){
+              const upd={};
+              upd[`games/${roomCode}/nightActions/_fluteThisNight`]=newThisNight;
+              upd[`games/${roomCode}/nightActions/_fluteEnchanted`]=newEnchanted;
+              db.ref().update(upd);
+            } else if(gameState){
+              if(!gameState.nightActions) gameState.nightActions={};
+              gameState.nightActions._fluteThisNight=newThisNight;
+              gameState.nightActions._fluteEnchanted=newEnchanted;
+              renderGame();
+            }
+          }
+        });
+      });
+    }
   }
   // ── CROW ──
   else if(stepId==='crow'){
-    alive.forEach(p=>addBtn(ab,(lang==='ar'?'اتهم ':lang==='fr'?'Accuser ':'Accuse ')+p.name,'kill',()=>submitAction({type:'crow_accuse',target:p.id})));
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'اتهم ':lang==='fr'?'Accuser ':'Accuse ')+p.name,'kill',()=>{
+      // Write both the player's action AND _crowAccused atomically
+      const data={type:'crow_accuse',target:p.id,by:myId,ts:Date.now()};
+      if(fbOk&&db&&roomCode){
+        const upd={};
+        upd[`games/${roomCode}/nightActions/${myId}`]=data;
+        upd[`games/${roomCode}/nightActions/_crowAccused`]=p.id;
+        db.ref().update(upd);
+      } else if(gameState){
+        if(!gameState.nightActions) gameState.nightActions={};
+        gameState.nightActions[myId]=data;
+        gameState.nightActions._crowAccused=p.id;
+        checkTurnComplete();
+        renderGame();
+      }
+    }));
     addSkipBtn(ab);
   }
   // ── PYROMANIAC ──
   else if(stepId==='pyromaniac'){
     const doused=gameState.nightActions?._pyroDoused||[];
-    alive.filter(p=>!doused.includes(p.id)).forEach(p=>addBtn(ab,(lang==='ar'?'رشّ ':lang==='fr'?'Arroser ':'Douse ')+p.name,'kill',()=>submitAction({type:'pyro_douse',target:p.id})));
+    const labelEl=document.createElement('div');
+    labelEl.style.cssText='color:var(--moon-pale);font-size:.82rem;margin-bottom:.4rem;width:100%;text-align:center';
+    labelEl.textContent=(doused.length>0?(lang==='ar'?`مرشوشون: ${doused.length}`:lang==='fr'?`Arrosés: ${doused.length}`:`Doused: ${doused.length}`):'')+
+      (lang==='ar'?' — رشّ أو أشعل':lang==='fr'?' — arrosez ou enflammez':' — douse someone or ignite');
+    ab.appendChild(labelEl);
+    alive.filter(p=>!doused.includes(p.id)).forEach(p=>{
+      addBtn(ab,(lang==='ar'?'رشّ ':lang==='fr'?'Arroser ':'Douse ')+p.name,'kill',()=>{
+        // Write doused list and action marker (but same turn, so we submit to allow advancing)
+        const newDoused=[...doused,p.id];
+        const data={type:'pyro_douse',target:p.id,by:myId,ts:Date.now()};
+        if(fbOk&&db&&roomCode){
+          const upd={};
+          upd[`games/${roomCode}/nightActions/_pyroDoused`]=newDoused;
+          upd[`games/${roomCode}/nightActions/${myId}`]=data;
+          db.ref().update(upd);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions._pyroDoused=newDoused;
+          gameState.nightActions[myId]=data;
+          checkTurnComplete(); renderGame();
+        }
+      });
+    });
     if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','kill',()=>submitAction({type:'pyro_ignite'}));
     addSkipBtn(ab);
   }
@@ -1994,7 +2112,7 @@ function submitAction(action){
   } else if(gameState){
     if(!gameState.nightActions) gameState.nightActions={};
     gameState.nightActions[myId]=data;
-    if(action.type==='kill') gameState.nightActions._wolfVictim=action.target;
+    if(action.type==='kill'||action.type==='bigbad_kill') gameState.nightActions._wolfVictim=action.target;
     if(action.type==='protect') gameState.nightActions._bodyguardProtected=action.target;
     if(action.type==='savior_save') gameState.nightActions._saviorProtected=action.target;
     checkTurnComplete();
