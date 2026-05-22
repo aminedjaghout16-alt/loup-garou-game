@@ -1195,10 +1195,10 @@ function _doStartWithPlayers(players){
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
     // Reset witch potions: each witch gets 1 life + 1 death potion
-    upd[`games/${roomCode}/witchPotions`]=null;
-    players.forEach((p,i)=>{
-      if(roles[i]==='witch') upd[`games/${roomCode}/witchPotions/${p.id}`]={life:true,death:true};
-    });
+    // Build as a single object to avoid ancestor/child path conflict in Firebase update
+    const witchPotions={};
+    players.forEach((p,i)=>{ if(roles[i]==='witch') witchPotions[p.id]={life:true,death:true}; });
+    upd[`games/${roomCode}/witchPotions`]=Object.keys(witchPotions).length ? witchPotions : null;
     upd[`games/${roomCode}/nightTurn`]={stepId:'__init__',stepIndex:-1,turnStart:Date.now()};
     upd[`games/${roomCode}/nightActions`]=null;
     upd[`games/${roomCode}/dayVotes`]=null;
