@@ -435,6 +435,30 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 </script>
 <script>
 // ════════════════════════════════════════════
+// WOLF DETECTION HELPER
+// Returns true for ALL wolf-side roles, including whitewerewolf
+// and wolfhound who chose 'werewolf'.
+// ════════════════════════════════════════════
+function isWolfRole(role, gs){
+  if(!role) return false;
+  // All roles whose team is 'werewolf' in ROLES_DEF
+  if(ROLES_DEF[role]?.team==='werewolf') return true;
+  // whitewerewolf is solo but is still a wolf for counting purposes
+  if(role==='whitewerewolf') return true;
+  // wolfhound who chose werewolf
+  if(role==='wolfhound' && gs){
+    const actions=gs.nightActions||{};
+    // Find the wolfhound player's action
+    const wh=Object.values(gs.players||{}).find(p=>p.role==='wolfhound');
+    if(wh){
+      const a=actions[wh.id];
+      if(a?.type==='wolfhound_choose' && a.pick==='werewolf') return true;
+    }
+  }
+  return false;
+}
+
+// ════════════════════════════════════════════
 // ROLES  (key → { emoji, team, default })
 // ════════════════════════════════════════════
 const ROLES_DEF = {
@@ -859,8 +883,8 @@ function checkWinCondition(){
   if(!gameState||gameState.status!=='playing') return null;
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
-  const wolves=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
-  const nonWolves=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+  const wolves=alive.filter(p=>isWolfRole(p.role,gameState));
+  const nonWolves=alive.filter(p=>!isWolfRole(p.role,gameState));
 
   // Wolves win: wolves >= non-wolves
   if(wolves.length>0 && wolves.length>=nonWolves.length){
@@ -1073,7 +1097,7 @@ function checkHunterWinCondition(){
   if(!gameState) return;
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
-  const wolvesAlive=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
+  const wolvesAlive=alive.filter(p=>isWolfRole(p.role,gameState));
   
   // If no werewolves left (and at least one villager alive), village wins immediately
   if(wolvesAlive.length===0 && alive.length>0){
@@ -1089,7 +1113,7 @@ function checkHunterWinCondition(){
   }
   
   // Also check if werewolves equal or outnumber villagers - werewolves win
-  const nonWolvesAlive=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+  const nonWolvesAlive=alive.filter(p=>!isWolfRole(p.role,gameState));
   if(wolvesAlive.length>0 && wolvesAlive.length>=nonWolvesAlive.length){
     const upd={};
     upd[`games/${roomCode}/status`]='gameover:werewolf';
@@ -1832,8 +1856,8 @@ function renderStats(players){
   document.getElementById('iAlive').textContent=alive.length;
   document.getElementById('iDead').textContent=dead.length;
   if(gameState.status==='playing'){
-    document.getElementById('iWolves').textContent=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf').length;
-    document.getElementById('iVillage').textContent=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf').length;
+    document.getElementById('iWolves').textContent=alive.filter(p=>isWolfRole(p.role,gameState)).length;
+    document.getElementById('iVillage').textContent=alive.filter(p=>!isWolfRole(p.role,gameState)).length;
   }
 }
 
@@ -1962,7 +1986,7 @@ function renderPhase(){
 
   // ── WOLVES ──
   if(stepId==='wolves'){
-    alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'kill',target:p.id})));
+    alive.filter(p=>!isWolfRole(p.role,gameState)).forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'kill',target:p.id})));
   }
   // ── WHITE WEREWOLF (kill own pack) ──
   else if(stepId==='whitewerewolf'){
@@ -1973,8 +1997,8 @@ function renderPhase(){
   else if(stepId==='seer'||stepId==='apprenticeseer'){
     alive.forEach(p=>addBtn(ab,p.name,'seer',()=>{
       const role=gameState.players[p.id]?.role||'unknown';
-      const team=ROLES_DEF[role]?.team||'?';
-      const result=lang==='ar'?(team==='werewolf'?'🐺 ذئب':'✓ بريء'):lang==='fr'?(team==='werewolf'?'🐺 Loup':'✓ Innocent'):(team==='werewolf'?'🐺 Werewolf':'✓ Innocent');
+      const isWolf=isWolfRole(role,gameState);
+      const result=lang==='ar'?(isWolf?'🐺 ذئب':'✓ بريء'):lang==='fr'?(isWolf?'🐺 Loup':'✓ Innocent'):(isWolf?'🐺 Werewolf':'✓ Innocent');
       submitAction({type:'seer',target:p.id,result});
       setTimeout(()=>alert('🔮 '+p.name+': '+result),100);
     }));
@@ -2453,8 +2477,8 @@ function resolveNightAndAdvance(){
   const _tempPlayers=Object.values(players);
   killSet.forEach(id=>{ if(players[id]) players[id].alive=false; });
   const _aliveAfter=Object.values(players).filter(p=>p.alive);
-  const _wolvesAfter=_aliveAfter.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
-  const _nonWolvesAfter=_aliveAfter.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+  const _wolvesAfter=_aliveAfter.filter(p=>isWolfRole(p.role,{...gs,players}));
+  const _nonWolvesAfter=_aliveAfter.filter(p=>!isWolfRole(p.role,{...gs,players}));
   let _winResult=null;
   if(_wolvesAfter.length>0&&_wolvesAfter.length>=_nonWolvesAfter.length) _winResult='werewolf';
   else if(_wolvesAfter.length===0&&_aliveAfter.length>0) _winResult='village';
@@ -2712,8 +2736,8 @@ function resolveDayAndAdvance(){
     });
     // Check if game is over after this elimination
     const aliveD=players.filter(p=>gs.players[p.id]?.alive!==false&&p.alive!==false);
-    const wolvesD=aliveD.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
-    const nonWolvesD=aliveD.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+    const wolvesD=aliveD.filter(p=>isWolfRole(p.role,gs));
+    const nonWolvesD=aliveD.filter(p=>!isWolfRole(p.role,gs));
     let winD=null;
     if(wolvesD.length>0&&wolvesD.length>=nonWolvesD.length) winD={winner:'werewolf'};
     else if(wolvesD.length===0&&aliveD.length>0) winD={winner:'village'};
