@@ -2074,12 +2074,14 @@ function renderPhase(){
               const upd={};
               upd[`games/${roomCode}/nightActions/_cupid_chosen`]=pair;
               upd[`games/${roomCode}/nightActions/_loversIds`]=pair;
+              upd[`games/${roomCode}/loversIds`]=pair;
               upd[`games/${roomCode}/nightActions/${myId}`]=data;
               db.ref().update(upd);
             } else if(gameState){
               if(!gameState.nightActions) gameState.nightActions={};
               gameState.nightActions['_cupid_chosen']=pair;
               gameState.nightActions['_loversIds']=pair;
+              gameState.loversIds=pair;
               gameState.nightActions[myId]=data;
               checkTurnComplete();
               renderGame();
@@ -2383,7 +2385,14 @@ function checkTurnComplete(){
   }
 
   const players=Object.values(gameState.players||{});
-  const actingPlayers=players.filter(p=>p.alive && step.roles.includes(p.role));
+  let actingPlayers=players.filter(p=>p.alive && step.roles.includes(p.role));
+  // For the wolves step, exclude wolfhound who chose villager (they don't wake with wolves)
+  if(stepId==='wolves'){
+    actingPlayers=actingPlayers.filter(p=>{
+      if(p.role==='wolfhound' && !isWolfRole('wolfhound',gameState)) return false;
+      return true;
+    });
+  }
   const actions=gameState.nightActions||{};
   const allDone=actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]);
 
@@ -2466,6 +2475,14 @@ function resolveNightAndAdvance(){
   const dayNum=gs.dayNum||1;
   if(dayNum<=2){
     Object.values(players).forEach(p=>{ if(p.role==='berserker') killSet.delete(p.id); });
+  }
+
+  // Cupid lovers: if one lover is killed, the other dies too
+  const loversIds=gs.loversIds||actions._loversIds||[];
+  if(loversIds.length===2){
+    const [l1,l2]=loversIds;
+    if(killSet.has(l1) && players[l2]?.alive) killSet.add(l2);
+    if(killSet.has(l2) && players[l1]?.alive) killSet.add(l1);
   }
 
   // Mark dead
@@ -2747,6 +2764,17 @@ function resolveDayAndAdvance(){
     }
   }
 
+  // Cupid lovers: if one lover is eliminated during the day, the other dies too
+  const loversIdsDay=gs.loversIds||[];
+  if(loversIdsDay.length===2){
+    const [l1,l2]=loversIdsDay;
+    // Check if either lover was just marked for death
+    const l1dying=upd[`games/${roomCode}/players/${l1}/alive`]===false;
+    const l2dying=upd[`games/${roomCode}/players/${l2}/alive`]===false;
+    if(l1dying && !l2dying && gs.players[l2]?.alive) upd[`games/${roomCode}/players/${l2}/alive`]=false;
+    if(l2dying && !l1dying && gs.players[l1]?.alive) upd[`games/${roomCode}/players/${l1}/alive`]=false;
+  }
+
   // Advance to next night
   _lastStepId=null; // Reset so night turns can advance properly
   invalidateTimerKey(); // Force timer to restart
@@ -2893,7 +2921,14 @@ function autoSkipTurn(){
   const step=NIGHT_SEQUENCE.find(s=>s.id===turn.stepId);
   if(!step){ advanceNightTurnFromCurrent(); return; }
   const players=Object.values(gameState.players||{});
-  const actingPlayers=players.filter(p=>p.alive&&step.roles.includes(p.role));
+  let actingPlayers=players.filter(p=>p.alive&&step.roles.includes(p.role));
+  // For the wolves step, exclude wolfhound who chose villager
+  if(turn.stepId==='wolves'){
+    actingPlayers=actingPlayers.filter(p=>{
+      if(p.role==='wolfhound' && !isWolfRole('wolfhound',gameState)) return false;
+      return true;
+    });
+  }
   const actions=gameState.nightActions||{};
   const pending=actingPlayers.filter(p=>!actions[p.id]);
   if(pending.length===0){ advanceNightTurnFromCurrent(); return; }
@@ -3218,6 +3253,7 @@ window.addEventListener('load',()=>{
   setTimeout(()=>initFB(), 200);
 });
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
