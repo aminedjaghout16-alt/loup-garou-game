@@ -417,14 +417,14 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 
   function loadDB(onload){
     loadScript(CDN1_DB, onload, function(){
-      console.debug('gstatic DB unavailable, using jsDelivr fallback');
+      console.log('gstatic DB unavailable, using jsDelivr fallback');
       loadScript(CDN2_DB, onload, function(){ console.error('All Firebase DB CDNs failed'); window._fbLoadFailed=true; });
     });
   }
   loadScript(CDN1_APP,
     function(){ loadDB(function(){ window._fbReady=true; }); },
     function(){
-      console.debug('gstatic APP unavailable, using jsDelivr fallback');
+      console.log('gstatic APP unavailable, using jsDelivr fallback');
       loadScript(CDN2_APP,
         function(){ loadDB(function(){ window._fbReady=true; }); },
         function(){ console.error('All Firebase APP CDNs failed'); window._fbLoadFailed=true; }
@@ -1046,11 +1046,15 @@ function hunterShoot(targetId, callback){
     db.ref(`games/${roomCode}/players/${targetId}/alive`).set(false).then(()=>{
       // Write hunter shot record
       db.ref(`games/${roomCode}/nightActions/_hunterShot`).set({target:targetId,by:myId,ts:Date.now()});
+      // Check for instant win (hunter kills last wolf)
+      setTimeout(()=>checkHunterWinCondition(), 100);
     });
   } else if(gameState){
     if(gameState.players[targetId]) gameState.players[targetId].alive=false;
     if(!gameState.nightActions) gameState.nightActions={};
     gameState.nightActions._hunterShot={target:targetId,by:myId,ts:Date.now()};
+    // Check for instant win (hunter kills last wolf)
+    setTimeout(()=>checkHunterWinCondition(), 100);
   }
   // Show death anim for target, then continue
   setTimeout(()=>showDeathAnimation(targetName, targetRole), 200);
@@ -1061,6 +1065,44 @@ function hunterSkip(){
   const ov=document.getElementById('hunterOverlay');
   ov.classList.remove('active');
   _hunterPending=false;
+}
+
+function checkHunterWinCondition(){
+  // Check if hunter just killed the last wolf - village wins instantly
+  if(!isLeader) return;
+  if(!gameState) return;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const wolvesAlive=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
+  
+  // If no werewolves left (and at least one villager alive), village wins immediately
+  if(wolvesAlive.length===0 && alive.length>0){
+    const upd={};
+    upd[`games/${roomCode}/status`]='gameover:village';
+    if(fbOk&&db&&roomCode){
+      db.ref().update(upd);
+    } else {
+      gameState.status='gameover:village';
+      renderGame();
+    }
+    return true;
+  }
+  
+  // Also check if werewolves equal or outnumber villagers - werewolves win
+  const nonWolvesAlive=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+  if(wolvesAlive.length>0 && wolvesAlive.length>=nonWolvesAlive.length){
+    const upd={};
+    upd[`games/${roomCode}/status`]='gameover:werewolf';
+    if(fbOk&&db&&roomCode){
+      db.ref().update(upd);
+    } else {
+      gameState.status='gameover:werewolf';
+      renderGame();
+    }
+    return true;
+  }
+  
+  return false;
 }
 
 // ════════════════════════════════════════════
@@ -2469,8 +2511,13 @@ function renderDayVoting(){
       voterMap[a.target].push({id:pid, name:pName, color:getPlayerColor(pid), weight:w});
     }
   });
+  // Add crow's accusation to tally with special indicator
   const crowAccused=(gameState.nightActions||{})._crowAccused;
-  if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+  if(crowAccused){
+    tally[crowAccused]=(tally[crowAccused]||0)+2;
+    if(!voterMap[crowAccused]) voterMap[crowAccused]=[];
+    voterMap[crowAccused].push({id:'crow_system', name:'🐦‍⬛ Crow', color:'#b8860b', weight:2, isCrow:true});
+  }
 
   let html='';
 
@@ -2483,12 +2530,16 @@ function renderDayVoting(){
       html+=`<div class="vote-grid" style="pointer-events:none;opacity:.6">`;
       alive.forEach(p=>{
         const v=tally[p.id]||0;
-        const dots=(voterMap[p.id]||[]).map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default">
+        const voters=(voterMap[p.id]||[]);
+        const hasCrowVote=voters.some(vt=>vt.isCrow);
+        const regularVoters=voters.filter(vt=>!vt.isCrow);
+        const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+        const crowIndicator=hasCrowVote?`<span class="vote-dot" style="background:#b8860b;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.6rem" title="🐦‍⬛ Crow Accusation (+2)">🐦</span>`:'';
+        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default;${hasCrowVote?'border:2px solid #b8860b;':''}">
           <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
           <span class="vc-name">${p.name}</span>
-          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}</div>
-          <div class="vc-dots">${dots}</div>
+          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}${hasCrowVote?' 🐦':''}</div>
+          <div class="vc-dots">${crowIndicator}${dots}</div>
         </div>`;
       });
       html+=`</div>`;
@@ -2524,12 +2575,16 @@ function renderDayVoting(){
       html+=`<div class="vote-grid" style="pointer-events:none;margin-top:.6rem">`;
       aliveOthers.forEach(p=>{
         const v=tally[p.id]||0;
-        const dots=(voterMap[p.id]||[]).map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default">
+        const voters=(voterMap[p.id]||[]);
+        const hasCrowVote=voters.some(vt=>vt.isCrow);
+        const regularVoters=voters.filter(vt=>!vt.isCrow);
+        const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+        const crowIndicator=hasCrowVote?`<span class="vote-dot" style="background:#b8860b;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.6rem" title="🐦‍⬛ Crow Accusation (+2)">🐦</span>`:'';
+        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default;${hasCrowVote?'border:2px solid #b8860b;':''}">
           <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
           <span class="vc-name">${p.name}</span>
-          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}</div>
-          <div class="vc-dots">${dots}</div>
+          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}${hasCrowVote?' 🐦':''}</div>
+          <div class="vc-dots">${crowIndicator}${dots}</div>
         </div>`;
       });
       html+=`</div>`;
@@ -2539,12 +2594,16 @@ function renderDayVoting(){
     html+=`<div class="vote-grid">`;
     aliveOthers.forEach(p=>{
       const v=tally[p.id]||0;
-      const dots=(voterMap[p.id]||[]).map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-      html+=`<div class="vote-card${v>0?' has-votes':''}" onclick="doVote('${p.id}')">
+      const voters=(voterMap[p.id]||[]);
+      const hasCrowVote=voters.some(vt=>vt.isCrow);
+      const regularVoters=voters.filter(vt=>!vt.isCrow);
+      const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+      const crowIndicator=hasCrowVote?`<span class="vote-dot" style="background:#b8860b;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.6rem" title="🐦‍⬛ Crow Accusation (+2)">🐦</span>`:'';
+      html+=`<div class="vote-card${v>0?' has-votes':''}" onclick="doVote('${p.id}')" style="${hasCrowVote?'border:2px solid #b8860b;':''}">
         <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
         <span class="vc-name">${p.name}</span>
-        <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}</div>
-        <div class="vc-dots">${dots}</div>
+        <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}${hasCrowVote?' 🐦':''}</div>
+        <div class="vc-dots">${crowIndicator}${dots}</div>
       </div>`;
     });
     html+=`</div>`;
