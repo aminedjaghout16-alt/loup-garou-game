@@ -1687,6 +1687,13 @@ function _doStartWithPlayers(players){
     upd[`games/${roomCode}/nightTurn`]={stepId:'__init__',stepIndex:-1,turnStart:Date.now()};
     upd[`games/${roomCode}/nightActions`]=null;
     upd[`games/${roomCode}/dayVotes`]=null;
+    // Thief: pick 2 unused role cards from non-assigned pool
+    if(roles.includes('thief')){
+      const allPool=['seer','witch','hunter','bodyguard','villager','villager','werewolf','fox','crow','savior'];
+      const unusedPool=allPool.filter(r=>!roles.includes(r));
+      const shuffled=unusedPool.sort(()=>Math.random()-.5);
+      upd[`games/${roomCode}/thiefCards`]=[shuffled[0]||'villager', shuffled[1]||'villager'];
+    }
     db.ref().update(upd).then(()=>{
       console.log('✅ Game started');
       _lastStepId=null;
@@ -1710,6 +1717,13 @@ function _doStartWithPlayers(players){
       nightTurn:{stepId:'__init__',stepIndex:-1,turnStart:Date.now()},
       nightActions:null,dayVotes:null
     });
+    // Thief cards
+    if(roles.includes('thief')){
+      const allPool=['seer','witch','hunter','bodyguard','villager','villager','werewolf','fox','crow','savior'];
+      const unusedPool=allPool.filter(r=>!roles.includes(r));
+      const shuffled=unusedPool.sort(()=>Math.random()-.5);
+      gameState.thiefCards=[shuffled[0]||'villager', shuffled[1]||'villager'];
+    }
     _lastStepId=null;
     _advancingStep=false;
     _lastPhase=null;
@@ -1968,10 +1982,38 @@ function renderPhase(){
       lang==='ar'? `${stepLabel} يتصرف الآن… 🌙` :
       lang==='fr'? `${stepLabel} agit maintenant… 🌙` :
                    `${stepLabel} is acting now… 🌙`;
-    // Show "waiting" with subtle progress dots
-    ab.innerHTML=`<div style="color:var(--ghost);opacity:.5;font-size:.85rem;margin-top:.5rem">
-      ${lang==='ar'?'انتظر دورك':lang==='fr'?'Attendez votre tour':'Waiting for your turn…'}
-    </div>`;
+    // Little Girl: may peek during wolves turn (at her own risk — if wolves notice, she can die)
+    if(myRole==='littlegirl' && iAmAlive && stepId==='wolves'){
+      const peekCount=gameState.littleGirlPeeks||0;
+      if(peekCount<2){
+        ab.innerHTML='';
+        const labelEl=document.createElement('div');
+        labelEl.style.cssText='color:var(--moon-pale);font-size:.85rem;margin-bottom:.6rem;width:100%;text-align:center';
+        labelEl.textContent=lang==='ar'?'👁 يمكنك التجسس على الذئاب… لكن قد تُكتشفين!':lang==='fr'?'👁 Vous pouvez épier les loups… mais ils pourraient vous repérer !':'👁 You may peek at the wolves… but they might catch you!';
+        ab.appendChild(labelEl);
+        addBtn(ab, lang==='ar'?'👀 تجسس':lang==='fr'?'👀 Épier':'👀 Peek', 'seer', ()=>{
+          // Reveal wolf names to the Little Girl
+          const wolves=Object.values(gameState.players||{}).filter(p=>p.alive&&isWolfRole(p.role,gameState));
+          const wolfNames=wolves.map(p=>p.name).join(', ')||'?';
+          // Record peek (too many peeks could get her caught — for flavor, random 25% chance wolves catch her)
+          const caught=Math.random()<0.25;
+          if(fbOk&&db&&roomCode){
+            db.ref(`games/${roomCode}/littleGirlPeeks`).set(peekCount+1);
+            if(caught) db.ref(`games/${roomCode}/littleGirlCaught`).set(true);
+          } else if(gameState){
+            gameState.littleGirlPeeks=(peekCount+1);
+            if(caught) gameState.littleGirlCaught=true;
+          }
+          const caughtMsg=caught?(lang==='ar'?' — ⚠️ لقد اكتُشفت! ستموتين هذه الليلة!':lang==='fr'?' — ⚠️ Vous avez été repérée ! Vous mourrez cette nuit !':' — ⚠️ You were caught! You will die tonight!'):'';
+          setTimeout(()=>alert(`🐺 ${lang==='ar'?'الذئاب هم:':lang==='fr'?'Les loups sont :':'Wolves are:'} ${wolfNames}${caughtMsg}`),100);
+        });
+      }
+    } else {
+      // Show "waiting" with subtle progress dots
+      ab.innerHTML=`<div style="color:var(--ghost);opacity:.5;font-size:.85rem;margin-top:.5rem">
+        ${lang==='ar'?'انتظر دورك':lang==='fr'?'Attendez votre tour':'Waiting for your turn…'}
+      </div>`;
+    }
     return;
   }
 
@@ -2338,8 +2380,7 @@ function renderPhase(){
     addSkipBtn(ab);
   }
   // ── TWO SISTERS ──
-  else if(stepId==='twosisters'){
-    // Sisters just see each other — they auto-act, show info
+  else if(stepId==='twosisters'){    // Sisters just see each other — they auto-act, show info
     const sisters=aliveAll.filter(p=>p.role==='twosisters');
     ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem">👯 ${lang==='ar'?'أختك هي: ':lang==='fr'?'Votre sœur est : ':'Your sister is: '} <strong>${sisters.filter(p=>p.id!==myId).map(p=>p.name).join(', ')||'?'}</strong></div>`;
     setTimeout(()=>submitAction({type:'sisters_meet'}),1500);
@@ -2512,6 +2553,14 @@ function resolveNightAndAdvance(){
 
   // Collect who dies
   const killSet=new Set();
+
+  // Little Girl: if caught peeking by wolves, she dies
+  if(gs.littleGirlCaught){
+    const lg=Object.values(players).find(p=>p.role==='littlegirl'&&p.alive);
+    if(lg) killSet.add(lg.id);
+    upd[`games/${roomCode}/littleGirlCaught`]=false;
+    upd[`games/${roomCode}/littleGirlPeeks`]=0;
+  }
 
   // Rusty Sword Knight: kill infected wolf from previous night
   if(gs.rustyInfectedWolf){
@@ -2747,6 +2796,7 @@ function renderDayVoting(){
   const ab=document.getElementById('actionBtns');
   const me=gameState.players?.[myId];
   const iAmDead=!me?.alive;
+  const iAmIdiotRevealed=!!me?.idiotRevealed; // revealed village idiot loses voting rights
 
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
@@ -2782,7 +2832,10 @@ function renderDayVoting(){
   let html='';
 
   // ── DEAD PLAYER: ghost spectator view ──
-  if(iAmDead){
+  if(iAmDead || iAmIdiotRevealed){
+    if(iAmIdiotRevealed && !iAmDead){
+      html+=`<div style="padding:.5rem .8rem;background:rgba(212,160,23,.15);border:1px solid var(--moon);border-radius:6px;text-align:center;margin-bottom:.7rem;font-size:.85rem;color:var(--moon-pale)">🤡 ${lang==='ar'?'أنت المغفل — فقدت حق التصويت':lang==='fr'?'Vous êtes l\'Idiot du Village — droit de vote perdu !':'You are the Village Idiot — voting rights lost!'}</div>`;
+    }
     html+=`<div style="text-align:center;padding:.5rem 0">`;
     // Show tally read-only
     html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:.95rem;margin-bottom:.7rem;letter-spacing:.05em">🗳 ${lang==='ar'?'تصويت الإقصاء':lang==='fr'?'Vote d\'élimination':'Elimination Vote'}</div>`;
@@ -2884,6 +2937,9 @@ function renderDayVoting(){
 
 function doVote(targetId){
   if(!myId) return;
+  // Village Idiot who has been revealed cannot vote
+  const me=gameState.players?.[myId];
+  if(me?.idiotRevealed) return;
   const maireId=gameState.maire;
   const voteWeight=(myId===maireId)?2:1;
   const action={type:'vote',target:targetId,by:myId,ts:Date.now(),voteWeight};
@@ -2901,7 +2957,8 @@ function checkDayVoteComplete(){
   if(!isLeader) return;
   if(gameState?.phase!=='day') return;
   const players=Object.values(gameState.players||{});
-  const alive=players.filter(p=>p.alive);
+  // Revealed village idiots lose voting rights — exclude them from completion check
+  const alive=players.filter(p=>p.alive && !p.idiotRevealed);
   const dayVotes=gameState.dayVotes||{};
   const allVoted=alive.every(p=>!!dayVotes[p.id]);
   if(allVoted && alive.length>0){ 
