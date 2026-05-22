@@ -745,9 +745,17 @@ function renderReadyStatus(readyPlayers){
   html+='</div>';
   el.innerHTML=html;
 
-  // If all ready and I'm leader, restart the game
-  if(isLeader && readyCount>=totalCount && totalCount>0){
+  // If all ready and I'm leader, restart the game (guard _gameOver to prevent double-trigger)
+  if(isLeader && !_gameOver && readyCount>=totalCount && totalCount>0){
     doRestart();
+  }
+}
+
+function _resetPlayView(){
+  const playView=document.getElementById('playView');
+  if(playView){
+    playView.innerHTML='<div class="phase-title" id="phaseTitle">Night</div><div class="phase-desc" id="phaseDesc"></div><div class="phase-timer" id="phaseTimer">—</div><div id="actionBtns" style="display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center"></div><div class="player-list" id="playerList"></div>';
+    playView.style.display='none';
   }
 }
 
@@ -761,6 +769,9 @@ function doRestart(){
   _previousAlive={};
   _lastStepId=null;
   _advancingStep=false;
+
+  // Restore playView DOM so renderGame() can find phaseTitle, actionBtns, playerList etc.
+  _resetPlayView();
 
   const roles=assignRoles(players.length);
 
@@ -1131,11 +1142,7 @@ function doLeave(){
   gameState=null; myRole=null; myId=null; roomCode=null; isLeader=false;
   _gameOver=false; _previousAlive={}; _lastStepId=null; _advancingStep=false;
   // Clear dynamic UI so stale content never shows on next login
-  const playView=document.getElementById('playView');
-  if(playView){
-    playView.innerHTML='<div class="phase-title" id="phaseTitle">Night</div><div class="phase-desc" id="phaseDesc"></div><div class="phase-timer" id="phaseTimer">—</div><div id="actionBtns" style="display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center"></div><div class="player-list" id="playerList"></div>';
-    playView.style.display='none';
-  }
+  _resetPlayView();
   const setupView=document.getElementById('setupView');
   if(setupView) setupView.style.display='block';
   document.getElementById('gameScreen').classList.add('hidden');
