@@ -1280,6 +1280,22 @@ function renderGame(){
   document.getElementById('hPlayers').textContent=players.length;
   document.getElementById('hRoom').textContent=roomCode||'';
 
+  // Handle gameover status written by leader
+  if(typeof gameState.status==='string'&&gameState.status.startsWith('gameover:')){
+    if(!_gameOver){
+      const winner=gameState.status.split(':')[1];
+      const msg=winner==='werewolf'
+        ?(lang==='ar'?'🐺 فاز الذئاب! سيطروا على القرية!':lang==='fr'?'🐺 Les Loups-Garous gagnent ! Ils ont pris le contrôle du village !':'🐺 Werewolves win! They have taken over the village!')
+        :(lang==='ar'?'🏘️ فاز القرويون! تم القضاء على جميع الذئاب!':lang==='fr'?'🏘️ Les Villageois gagnent ! Tous les loups sont éliminés !':'🏘️ Villagers win! All werewolves have been eliminated!');
+      document.getElementById('setupView').style.display='none';
+      document.getElementById('playView').style.display='flex';
+      showGameOver({winner,msg});
+    }
+    renderChat();
+    applyTranslations();
+    return;
+  }
+
   if(gameState.status==='setup'){
     document.getElementById('setupView').style.display='block';
     document.getElementById('playView').style.display='none';
@@ -1337,14 +1353,8 @@ function renderGame(){
     // Check for newly dead players and show death animation
     checkForDeaths(players);
 
-    // Check win condition
-    const winResult=checkWinCondition();
-    if(winResult){
-      showGameOver(winResult);
-      renderChat();
-      applyTranslations();
-      return;
-    }
+    // Win condition is now handled via status:'gameover:...' written by leader
+    // (checkWinCondition block moved to the gameover handler at top of renderGame)
 
     const me=gameState.players?.[myId];
     if(me?.role){
@@ -1874,6 +1884,17 @@ function resolveNightAndAdvance(){
   upd[`games/${roomCode}/maireCandidates`]=null;
   upd[`games/${roomCode}/maireVotes`]=null;
 
+  // Check win after applying kills, write gameover status so all clients see it
+  const _tempPlayers=Object.values(players);
+  killSet.forEach(id=>{ if(players[id]) players[id].alive=false; });
+  const _aliveAfter=Object.values(players).filter(p=>p.alive);
+  const _wolvesAfter=_aliveAfter.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
+  const _nonWolvesAfter=_aliveAfter.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+  let _winResult=null;
+  if(_wolvesAfter.length>0&&_wolvesAfter.length>=_nonWolvesAfter.length) _winResult='werewolf';
+  else if(_wolvesAfter.length===0&&_aliveAfter.length>0) _winResult='village';
+  if(_winResult) upd[`games/${roomCode}/status`]='gameover:'+_winResult;
+
   if(fbOk&&db&&roomCode){
     db.ref().update(upd);
   } else {
@@ -2065,14 +2086,22 @@ function resolveDayAndAdvance(){
   upd[`games/${roomCode}/maireVotes`]=null;
 
   if(fbOk&&db&&roomCode){
-    // Also apply elimination locally before Firebase write for immediate feedback
+    // Apply elimination locally to check win condition before Firebase write
     Object.entries(upd).forEach(([path,val])=>{
       const m=path.match(/players\/([^/]+)\/alive/);
       if(m && val===false && gs.players[m[1]]) gs.players[m[1]].alive=false;
     });
+    // Check if game is over after this elimination
+    const aliveD=players.filter(p=>gs.players[p.id]?.alive!==false&&p.alive!==false);
+    const wolvesD=aliveD.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
+    const nonWolvesD=aliveD.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+    let winD=null;
+    if(wolvesD.length>0&&wolvesD.length>=nonWolvesD.length) winD={winner:'werewolf'};
+    else if(wolvesD.length===0&&aliveD.length>0) winD={winner:'village'};
+    if(winD) upd[`games/${roomCode}/status`]='gameover:'+(winD.winner);
     db.ref().update(upd,()=>{
-      // After write, kick off first night turn
-      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+      // After write, kick off first night turn (only if no win)
+      if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     });
   } else {
     // Apply eliminations locally
