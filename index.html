@@ -2527,16 +2527,16 @@ function renderDayVoting(){
       html+=`<div class="vote-grid" style="pointer-events:none;opacity:.6">`;
       alive.forEach(p=>{
         const v=tally[p.id]||0;
-        const voters=(voterMap[p.id]||[]);
-        const hasCrowVote=voters.some(vt=>vt.isCrow);
-        const regularVoters=voters.filter(vt=>!vt.isCrow);
+        const isCrowAccused=crowAccused&&crowAccused===p.id;
+        const regularVoters=(voterMap[p.id]||[]).filter(vt=>!vt.isCrow);
         const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-        const crowIndicator=hasCrowVote?`<span class="vote-dot" style="background:#b8860b;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.6rem" title="🐦‍⬛ Crow Accusation (+2)">🐦</span>`:'';
-        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default;${hasCrowVote?'border:2px solid #b8860b;':''}">
+        const crowBadge=isCrowAccused?`<span style="color:#f59e0b;font-size:.85rem;font-weight:700;display:block;margin-top:.15rem">🐦‍⬛ +2</span>`:'';
+        html+=`<div class="vote-card${v>0||isCrowAccused?' has-votes':''}" style="cursor:default;${isCrowAccused?'border:2px solid #f59e0b;box-shadow:0 0 10px rgba(245,158,11,.3);':''}">
           <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
           <span class="vc-name">${p.name}</span>
-          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}${hasCrowVote?' 🐦':''}</div>
-          <div class="vc-dots">${crowIndicator}${dots}</div>
+          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):isCrowAccused?'2 votes':''}</div>
+          ${crowBadge}
+          <div class="vc-dots">${dots}</div>
         </div>`;
       });
       html+=`</div>`;
@@ -2572,16 +2572,16 @@ function renderDayVoting(){
       html+=`<div class="vote-grid" style="pointer-events:none;margin-top:.6rem">`;
       aliveOthers.forEach(p=>{
         const v=tally[p.id]||0;
-        const voters=(voterMap[p.id]||[]);
-        const hasCrowVote=voters.some(vt=>vt.isCrow);
-        const regularVoters=voters.filter(vt=>!vt.isCrow);
+        const isCrowAccused=crowAccused&&crowAccused===p.id;
+        const regularVoters=(voterMap[p.id]||[]).filter(vt=>!vt.isCrow);
         const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-        const crowIndicator=hasCrowVote?`<span class="vote-dot" style="background:#b8860b;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.6rem" title="🐦‍⬛ Crow Accusation (+2)">🐦</span>`:'';
-        html+=`<div class="vote-card${v>0?' has-votes':''}" style="cursor:default;${hasCrowVote?'border:2px solid #b8860b;':''}">
+        const crowBadge=isCrowAccused?`<span style="color:#f59e0b;font-size:.85rem;font-weight:700;display:block;margin-top:.15rem">🐦‍⬛ +2</span>`:'';
+        html+=`<div class="vote-card${v>0||isCrowAccused?' has-votes':''}" style="cursor:default;${isCrowAccused?'border:2px solid #f59e0b;box-shadow:0 0 10px rgba(245,158,11,.3);':''}">
           <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
           <span class="vc-name">${p.name}</span>
-          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}${hasCrowVote?' 🐦':''}</div>
-          <div class="vc-dots">${crowIndicator}${dots}</div>
+          <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):isCrowAccused?'2 votes':''}</div>
+          ${crowBadge}
+          <div class="vc-dots">${dots}</div>
         </div>`;
       });
       html+=`</div>`;
@@ -2591,16 +2591,16 @@ function renderDayVoting(){
     html+=`<div class="vote-grid">`;
     aliveOthers.forEach(p=>{
       const v=tally[p.id]||0;
-      const voters=(voterMap[p.id]||[]);
-      const hasCrowVote=voters.some(vt=>vt.isCrow);
-      const regularVoters=voters.filter(vt=>!vt.isCrow);
+      const isCrowAccused=crowAccused&&crowAccused===p.id;
+      const regularVoters=(voterMap[p.id]||[]).filter(vt=>!vt.isCrow);
       const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-      const crowIndicator=hasCrowVote?`<span class="vote-dot" style="background:#b8860b;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.6rem" title="🐦‍⬛ Crow Accusation (+2)">🐦</span>`:'';
-      html+=`<div class="vote-card${v>0?' has-votes':''}" onclick="doVote('${p.id}')" style="${hasCrowVote?'border:2px solid #b8860b;':''}">
+      const crowBadge=isCrowAccused?`<span style="color:#f59e0b;font-size:.85rem;font-weight:700;display:block;margin-top:.15rem">🐦‍⬛ +2</span>`:'';
+      html+=`<div class="vote-card${v>0||isCrowAccused?' has-votes':''}" onclick="doVote('${p.id}')" style="${isCrowAccused?'border:2px solid #f59e0b;box-shadow:0 0 10px rgba(245,158,11,.3);':''}">
         <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
         <span class="vc-name">${p.name}</span>
-        <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):''}${hasCrowVote?' 🐦':''}</div>
-        <div class="vc-dots">${crowIndicator}${dots}</div>
+        <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):isCrowAccused?'2 votes':''}</div>
+        ${crowBadge}
+        <div class="vc-dots">${dots}</div>
       </div>`;
     });
     html+=`</div>`;
