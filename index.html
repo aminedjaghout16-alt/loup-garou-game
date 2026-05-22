@@ -43,6 +43,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 .g-title{font-family:'Cinzel Decorative',serif;color:var(--moon);font-size:1.15rem}
 .g-meta{display:flex;gap:1.2rem;font-size:.82rem;flex-wrap:wrap;align-items:center}
 .g-meta span{color:var(--moon-pale);font-weight:600}
+.g-meta span[id]{font-family:'Cinzel',serif;font-size:.95rem;color:var(--moon);font-weight:700}
 .leave-btn{padding:.3rem .8rem;background:transparent;border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s}
 .leave-btn:hover{background:var(--blood-glow);color:#fff}
 .g-content{flex:1;overflow:hidden;display:flex;gap:1rem;padding:1rem}
@@ -52,6 +53,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 .left-panel h3{color:var(--moon);font-family:'Cinzel',serif;font-size:.95rem;margin-bottom:.3rem}
 .irow{display:flex;justify-content:space-between;font-size:.85rem;padding:.35rem 0;border-bottom:1px solid var(--fog)}
 .irow strong{color:var(--moon-pale)}
+.irow span{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;color:var(--moon-pale)}
 .role-card{margin-top:.8rem;padding:.9rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;text-align:center}
 .role-card .re{font-size:2.4rem;margin-bottom:.3rem}
 .role-card .rn{color:var(--moon-pale);font-weight:700;font-size:1rem;margin-bottom:.4rem}
@@ -700,18 +702,10 @@ function showGameOver(result){
         }).join('')}
       </div>
       <div id="readySection" style="margin-top:1.5rem">
-        <div id="readyStatus" style="font-size:.85rem;color:var(--moon-pale);margin-bottom:.6rem"></div>
-        <button class="btn" style="padding:.8rem 2rem;font-size:1.05rem;margin-right:.5rem" onclick="doReady()">🔄 ${lang==='ar'?'مستعد للعب مرة أخرى':lang==='fr'?'Prêt à rejouer':'Ready to Play Again'}</button>
-        <button class="btn btn-secondary" style="padding:.8rem 1.5rem;font-size:.95rem" onclick="doLeave()">${lang==='ar'?'خروج':lang==='fr'?'Quitter':'Leave Game'}</button>
+        <button class="btn btn-secondary" style="padding:.8rem 2rem;font-size:1.05rem" onclick="doLeave()">${lang==='ar'?'العودة إلى الردهة':lang==='fr'?'Retour au lobby':'Return to Lobby'}</button>
       </div>
     </div>`;
   playView.style.display='flex';
-  // Listen for ready states
-  if(fbOk&&db&&roomCode){
-    db.ref(`games/${roomCode}/readyPlayers`).on('value',snap=>{
-      renderReadyStatus(snap.val()||{});
-    });
-  }
 }
 
 function doReady(){
