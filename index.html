@@ -2165,12 +2165,12 @@ function renderPhase(){
       if(fbOk&&db&&roomCode){
         const upd={};
         upd[`games/${roomCode}/nightActions/${myId}`]=data;
-        upd[`games/${roomCode}/nightActions/_crowAccused`]=p.id;
+        upd[`games/${roomCode}/crowAccused`]=p.id;
         db.ref().update(upd);
       } else if(gameState){
         if(!gameState.nightActions) gameState.nightActions={};
         gameState.nightActions[myId]=data;
-        gameState.nightActions._crowAccused=p.id;
+        gameState.crowAccused=p.id;
         checkTurnComplete();
         renderGame();
       }
@@ -2430,10 +2430,6 @@ function resolveNightAndAdvance(){
 
   // Update savior's last-saved memory (can't save same person twice)
   const saviorAction=Object.values(actions).find(a=>a?.type==='savior_save');
-  if(saviorAction?.target) upd[`games/${roomCode}/nightActions/_saviorLast`]=saviorAction.target;
-
-  // Bodyguard last protected
-  if(bodyguardProtected) upd[`games/${roomCode}/nightActions/_bodyguardLast`]=bodyguardProtected;
 
   // Advance to day
   const nextDay=(gs.dayNum||1);
@@ -2447,8 +2443,8 @@ function resolveNightAndAdvance(){
     _bodyguardLast: bodyguardProtected||null,
     _fluteEnchanted: actions._fluteEnchanted||[],
     _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
-    _crowAccused: actions._crowAccused||null,
   };
+  // crowAccused stays as top-level key through the day, cleared after day resolves
   upd[`games/${roomCode}/dayVotes`]=null;
   upd[`games/${roomCode}/maireCandidates`]=null;
   upd[`games/${roomCode}/maireVotes`]=null;
@@ -2473,7 +2469,6 @@ function resolveNightAndAdvance(){
       _bodyguardLast: bodyguardProtected||null,
       _fluteEnchanted: actions._fluteEnchanted||[],
       _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
-      _crowAccused: actions._crowAccused||null,
     }});
     gs.dayVotes={};
     gs.maireCandidates=null;
@@ -2514,7 +2509,7 @@ function renderDayVoting(){
     }
   });
   // Add crow's accusation to tally with special indicator
-  const crowAccused=(gameState.nightActions||{})._crowAccused;
+  const crowAccused=gameState.crowAccused||null;
   if(crowAccused){
     tally[crowAccused]=(tally[crowAccused]||0)+2;
     if(!voterMap[crowAccused]) voterMap[crowAccused]=[];
@@ -2662,7 +2657,7 @@ function resolveDayAndAdvance(){
   // Tally
   const tally={};
   Object.values(dayVotes).forEach(a=>{ if(a?.type==='vote'&&a.target) tally[a.target]=(tally[a.target]||0)+(a.voteWeight||1); });
-  const crowAccused=actions._crowAccused;
+  const crowAccused=gs.crowAccused||null;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
 
   // Find max
@@ -2703,8 +2698,8 @@ function resolveDayAndAdvance(){
     _bodyguardLast: actions._bodyguardLast||null,
     _fluteEnchanted: actions._fluteEnchanted||[],
     _pyroDoused: actions._pyroDoused||[],
-    _crowAccused: null,
   };
+  upd[`games/${roomCode}/crowAccused`]=null;
   upd[`games/${roomCode}/dayVotes`]=null;
   upd[`games/${roomCode}/maireCandidates`]=null;
   upd[`games/${roomCode}/maireVotes`]=null;
@@ -2766,7 +2761,8 @@ function resolveDayAndAdvance(){
     const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 : 400;
     setTimeout(()=>{
       Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
-      gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[],_crowAccused:null};
+      gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+      gs.crowAccused=null;
       gs.dayVotes={};
       gs.maireCandidates=null;
       gs.maireVotes=null;
@@ -3028,8 +3024,8 @@ function doMaireSkipDay(){
     _bodyguardLast: actions._bodyguardLast||null,
     _fluteEnchanted: actions._fluteEnchanted||[],
     _pyroDoused: actions._pyroDoused||[],
-    _crowAccused: null,
   };
+  upd[`games/${roomCode}/crowAccused`]=null;
   upd[`games/${roomCode}/dayVotes`]=null;
   upd[`games/${roomCode}/maireCandidates`]=null;
   upd[`games/${roomCode}/maireVotes`]=null;
@@ -3040,7 +3036,8 @@ function doMaireSkipDay(){
     });
   } else {
     Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
-    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[],_crowAccused:null};
+    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    gs.crowAccused=null;
     gs.dayVotes={};
     gs.maireCandidates=null;
     gs.maireVotes=null;
