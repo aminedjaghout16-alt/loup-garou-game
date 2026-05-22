@@ -1888,10 +1888,11 @@ const NIGHT_SEQUENCE = [
   // Every night
   { id:'seer',       roles:['seer'],                                label:{en:'Seer',fr:'Voyante',ar:'العرافة'}           },
   { id:'apprenticeseer', roles:['apprenticeseer'],                  label:{en:'Apprentice Seer',fr:'Apprentie Voyante',ar:'تلميذة العرافة'}, condition:(gs)=>!getAlive(gs).find(p=>p.role==='seer') },
-  { id:'fox',        roles:['fox'],                                 label:{en:'Fox',fr:'Renard',ar:'الثعلب'}              },
+  { id:'fox',        roles:['fox'],                                 label:{en:'Fox',fr:'Renard',ar:'الثعلب'}, condition:(gs)=>!gs.foxPowerLost },
   { id:'bodyguard',  roles:['bodyguard'],                           label:{en:'Bodyguard',fr:'Garde du Corps',ar:'الحارس الشخصي'} },
   { id:'savior',     roles:['savior'],                              label:{en:'Savior',fr:'Sauveur',ar:'المنقذ'}          },
   { id:'wolves',     roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','wolfhound'], label:{en:'Werewolves',fr:'Loups-Garous',ar:'الذئاب'} },
+  { id:'bigbadwolf', roles:['bigbadwolf'],                          label:{en:'Big Bad Wolf',fr:'Grand Méchant Loup',ar:'الذئب الكبير الشرير'}, condition:(gs)=>{ const allP=Object.values(gs.players||{}); return !allP.some(p=>!p.alive&&isWolfRole(p.role,gs)); } },
   { id:'whitewerewolf', roles:['whitewerewolf'],                    label:{en:'White Werewolf',fr:'Loup Blanc',ar:'الذئب الأبيض'}, condition:(gs,dn)=>dn%2===0 },
   { id:'witch',      roles:['witch'],                               label:{en:'Witch',fr:'Sorcière',ar:'الساحرة'}         },
   { id:'fluteplayer',roles:['fluteplayer'],                         label:{en:'Flute Player',fr:'Joueur de Flûte',ar:'عازف الناي'} },
@@ -1993,7 +1994,29 @@ function renderPhase(){
 
   // ── WOLVES ──
   if(stepId==='wolves'){
-    alive.filter(p=>!isWolfRole(p.role,gameState)).forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'kill',target:p.id})));
+    const nonWolves=alive.filter(p=>!isWolfRole(p.role,gameState));
+    if(myRole==='wolffather' && !gameState.wolffatherUsed){
+      nonWolves.forEach(p=>{
+        addBtn(ab,'🐺 '+p.name,'kill',()=>submitAction({type:'kill',target:p.id}));
+        addBtn(ab,'🦠 '+p.name,'special',()=>submitAction({type:'wolffather_infect',target:p.id}));
+      });
+    } else if(myRole==='alphawolf' && !gameState.alphawolfUsed){
+      nonWolves.forEach(p=>{
+        addBtn(ab,'🐺 '+p.name,'kill',()=>submitAction({type:'kill',target:p.id}));
+        addBtn(ab,'👑 '+p.name,'special',()=>submitAction({type:'alphawolf_convert',target:p.id}));
+      });
+    } else {
+      nonWolves.forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'kill',target:p.id})));
+    }
+  }
+  // ── BIG BAD WOLF ──
+  else if(stepId==='bigbadwolf'){
+    // Big Bad Wolf: extra kill (only non-wolf villagers, excluding wolf victim)
+    const wolfVictimId=gameState.nightActions?._wolfVictim;
+    alive.filter(p=>!isWolfRole(p.role,gameState)&&p.id!==wolfVictimId).forEach(p=>addBtn(ab,p.name,'kill',()=>{
+      submitAction({type:'bigbad_kill',target:p.id});
+    }));
+    addSkipBtn(ab);
   }
   // ── WHITE WEREWOLF (kill own pack) ──
   else if(stepId==='whitewerewolf'){
@@ -2319,16 +2342,22 @@ function submitAction(action){
   if(fbOk&&db&&roomCode){
     const upd={};
     upd[`games/${roomCode}/nightActions/${myId}`]=data;
-    if(action.type==='kill'||action.type==='bigbad_kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=action.target;
+    if(action.type==='kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=action.target;
+    if(action.type==='bigbad_kill') upd[`games/${roomCode}/nightActions/_bigbadVictim`]=action.target;
     if(action.type==='protect')    upd[`games/${roomCode}/nightActions/_bodyguardProtected`]=action.target;
     if(action.type==='savior_save') upd[`games/${roomCode}/nightActions/_saviorProtected`]=action.target;
+    if(action.type==='wildchild_model') upd[`games/${roomCode}/wildchildModel`]=action.target;
+    if(action.type==='sect_recruit') upd[`games/${roomCode}/sectRecruits/${action.target}`]=true;
     db.ref().update(upd);
   } else if(gameState){
     if(!gameState.nightActions) gameState.nightActions={};
     gameState.nightActions[myId]=data;
-    if(action.type==='kill'||action.type==='bigbad_kill') gameState.nightActions._wolfVictim=action.target;
+    if(action.type==='kill') gameState.nightActions._wolfVictim=action.target;
+    if(action.type==='bigbad_kill') gameState.nightActions._bigbadVictim=action.target;
     if(action.type==='protect') gameState.nightActions._bodyguardProtected=action.target;
     if(action.type==='savior_save') gameState.nightActions._saviorProtected=action.target;
+    if(action.type==='wildchild_model') gameState.wildchildModel=action.target;
+    if(action.type==='sect_recruit'){ if(!gameState.sectRecruits) gameState.sectRecruits={}; gameState.sectRecruits[action.target]=true; }
     checkTurnComplete();
     renderGame();
   }
@@ -2436,9 +2465,28 @@ function resolveNightAndAdvance(){
   const gs=gameState;
   const actions=gs.nightActions||{};
   const players={...(gs.players||{})};
+  const upd={};
 
   // Collect who dies
   const killSet=new Set();
+
+  // Rusty Sword Knight: kill infected wolf from previous night
+  if(gs.rustyInfectedWolf){
+    const aliveWolvesRusty=Object.values(players).filter(p=>p.alive&&isWolfRole(p.role,gs));
+    if(aliveWolvesRusty.length>0){
+      killSet.add(aliveWolvesRusty[Math.floor(Math.random()*aliveWolvesRusty.length)].id);
+    }
+  }
+
+  // Thief: swap role with chosen card
+  const thiefAction=Object.values(actions).find(a=>a?.type==='thief');
+  if(thiefAction?.take){
+    const thiefPlayer=Object.values(players).find(p=>p.role==='thief'&&p.alive);
+    if(thiefPlayer){
+      upd[`games/${roomCode}/players/${thiefPlayer.id}/role`]=thiefAction.take;
+      players[thiefPlayer.id].role=thiefAction.take;
+    }
+  }
 
   // Wolf kill
   const wolfVictim=actions._wolfVictim;
@@ -2463,6 +2511,10 @@ function resolveNightAndAdvance(){
   const wwKill=Object.values(actions).find(a=>a?.type==='ww_kill');
   if(wwKill?.target) killSet.add(wwKill.target);
 
+  // Big Bad Wolf extra kill
+  const bigbadVictim=actions._bigbadVictim;
+  if(bigbadVictim) killSet.add(bigbadVictim);
+
   // Remove protections
   const bodyguardProtected=actions._bodyguardProtected;
   const saviorProtected=actions._saviorProtected;
@@ -2485,15 +2537,68 @@ function resolveNightAndAdvance(){
     if(killSet.has(l2) && players[l1]?.alive) killSet.add(l1);
   }
 
+  // Elder: survives first wolf attack
+  const elderPlayer=Object.values(players).find(p=>p.role==='elder'&&p.alive);
+  if(elderPlayer && killSet.has(elderPlayer.id)){
+    const elderLives=gs.elderLives===undefined?1:gs.elderLives;
+    // Only protect from wolf kills, not witch poison
+    const poisonedByWitch=Object.values(actions).some(a=>a?.type==='witch_poison'&&a.target===elderPlayer.id);
+    if(!poisonedByWitch && elderLives>0){
+      killSet.delete(elderPlayer.id);
+      upd[`games/${roomCode}/elderLives`]=0;
+    }
+  }
+
+  // Wolf Father: infect a player, turning them into a werewolf (instead of killing)
+  const wolffatherInfect=Object.values(actions).find(a=>a?.type==='wolffather_infect');
+  if(wolffatherInfect?.target){
+    killSet.delete(wolffatherInfect.target); // Don't kill, infect instead
+    upd[`games/${roomCode}/players/${wolffatherInfect.target}/role`]='werewolf';
+    upd[`games/${roomCode}/wolffatherUsed`]=true;
+    if(players[wolffatherInfect.target]) players[wolffatherInfect.target].role='werewolf';
+  }
+
+  // Alpha Wolf: convert a villager into a werewolf (once per game, instead of killing)
+  const alphawolfConvert=Object.values(actions).find(a=>a?.type==='alphawolf_convert');
+  if(alphawolfConvert?.target){
+    killSet.delete(alphawolfConvert.target);
+    upd[`games/${roomCode}/players/${alphawolfConvert.target}/role`]='werewolf';
+    upd[`games/${roomCode}/alphawolfUsed`]=true;
+    if(players[alphawolfConvert.target]) players[alphawolfConvert.target].role='werewolf';
+  }
+
+  // Wild Child: if role model dies, wild child becomes a werewolf
+  const wcModelId=gs.wildchildModel||null;
+  if(wcModelId && killSet.has(wcModelId)){
+    const wc=Object.values(players).find(p=>p.role==='wildchild'&&p.alive);
+    if(wc){
+      upd[`games/${roomCode}/players/${wc.id}/role`]='werewolf';
+      players[wc.id].role='werewolf';
+    }
+  }
+
+  // Rusty Sword Knight: if killed by wolves, a random wolf gets infected and dies next night
+  const rustyKnight=Object.values(players).find(p=>p.role==='rustyswordknight'&&p.alive);
+  if(rustyKnight && killSet.has(rustyKnight.id) && wolfVictim===rustyKnight.id){
+    upd[`games/${roomCode}/rustyInfectedWolf`]=true;
+  } else if(!gs.rustyInfectedWolf) {
+    upd[`games/${roomCode}/rustyInfectedWolf`]=false;
+  }
+
+  // Fox: loses power if sniff found no wolves
+  const foxAction=Object.values(actions).find(a=>a?.type==='fox_sniff');
+  if(foxAction && foxAction.found===false){
+    upd[`games/${roomCode}/foxPowerLost`]=true;
+  }
+
   // Mark dead
-  const upd={};
   killSet.forEach(id=>{ if(players[id]) upd[`games/${roomCode}/players/${id}/alive`]=false; });
 
   // Update savior's last-saved memory (can't save same person twice)
   const saviorAction=Object.values(actions).find(a=>a?.type==='savior_save');
 
   // Bear Tamer dawn signal: check if neighbors include a wolf
-  const _aliveForBear=Object.values(players).filter(p=>p.alive);
+  const _aliveForBear=Object.values(players).filter(p=>p.alive&&!killSet.has(p.id));
   const bearTamer=_aliveForBear.find(p=>p.role==='beartamer');
   let bearSignal=false;
   if(bearTamer){
@@ -2538,10 +2643,46 @@ function resolveNightAndAdvance(){
   else if(_wolvesAfter.length===0&&_aliveAfter.length>0) _winResult='village';
   if(_winResult) upd[`games/${roomCode}/status`]='gameover:'+_winResult;
 
+  // Sect Leader win: check if all alive players are recruited
+  if(!_winResult){
+    const sectLeader=Object.values(players).find(p=>p.role==='sectleader'&&p.alive);
+    if(sectLeader){
+      const recruits=gs.sectRecruits||{};
+      const aliveNonSect=_aliveAfter.filter(p=>p.id!==sectLeader.id&&!recruits[p.id]);
+      if(aliveNonSect.length===0 && _aliveAfter.length>1){
+        _winResult='sectleader';
+        upd[`games/${roomCode}/status`]='gameover:sectleader';
+      }
+    }
+  }
+
+  // Flute Player win: all alive players are enchanted
+  if(!_winResult){
+    const flutePlayer=Object.values(players).find(p=>p.role==='fluteplayer'&&p.alive);
+    if(flutePlayer){
+      const enchanted=new Set(actions._fluteEnchanted||[]);
+      const allEnchanted=_aliveAfter.filter(p=>p.id!==flutePlayer.id).every(p=>enchanted.has(p.id));
+      if(allEnchanted && _aliveAfter.length>1){
+        _winResult='fluteplayer';
+        upd[`games/${roomCode}/status`]='gameover:fluteplayer';
+      }
+    }
+  }
+
   if(fbOk&&db&&roomCode){
     db.ref().update(upd);
   } else {
     killSet.forEach(id=>{ if(gs.players[id]) gs.players[id].alive=false; });
+    // Apply role changes from upd
+    Object.entries(upd).forEach(([path,val])=>{
+      const m3=path.match(/players\/([^/]+)\/role/);
+      if(m3 && gs.players[m3[1]]) gs.players[m3[1]].role=val;
+    });
+    if(upd[`games/${roomCode}/elderLives`]!==undefined) gs.elderLives=upd[`games/${roomCode}/elderLives`];
+    if(upd[`games/${roomCode}/rustyInfectedWolf`]!==undefined) gs.rustyInfectedWolf=upd[`games/${roomCode}/rustyInfectedWolf`];
+    if(upd[`games/${roomCode}/foxPowerLost`]) gs.foxPowerLost=true;
+    if(upd[`games/${roomCode}/wolffatherUsed`]) gs.wolffatherUsed=true;
+    if(upd[`games/${roomCode}/alphawolfUsed`]) gs.alphawolfUsed=true;
     Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},nightActions:{
       _saviorLast: saviorAction?.target||null,
       _bodyguardLast: bodyguardProtected||null,
@@ -2775,6 +2916,22 @@ function resolveDayAndAdvance(){
     if(l2dying && !l1dying && gs.players[l1]?.alive) upd[`games/${roomCode}/players/${l1}/alive`]=false;
   }
 
+  // Wild Child: if role model is eliminated during day, wild child becomes werewolf
+  const wcModelIdDay=gs.wildchildModel||null;
+  if(wcModelIdDay && upd[`games/${roomCode}/players/${wcModelIdDay}/alive`]===false){
+    const wcDay=Object.values(gs.players||{}).find(p=>p.role==='wildchild'&&p.alive&&p.id!==wcModelIdDay);
+    if(wcDay) upd[`games/${roomCode}/players/${wcDay.id}/role`]='werewolf';
+  }
+
+  // Elder: if voted out by village, all villagers lose special powers
+  const elderElim=Object.entries(upd).find(([path,val])=>path.includes('/alive')&&val===false);
+  if(elderElim){
+    const elderElimId=elderElim[0].match(/players\/([^/]+)\/alive/)?.[1];
+    if(elderElimId && gs.players[elderElimId]?.role==='elder'){
+      upd[`games/${roomCode}/elderVotedOut`]=true;
+    }
+  }
+
   // Advance to next night
   _lastStepId=null; // Reset so night turns can advance properly
   invalidateTimerKey(); // Force timer to restart
@@ -2845,7 +3002,11 @@ function resolveDayAndAdvance(){
       if(m && val===false && gs.players[m[1]]) gs.players[m[1]].alive=false;
       const m2=path.match(/players\/([^/]+)\/idiotRevealed/);
       if(m2 && gs.players[m2[1]]) gs.players[m2[1]].idiotRevealed=true;
+      const m3=path.match(/players\/([^/]+)\/role/);
+      if(m3 && gs.players[m3[1]]) gs.players[m3[1]].role=val;
     });
+    if(upd[`games/${roomCode}/elderVotedOut`]) gs.elderVotedOut=true;
+    if(upd[`games/${roomCode}/wildchildModel`]!==undefined) gs.wildchildModel=upd[`games/${roomCode}/wildchildModel`];
     const elimCountOff=Object.entries(upd).filter(([p,v])=>p.includes('/alive')&&v===false).length;
     const DEATH_ANIM_MS=4200;
     const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 : 400;
