@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Loup-Garou</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -12,14 +12,14 @@
   --blood-glow:#b91c1c;--moon:#d4a017;--moon-pale:#e8c44a;
   --ghost:#e8e8e8;--fog:rgba(232,232,232,.07);--green:#10b981;--red:#ef4444;
 }
-body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color:var(--ghost);line-height:1.6;min-height:100vh}
+body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);line-height:1.6;min-height:100vh;letter-spacing:.03em}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
 
 /* ── LOGIN ── */
 #loginScreen{position:fixed;inset:0;background:var(--void);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
 #loginScreen.hidden{display:none}
 .login-box{background:var(--abyss);border:1px solid var(--moon);border-radius:10px;padding:2rem;width:100%;max-width:400px;text-align:center;box-shadow:0 0 40px rgba(212,160,23,.18)}
-.login-box h1{font-family:'Cinzel Decorative',serif;font-size:2.2rem;color:var(--moon);margin-bottom:.5rem}
+.login-box h1{font-family:'Creepster',cursive;font-size:2.2rem;color:var(--moon);margin-bottom:.5rem}
 .login-box p{color:var(--ghost);margin-bottom:1.4rem;font-size:.95rem;opacity:.85}
 .fg{margin-bottom:1.1rem;text-align:left}
 .fg label{display:block;margin-bottom:.35rem;color:var(--moon);font-weight:600;font-size:.9rem}
@@ -33,27 +33,27 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 .lb{padding:.4rem .9rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);cursor:pointer;border-radius:4px;font-family:inherit;font-size:.82rem;transition:.2s}
 .lb.active{background:var(--moon);color:var(--void);font-weight:700}
 .room-code-display{margin-top:1rem;padding:.8rem;background:var(--purple);border:1px solid var(--moon-pale);border-radius:6px;display:none}
-.room-code-display .code{font-family:'Cinzel',serif;font-size:2rem;color:var(--moon-pale);letter-spacing:.25em}
+.room-code-display .code{font-family:'Creepster',cursive;font-size:2rem;color:var(--moon-pale);letter-spacing:.25em}
 .room-code-display small{display:block;font-size:.78rem;opacity:.7;margin-top:.2rem}
 
 /* ── GAME SCREEN ── */
 #gameScreen{position:fixed;inset:0;background:var(--void);z-index:99;display:flex;flex-direction:column}
 #gameScreen.hidden{display:none}
 .g-header{padding:.7rem 1rem;background:rgba(10,10,26,.96);border-bottom:1px solid var(--moon);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem}
-.g-title{font-family:'Cinzel Decorative',serif;color:var(--moon);font-size:1.15rem}
+.g-title{font-family:'Creepster',cursive;color:var(--moon);font-size:1.15rem}
 .g-meta{display:flex;gap:1.2rem;font-size:.82rem;flex-wrap:wrap;align-items:center}
 .g-meta span{color:var(--moon-pale);font-weight:600}
-.g-meta span[id]{font-family:'Cinzel',serif;font-size:.95rem;color:var(--moon);font-weight:700}
+.g-meta span[id]{font-family:'Creepster',cursive;font-size:.95rem;color:var(--moon);font-weight:700}
 .leave-btn{padding:.3rem .8rem;background:transparent;border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s}
 .leave-btn:hover{background:var(--blood-glow);color:#fff}
 .g-content{flex:1;overflow:hidden;display:flex;gap:1rem;padding:1rem}
 
 /* Left panel */
 .left-panel{flex:0 0 240px;background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:1.2rem;display:flex;flex-direction:column;gap:.5rem;overflow-y:auto}
-.left-panel h3{color:var(--moon);font-family:'Cinzel',serif;font-size:.95rem;margin-bottom:.3rem}
+.left-panel h3{color:var(--moon);font-family:'Creepster',cursive;font-size:.95rem;margin-bottom:.3rem}
 .irow{display:flex;justify-content:space-between;font-size:.85rem;padding:.35rem 0;border-bottom:1px solid var(--fog)}
 .irow strong{color:var(--moon-pale)}
-.irow span{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;color:var(--moon-pale)}
+.irow span{font-family:'Creepster',cursive;font-weight:700;font-size:1rem;color:var(--moon-pale)}
 .role-card{margin-top:.8rem;padding:.9rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;text-align:center}
 .role-card .re{font-size:2.4rem;margin-bottom:.3rem}
 .role-card .rn{color:var(--moon-pale);font-weight:700;font-size:1rem;margin-bottom:.4rem}
@@ -64,7 +64,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 
 /* Setup */
 .setup-wrap{width:100%}
-.setup-wrap h2{color:var(--moon);font-family:'Cinzel',serif;margin-bottom:1.2rem;font-size:1.15rem}
+.setup-wrap h2{color:var(--moon);font-family:'Creepster',cursive;margin-bottom:1.2rem;font-size:1.15rem}
 .s-section{margin-bottom:1.4rem;padding-bottom:1.2rem;border-bottom:1px solid var(--fog)}
 .s-section h4{color:var(--moon-pale);margin-bottom:.7rem;font-size:.9rem}
 .s-section input[type=number]{padding:.45rem .6rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:4px;font-family:inherit;font-size:.95rem;width:90px}
@@ -87,9 +87,9 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 
 /* Gameplay */
 .play-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;text-align:center}
-.phase-title{font-family:'Cinzel Decorative',serif;font-size:2rem;color:var(--moon-pale);margin-bottom:.6rem}
+.phase-title{font-family:'Creepster',cursive;font-size:2rem;color:var(--moon-pale);margin-bottom:.6rem}
 .phase-desc{color:var(--ghost);margin-bottom:1.2rem;font-size:1rem;opacity:.9}
-.phase-timer{font-family:'Cinzel',serif;font-size:2.8rem;color:var(--blood-glow);margin-bottom:1rem;animation:pulse 1.5s infinite}
+.phase-timer{font-family:'Creepster',cursive;font-size:2.8rem;color:var(--blood-glow);margin-bottom:1rem;animation:pulse 1.5s infinite}
 .player-list{margin-top:1.2rem;width:100%;max-width:520px;text-align:left}
 .pi{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;background:var(--purple);border:1px solid var(--moon);border-radius:4px;margin-bottom:.35rem;font-size:.88rem}
 .pstatus{width:10px;height:10px;border-radius:50%;flex-shrink:0}
@@ -98,7 +98,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 
 /* Right chat */
 .right-panel{flex:0 0 210px;background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:1.1rem;display:flex;flex-direction:column}
-.chat-hdr{color:var(--moon);font-family:'Cinzel',serif;font-size:.95rem;margin-bottom:.7rem}
+.chat-hdr{color:var(--moon);font-family:'Creepster',cursive;font-size:.95rem;margin-bottom:.7rem}
 .chat-msgs{flex:1;overflow-y:auto;margin-bottom:.7rem;min-height:60px}
 .cm{margin-bottom:.55rem;padding:.42rem .55rem;background:var(--purple);border-left:3px solid var(--moon);border-radius:2px;font-size:.8rem}
 .cm .cn{color:var(--moon-pale);font-weight:700}
@@ -115,7 +115,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 
 /* Maire */
 .maire-bar{margin-bottom:.8rem;padding:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;text-align:center}
-.maire-bar .maire-title{color:var(--moon-pale);font-family:'Cinzel',serif;font-size:.9rem;margin-bottom:.4rem}
+.maire-bar .maire-title{color:var(--moon-pale);font-family:'Creepster',cursive;font-size:.9rem;margin-bottom:.4rem}
 .maire-bar .maire-name{color:var(--moon);font-weight:700;font-size:1rem}
 .candidate-list{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:.4rem}
 .vote-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 1px;vertical-align:middle;border:1px solid rgba(255,255,255,.2)}
@@ -140,12 +140,48 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 @keyframes deathCardIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.1) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 .death-card .death-emoji{font-size:5rem;margin-bottom:.8rem;filter:grayscale(1);animation:deathSkull 1.5s .8s ease infinite}
 @keyframes deathSkull{0%,100%{filter:grayscale(1) drop-shadow(0 0 10px rgba(139,0,0,.5))}50%{filter:grayscale(0) drop-shadow(0 0 25px rgba(139,0,0,.9))}}
-.death-card .death-name{font-family:'Cinzel Decorative',serif;font-size:2.4rem;color:var(--blood-glow);margin-bottom:.5rem;text-shadow:0 0 20px rgba(139,0,0,.6)}
+.death-card .death-name{font-family:'Creepster',cursive;font-size:2.4rem;color:var(--blood-glow);margin-bottom:.5rem;text-shadow:0 0 20px rgba(139,0,0,.6)}
 .death-card .death-role{font-size:1.1rem;color:var(--moon-pale);margin-bottom:.3rem;opacity:0;animation:deathFadeIn .5s 1.2s ease forwards}
 .death-card .death-label{font-size:1rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1s ease forwards;margin-bottom:.4rem}
-.death-card .death-rip{font-family:'Cinzel',serif;font-size:1.4rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1.5s ease forwards;letter-spacing:.15em;margin-top:.6rem}
+.death-card .death-rip{font-family:'Creepster',cursive;font-size:1.4rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1.5s ease forwards;letter-spacing:.15em;margin-top:.6rem}
 @keyframes deathFadeIn{to{opacity:1}}
 .death-card .death-blood-line{width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--blood-glow),transparent);margin:.5rem auto;opacity:0;animation:deathFadeIn .5s 1.4s ease forwards}
+
+/* ── PHASE TRANSITION OVERLAY ── */
+#phaseTransOverlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;pointer-events:none;overflow:hidden}
+#phaseTransOverlay.active{display:flex}
+.ptrans-bg{position:absolute;inset:0;background:var(--void);opacity:0}
+.ptrans-content{position:relative;z-index:1;text-align:center;opacity:0;transform:scale(.4) rotate(-8deg)}
+.ptrans-icon{font-size:7rem;display:block;margin-bottom:.8rem;filter:drop-shadow(0 0 40px currentColor)}
+.ptrans-label{font-family:'Creepster',cursive;font-size:4.5rem;letter-spacing:.1em;display:block;text-shadow:0 0 30px currentColor,0 0 60px currentColor}
+.ptrans-sub{font-family:'Creepster',cursive;font-size:1.4rem;letter-spacing:.25em;display:block;margin-top:.4rem;opacity:.8}
+
+/* Night → Day */
+#phaseTransOverlay.to-day .ptrans-bg{animation:ptBgIn .5s ease forwards,ptBgOut .5s 2.2s ease forwards}
+#phaseTransOverlay.to-day .ptrans-content{color:var(--moon-pale);animation:ptContentIn .6s .3s cubic-bezier(.17,.67,.35,1.4) forwards,ptContentOut .5s 2s ease forwards}
+#phaseTransOverlay.to-day .ptrans-icon{animation:ptSunSpin 2.5s .4s ease infinite}
+
+/* Day → Night */
+#phaseTransOverlay.to-night .ptrans-bg{animation:ptBgInNight .5s ease forwards,ptBgOut .5s 2.2s ease forwards}
+#phaseTransOverlay.to-night .ptrans-content{color:#9f7fff;animation:ptContentIn .6s .3s cubic-bezier(.17,.67,.35,1.4) forwards,ptContentOut .5s 2s ease forwards}
+#phaseTransOverlay.to-night .ptrans-icon{animation:ptMoonPulse 1.2s .4s ease infinite}
+
+@keyframes ptBgIn{to{opacity:.95}}
+@keyframes ptBgInNight{to{opacity:.98;background:#04040f}}
+@keyframes ptBgOut{to{opacity:0}}
+@keyframes ptContentIn{to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes ptContentOut{to{opacity:0;transform:scale(1.15) rotate(2deg)}}
+@keyframes ptSunSpin{0%,100%{filter:drop-shadow(0 0 30px #d4a017) rotate(0deg)}50%{filter:drop-shadow(0 0 60px #ffe566) rotate(20deg)}}
+@keyframes ptMoonPulse{0%,100%{filter:drop-shadow(0 0 20px #7c3aed)}50%{filter:drop-shadow(0 0 55px #a78bfa)}}
+
+/* ── ENHANCED KILL ANIMATION ── */
+#killOverlay{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;pointer-events:none}
+#killOverlay.active{display:flex;animation:killBgFlash .15s ease forwards}
+@keyframes killBgFlash{0%{background:rgba(139,0,0,0)}30%{background:rgba(139,0,0,.7)}100%{background:rgba(0,0,0,.88)}}
+.kill-shards{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.kill-shard{position:absolute;background:var(--blood-glow);transform-origin:center;animation:shardFly .8s ease-out forwards}
+@keyframes shardFly{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(0) translate(var(--tx),var(--ty)) rotate(var(--tr))}}
+
 </style>
 </head>
 <body>
@@ -187,7 +223,7 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
       <div><span id="t_lplayers">Players:</span> <span id="hPlayers">0</span></div>
       <div><span id="t_lroom">Room:</span> <span id="hRoom" style="font-family:monospace;letter-spacing:.12em;color:var(--moon-pale)">—</span></div>
       <div><span id="t_lstatus">Status:</span> <span id="hStatus">—</span></div>
-      <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
+      <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Creepster',cursive;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
     </div>
     <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
   </div>
@@ -261,6 +297,19 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
     <div class="death-rip">R.I.P.</div>
   </div>
 </div>
+
+<!-- ══ PHASE TRANSITION OVERLAY ══ -->
+<div id="phaseTransOverlay">
+  <div class="ptrans-bg"></div>
+  <div class="ptrans-content">
+    <span class="ptrans-icon" id="ptransIcon">🌙</span>
+    <span class="ptrans-label" id="ptransLabel">NIGHT</span>
+    <span class="ptrans-sub" id="ptransSub">The village sleeps…</span>
+  </div>
+</div>
+
+<!-- ══ KILL FLASH OVERLAY ══ -->
+<div id="killOverlay"><div class="kill-shards" id="killShards"></div></div>
 <script>
 // Load Firebase with fallback CDNs
 (function(){
@@ -626,9 +675,64 @@ function showDeathAnimation(playerName, playerRole){
   document.getElementById('deathLabel').textContent=
     lang==='ar'?'تم إقصاؤه':lang==='fr'?'Éliminé':'Eliminated';
   overlay.classList.add('active');
+  showKillFlash();
   setTimeout(()=>{
     overlay.classList.remove('active');
   }, 4000);
+}
+
+// ════════════════════════════════════════════
+// KILL FLASH — blood-shard burst on elimination
+// ════════════════════════════════════════════
+function showKillFlash(){
+  const ov=document.getElementById('killOverlay');
+  const sh=document.getElementById('killShards');
+  sh.innerHTML='';
+  for(let i=0;i<18;i++){
+    const s=document.createElement('div');
+    s.className='kill-shard';
+    const angle=Math.random()*360;
+    const dist=80+Math.random()*200;
+    const tx=Math.cos(angle*Math.PI/180)*dist+'px';
+    const ty=Math.sin(angle*Math.PI/180)*dist+'px';
+    const tr=(Math.random()-0.5)*720+'deg';
+    s.style.cssText=`left:${30+Math.random()*40}%;top:${30+Math.random()*40}%;width:${6+Math.random()*14}px;height:${2+Math.random()*5}px;border-radius:2px;--tx:${tx};--ty:${ty};--tr:${tr};animation-delay:${Math.random()*.2}s`;
+    sh.appendChild(s);
+  }
+  ov.classList.add('active');
+  setTimeout(()=>ov.classList.remove('active'),900);
+}
+
+// ════════════════════════════════════════════
+// PHASE TRANSITION ANIMATION
+// ════════════════════════════════════════════
+let _lastPhase=null;
+function maybeShowPhaseTransition(newPhase){
+  if(!newPhase || newPhase===_lastPhase || _lastPhase===null){ _lastPhase=newPhase; return; }
+  const fromPhase=_lastPhase;
+  _lastPhase=newPhase;
+  const ov=document.getElementById('phaseTransOverlay');
+  const icon=document.getElementById('ptransIcon');
+  const label=document.getElementById('ptransLabel');
+  const sub=document.getElementById('ptransSub');
+  ov.classList.remove('to-day','to-night','active');
+  if(newPhase==='day'){
+    icon.textContent='☀️';
+    label.textContent=lang==='ar'?'النهار':lang==='fr'?'JOUR':'DAY';
+    sub.textContent=lang==='ar'?'القرية تستيقظ…':lang==='fr'?'Le village se réveille…':'The village awakens…';
+    ov.classList.add('to-day');
+  } else {
+    icon.textContent='🌙';
+    label.textContent=lang==='ar'?'الليل':lang==='fr'?'NUIT':'NIGHT';
+    sub.textContent=lang==='ar'?'القرية تنام…':lang==='fr'?'Le village s\'endort…':'Darkness falls…';
+    ov.classList.add('to-night');
+  }
+  ov.classList.add('active');
+  setTimeout(()=>{
+    ov.classList.remove('active','to-day','to-night');
+    ov.style.display='none';
+    setTimeout(()=>{ ov.style.display=''; },50);
+  }, 2800);
 }
 
 // Detect newly dead players and trigger animation
@@ -690,7 +794,7 @@ function showGameOver(result){
       </div>
       <div style="font-size:1.1rem;color:var(--ghost);margin:1rem 0">${result.msg}</div>
       <div style="margin-top:1.5rem;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
-        <div style="color:var(--moon);font-family:'Cinzel',serif;margin-bottom:.6rem">${lang==='ar'?'جميع اللاعبين:':lang==='fr'?'Tous les joueurs :':'All Players:'}</div>
+        <div style="color:var(--moon);font-family:'Creepster',cursive;margin-bottom:.6rem">${lang==='ar'?'جميع اللاعبين:':lang==='fr'?'Tous les joueurs :':'All Players:'}</div>
         ${Object.values(gameState.players||{}).map(p=>{
           const rd=ROLES_DEF[p.role];
           return `<div class="pi" style="opacity:${p.alive?1:.5}">
@@ -701,9 +805,7 @@ function showGameOver(result){
           </div>`;
         }).join('')}
       </div>
-      <div id="readySection" style="margin-top:1.5rem">
-        <button class="btn btn-secondary" style="padding:.8rem 2rem;font-size:1.05rem" onclick="doLeave()">${lang==='ar'?'العودة إلى الردهة':lang==='fr'?'Retour au lobby':'Return to Lobby'}</button>
-      </div>
+
     </div>`;
   playView.style.display='flex';
 }
@@ -763,6 +865,7 @@ function doRestart(){
   _previousAlive={};
   _lastStepId=null;
   _advancingStep=false;
+  _lastPhase=null;
 
   // Restore playView DOM so renderGame() can find phaseTitle, actionBtns, playerList etc.
   _resetPlayView();
@@ -994,7 +1097,7 @@ function updateRolePreview(){
   });
   if(vc>0) parts.push(`${vc}× 🧑‍🌾 ${tr('villager')}`);
   preview.innerHTML=`
-    <div style="color:var(--moon-pale);font-family:'Cinzel',serif;font-size:.8rem;margin-bottom:.35rem">
+    <div style="color:var(--moon-pale);font-family:'Creepster',cursive;font-size:.8rem;margin-bottom:.35rem">
       📋 ${lang==='ar'?`إجمالي الأدوار: ${total} لاعب`:lang==='fr'?`Total rôles : ${total} joueurs`:`Total roles: ${total} players`}
     </div>
     <div style="color:var(--ghost)">${parts.join(' · ')}</div>
@@ -1244,6 +1347,7 @@ function _doStartWithPlayers(players){
       console.log('✅ Game started');
       _lastStepId=null;
       _advancingStep=false;
+      _lastPhase=null;
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },600);
     }).catch(err=>{
       const btn=document.getElementById('t_start');
@@ -1264,6 +1368,7 @@ function _doStartWithPlayers(players){
     });
     _lastStepId=null;
     _advancingStep=false;
+    _lastPhase=null;
     renderGame();
     setTimeout(()=>advanceNightTurn(0),600);
   }
@@ -1364,6 +1469,9 @@ function renderGame(){
     document.getElementById('hStatus').textContent=tr('st_playing');
     document.getElementById('hPhase').textContent=gameState.phase==='night'?tr('ph_night'):tr('ph_day');
 
+    // Phase transition animation
+    maybeShowPhaseTransition(gameState.phase);
+
     // Initialize alive tracking on first render
     if(Object.keys(_previousAlive).length===0){
       players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
@@ -1410,7 +1518,7 @@ function renderStats(players){
 
 function renderPlayerList(players){
   const el=document.getElementById('playerList');
-  el.innerHTML=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.9rem;margin-bottom:.6rem">${tr('t_lplayers')}</div>`+
+  el.innerHTML=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:.9rem;margin-bottom:.6rem">${tr('t_lplayers')}</div>`+
     players.map(p=>{
       const pc=getPlayerColor(p.id);
       return `
@@ -1981,7 +2089,7 @@ function renderDayVoting(){
   const crowAccused=(gameState.nightActions||{})._crowAccused;
   if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
 
-  html+=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.88rem;margin:.6rem 0 .3rem">${
+  html+=`<div style="color:var(--moon);font-family:'Creepster',cursive;font-size:.88rem;margin:.6rem 0 .3rem">${
     lang==='ar'?'🗳 تصويت الإقصاء':lang==='fr'?'🗳 Vote d\'élimination':'🗳 Elimination Vote'
   }</div>`;
 
