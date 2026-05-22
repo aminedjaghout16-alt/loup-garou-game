@@ -135,331 +135,982 @@ body{font-family:'Cormorant Garamond',Georgia,serif;background:var(--void);color
 #deathOverlay.active{display:flex;pointer-events:all;animation:deathBgIn .6s ease forwards}
 @keyframes deathBgIn{to{background:rgba(0,0,0,.85)}}
 .death-card{text-align:center;transform:scale(0);opacity:0;animation:deathCardIn .7s .3s ease forwards}
-@keyframes deathCardIn{to{transform:scale(1);opacity:1}}
-.death-card h2{color:var(--blood-glow);font-family:'Cinzel Decorative',serif;font-size:3rem;margin-bottom:.5rem}
-.death-card .role{color:var(--moon-pale);font-size:2.2rem;margin:.5rem 0}
-.death-card .msg{color:var(--ghost);font-size:1.1rem;margin-top:.8rem}
-.death-card .ok-btn{margin-top:1.5rem;padding:.7rem 1.5rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-weight:700;transition:.2s;font-family:inherit}
-.death-card .ok-btn:hover{background:var(--blood)}
+@keyframes deathCardIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.1) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+.death-card .death-emoji{font-size:5rem;margin-bottom:.8rem;filter:grayscale(1);animation:deathSkull 1.5s .8s ease infinite}
+@keyframes deathSkull{0%,100%{filter:grayscale(1) drop-shadow(0 0 10px rgba(139,0,0,.5))}50%{filter:grayscale(0) drop-shadow(0 0 25px rgba(139,0,0,.9))}}
+.death-card .death-name{font-family:'Cinzel Decorative',serif;font-size:2.4rem;color:var(--blood-glow);margin-bottom:.5rem;text-shadow:0 0 20px rgba(139,0,0,.6)}
+.death-card .death-role{font-size:1.1rem;color:var(--moon-pale);margin-bottom:.3rem;opacity:0;animation:deathFadeIn .5s 1.2s ease forwards}
+.death-card .death-label{font-size:1rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1s ease forwards;margin-bottom:.4rem}
+.death-card .death-rip{font-family:'Cinzel',serif;font-size:1.4rem;color:var(--ghost);opacity:0;animation:deathFadeIn .5s 1.5s ease forwards;letter-spacing:.15em;margin-top:.6rem}
+@keyframes deathFadeIn{to{opacity:1}}
+.death-card .death-blood-line{width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--blood-glow),transparent);margin:.5rem auto;opacity:0;animation:deathFadeIn .5s 1.4s ease forwards}
 </style>
 </head>
-
 <body>
-<!-- LOGIN SCREEN -->
+
+<!-- ══ LOGIN ══ -->
 <div id="loginScreen">
   <div class="lang-bar">
-    <button class="lb active" onclick="setLang('en')">EN</button>
-    <button class="lb" onclick="setLang('fr')">FR</button>
-    <button class="lb" onclick="setLang('ar')">AR</button>
+    <button class="lb" data-l="en" onclick="setLang('en')">EN</button>
+    <button class="lb" data-l="fr" onclick="setLang('fr')">FR</button>
+    <button class="lb" data-l="ar" onclick="setLang('ar')">AR</button>
   </div>
   <div class="login-box">
-    <h1 id="appTitle">Loup-Garou</h1>
-    <p id="appSubtitle">Social Deduction Game</p>
+    <h1 id="t_title">Loup-Garou</h1>
+    <p  id="t_sub">Join the game of deception and survival</p>
     <div class="fg">
-      <label id="nameLabel">Your name</label>
-      <input id="inName" type="text" placeholder="e.g., Alex" />
+      <label id="t_name">Your Name</label>
+      <input id="inName" type="text" autocomplete="off">
     </div>
-    <div class="fg">
-      <label id="createOrJoin">Create or join?</label>
-      <div style="display:flex;gap:0.6rem">
-        <button class="btn" style="flex:1" onclick="doCreate()" id="btnCreate">Create</button>
-        <button class="btn btn-secondary" style="flex:1" onclick="doJoin()" id="btnJoin">Join</button>
-      </div>
+    <div class="fg" id="joinCodeGroup">
+      <label id="t_code">Room Code</label>
+      <input id="inCode" type="text" maxlength="6" style="text-transform:uppercase;letter-spacing:.15em" autocomplete="off">
     </div>
-    <div class="fg" id="joinCodeBox" style="display:none">
-      <label id="roomCodeLabel">Room code</label>
-      <input id="inCode" type="text" placeholder="e.g., ABC123" style="text-transform:uppercase" />
-    </div>
-    <div class="room-code-display" id="createdCodeBox" style="display:none">
-      <div style="font-size:.85rem;color:var(--moon-pale);margin-bottom:.5rem" id="copyPrompt">Share this code with others:</div>
-      <div class="code" id="roomCodeDisplay"></div>
-      <button class="btn-secondary" onclick="copyCodeToClipboard()" style="margin-top:.5rem;width:100%;padding:.5rem" id="copyBtn">Copy Code</button>
-      <small id="copyHint"></small>
+    <button class="btn" style="width:100%" onclick="doJoin()" id="t_join">Join Game</button>
+    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
+    <button class="btn btn-secondary" style="width:100%" onclick="doCreate()" id="t_create">Create Room</button>
+    <div class="room-code-display" id="createdCodeBox">
+      <small id="t_shareCode">Share this code with friends:</small>
+      <div class="code" id="createdCodeVal">——</div>
     </div>
   </div>
 </div>
 
-<!-- GAME SCREEN -->
+<!-- ══ GAME SCREEN ══ -->
 <div id="gameScreen" class="hidden">
   <div class="g-header">
-    <div class="g-title">🐺 <span id="hRoom"></span></div>
+    <div class="g-title" id="t_gtitle">Loup-Garou</div>
     <div class="g-meta">
-      <span id="hPlayers">0</span><span id="playerLabel">players</span>
-      <span id="hStatus">Setup</span>
-      <span id="hPhase">—</span>
+      <div><span id="t_lphase">Phase:</span> <span id="hPhase">—</span></div>
+      <div><span id="t_lplayers">Players:</span> <span id="hPlayers">0</span></div>
+      <div><span id="t_lroom">Room:</span> <span id="hRoom" style="font-family:monospace;letter-spacing:.12em;color:var(--moon-pale)">—</span></div>
+      <div><span id="t_lstatus">Status:</span> <span id="hStatus">—</span></div>
+      <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
     </div>
-    <button class="leave-btn" onclick="doLeave()" id="leaveBtn">Leave</button>
+    <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
   </div>
 
-  <!-- SETUP VIEW -->
-  <div id="setupView" class="g-content">
+  <div class="g-content">
+    <!-- Left -->
     <div class="left-panel">
-      <h3 id="playersTitle">Players</h3>
-      <div id="playerStats"></div>
+      <h3 id="t_linfo">Game Info</h3>
+      <div class="irow"><strong id="t_lalive">Alive:</strong><span id="iAlive">0</span></div>
+      <div class="irow"><strong id="t_ldead">Dead:</strong><span id="iDead">0</span></div>
+      <div class="irow"><strong id="t_lwolves">Wolves:</strong><span id="iWolves">?</span></div>
+      <div class="irow"><strong id="t_lvillage">Villagers:</strong><span id="iVillage">?</span></div>
+      <h3 id="t_lrole" style="margin-top:.8rem">Your Role</h3>
       <div class="role-card">
-        <div class="re" id="rEmoji">—</div>
+        <div class="re" id="rEmoji">🌑</div>
         <div class="rn" id="rName">—</div>
         <div class="rd" id="rDesc">—</div>
       </div>
     </div>
 
+    <!-- Center -->
     <div class="center-panel">
-      <div class="setup-wrap">
-        <h2 id="setupTitle">Setup</h2>
-
+      <!-- Setup -->
+      <div class="setup-wrap" id="setupView">
+        <h2 id="t_setup">Game Setup</h2>
         <div class="s-section">
-          <h4 id="timerTitle">Timers</h4>
-          <div class="timer-row">
-            <div>
-              <label id="dayTimerLabel">Day (seconds)</label>
-              <input id="cfgDay" type="number" value="60" onchange="cfgChanged()" min="5" max="300" />
-            </div>
-            <div>
-              <label id="nightTimerLabel">Night (seconds)</label>
-              <input id="cfgNight" type="number" value="45" onchange="cfgChanged()" min="5" max="300" />
-            </div>
-          </div>
-        </div>
-
-        <div class="s-section">
-          <h4 id="rolesTitle">Roles</h4>
+          <h4 id="t_roles">Select Roles</h4>
           <div class="roles-grid" id="rolesGrid"></div>
         </div>
-
+        <div class="s-section timer-row">
+          <div><h4 id="t_dayt">Day Timer (s)</h4><input type="number" id="cfgDay" min="10" max="600" value="60" onchange="cfgChanged()"></div>
+          <div><h4 id="t_nightt">Night Timer (s)</h4><input type="number" id="cfgNight" min="10" max="600" value="45" onchange="cfgChanged()"></div>
+        </div>
         <div id="hostStart" style="display:none">
-          <div style="padding:0.8rem;background:rgba(16,185,129,.1);border:1px solid var(--green);border-radius:6px;margin-bottom:1rem" id="startHelperMsg"></div>
+          <div id="startHelperMsg" style="font-size:.83rem;text-align:center;margin-bottom:.5rem;padding:.4rem;border-radius:4px"></div>
           <button class="btn" style="width:100%;padding:1rem;font-size:1.05rem" onclick="doStartGame()" id="t_start">Start Game</button>
         </div>
-
-        <div id="guestWait" class="waiting-msg" style="display:none">Waiting for host to start…</div>
+        <div id="guestWait" class="waiting-msg" style="display:none" id="t_wait">Waiting for host to start…</div>
+      </div>
+      <!-- Gameplay -->
+      <div class="play-wrap" id="playView" style="display:none">
+        <div class="phase-title" id="phaseTitle">Night</div>
+        <div class="phase-desc"  id="phaseDesc"></div>
+        <div class="phase-timer" id="phaseTimer">—</div>
+        <div id="actionBtns" style="display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center"></div>
+        <div class="player-list" id="playerList"></div>
       </div>
     </div>
 
+    <!-- Right -->
     <div class="right-panel">
-      <div class="chat-hdr" id="chatHeader">Chat</div>
-      <div id="chatTabs" class="chat-tabs"></div>
-      <div id="chatMsgs" class="chat-msgs"></div>
+      <div class="chat-hdr" id="t_chat">Game Chat</div>
+      <div class="chat-tabs" id="chatTabs"></div>
+      <div class="chat-msgs" id="chatMsgs"></div>
       <div class="chat-inp">
-        <input id="chatIn" type="text" placeholder="Say something..." onkeypress="if(event.key==='Enter') sendChat()" />
-        <button onclick="sendChat()" id="chatSendBtn">Send</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PLAY VIEW -->
-  <div id="playView" style="display:none" class="g-content">
-    <div class="left-panel">
-      <h3 id="statsTitle">Stats</h3>
-      <div id="playerStats"></div>
-      <div class="role-card">
-        <div class="re" id="rEmoji">—</div>
-        <div class="rn" id="rName">—</div>
-        <div class="rd" id="rDesc">—</div>
-      </div>
-    </div>
-
-    <div class="center-panel">
-      <div id="playContent" class="play-wrap"></div>
-    </div>
-
-    <div class="right-panel">
-      <div class="chat-hdr" id="chatHeader">Chat</div>
-      <div id="chatTabs" class="chat-tabs"></div>
-      <div id="chatMsgs" class="chat-msgs"></div>
-      <div class="chat-inp">
-        <input id="chatIn" type="text" placeholder="Say something..." onkeypress="if(event.key==='Enter') sendChat()" />
-        <button onclick="sendChat()" id="chatSendBtn">Send</button>
+        <input id="chatIn" type="text" onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()" id="t_send">▶</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Death Overlay -->
+<!-- ══ DEATH OVERLAY ══ -->
 <div id="deathOverlay">
-  <div class="death-card" id="deathCard">
-    <h2 id="deathTitle">💀</h2>
-    <div class="role" id="deathRole"></div>
-    <div class="msg" id="deathMsg"></div>
-    <button class="death-card ok-btn" onclick="closeDeathOverlay()">OK</button>
+  <div class="death-card">
+    <div class="death-emoji" id="deathEmoji">💀</div>
+    <div class="death-label" id="deathLabel">Eliminated</div>
+    <div class="death-name" id="deathName"></div>
+    <div class="death-blood-line"></div>
+    <div class="death-role" id="deathRole"></div>
+    <div class="death-rip">R.I.P.</div>
   </div>
 </div>
-
 <script>
+// Load Firebase with fallback CDNs
+(function(){
+  function loadScript(src, onload, onerror){
+    var s=document.createElement('script');
+    s.src=src; s.onload=onload; s.onerror=onerror;
+    document.head.appendChild(s);
+  }
+  var CDN1_APP='https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js';
+  var CDN2_APP='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-app-compat.min.js';
+  var CDN1_DB ='https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js';
+  var CDN2_DB ='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-database-compat.min.js';
+
+  function loadDB(onload){
+    loadScript(CDN1_DB, onload, function(){
+      console.warn('gstatic DB failed, trying jsDelivr');
+      loadScript(CDN2_DB, onload, function(){ console.error('All Firebase DB CDNs failed'); window._fbLoadFailed=true; });
+    });
+  }
+  loadScript(CDN1_APP,
+    function(){ loadDB(function(){ window._fbReady=true; }); },
+    function(){
+      console.warn('gstatic APP failed, trying jsDelivr');
+      loadScript(CDN2_APP,
+        function(){ loadDB(function(){ window._fbReady=true; }); },
+        function(){ console.error('All Firebase APP CDNs failed'); window._fbLoadFailed=true; }
+      );
+    }
+  );
+})();
+</script>
+<script>
+// ════════════════════════════════════════════
+// ROLES  (key → { emoji, team, default })
+// ════════════════════════════════════════════
+const ROLES_DEF = {
+  villager:          {e:'🧑‍🌾', team:'village',  def:true},
+  werewolf:          {e:'🐺',   team:'werewolf', def:true},
+  seer:              {e:'🔮',   team:'village',  def:true},
+  witch:             {e:'🧪',   team:'village',  def:true},
+  hunter:            {e:'🏹',   team:'village',  def:false},
+  cupid:             {e:'💘',   team:'village',  def:false},
+  littlegirl:        {e:'👧',   team:'village',  def:false},
+  thief:             {e:'🎭',   team:'village',  def:false},
+  elder:             {e:'👴',   team:'village',  def:false},
+  scapegoat:         {e:'🐐',   team:'village',  def:false},
+  villageidiot:      {e:'🤪',   team:'village',  def:false},
+  fluteplayer:       {e:'🎶',   team:'solo',     def:false},
+  bodyguard:         {e:'🛡️',  team:'village',  def:false},
+  savior:            {e:'✝️',   team:'village',  def:false},
+  crow:              {e:'🐦‍⬛', team:'village', def:false},
+  whitewerewolf:     {e:'🤍🐺', team:'solo',     def:false},
+  fox:               {e:'🦊',   team:'village',  def:false},
+  bigbadwolf:        {e:'😈',   team:'werewolf', def:false},
+  wolffather:        {e:'🐺👁️', team:'werewolf', def:false},
+  wildchild:         {e:'🧒',   team:'village',  def:false},
+  beartamer:         {e:'🐻',   team:'village',  def:false},
+  devotedservant:    {e:'🫡',   team:'village',  def:false},
+  rustyswordknight:  {e:'⚔️',   team:'village',  def:false},
+  gypsy:             {e:'🔯',   team:'village',  def:false},
+  judge:             {e:'⚖️',   team:'village',  def:false},
+  actor:             {e:'🎪',   team:'village',  def:false},
+  wolfhound:         {e:'🐕',   team:'village',  def:false},
+  threebrothers:     {e:'👬',   team:'village',  def:false},
+  twosisters:        {e:'👯',   team:'village',  def:false},
+  pyromaniac:        {e:'🔥',   team:'solo',     def:false},
+  necromancer:       {e:'💀',   team:'solo',     def:false},
+  sleepwalker:       {e:'🌙',   team:'village',  def:false},
+  apprenticeseer:    {e:'🔭',   team:'village',  def:false},
+  angel:             {e:'😇',   team:'solo',     def:false},
+  sectleader:        {e:'📿',   team:'solo',     def:false},
+  assassin:          {e:'🗡️',  team:'solo',     def:false},
+  hermit:            {e:'🏚️',  team:'village',  def:false},
+  alphawolf:         {e:'👑🐺', team:'werewolf', def:false},
+  berserker:         {e:'🪓',   team:'village',  def:false},
+  blackcat:          {e:'🐈‍⬛', team:'solo',    def:false},
+  kamikaze:          {e:'💥',   team:'village',  def:false},
+  puppeteer:         {e:'🪆',   team:'solo',     def:false},
+  demonchild:        {e:'😈🧒', team:'solo',     def:false},
+  corruptedbutcher:  {e:'🥩',   team:'werewolf', def:false},
+  spiderwoman:       {e:'🕷️',  team:'solo',     def:false},
+  trickster:         {e:'🃏',   team:'solo',     def:false},
+  gravedigger:       {e:'⛏️',  team:'village',  def:false},
+};
+
 // ════════════════════════════════════════════
 // TRANSLATIONS
 // ════════════════════════════════════════════
-let lang='en';
-const STRINGS={
-  en:{
-    appTitle:'Loup-Garou',appSubtitle:'Social Deduction Game',nameLabel:'Your name',createOrJoin:'Create or join?',btnCreate:'Create',btnJoin:'Join',roomCodeLabel:'Room code',copyPrompt:'Share this code with others:',copyBtn:'Copy Code',copyHint:'Code copied!',leaveBtn:'Leave',
-    playerLabel:'players',playersTitle:'Players',setupTitle:'Setup',timerTitle:'Timers',dayTimerLabel:'Day (seconds)',nightTimerLabel:'Night (seconds)',rolesTitle:'Roles',chatHeader:'Chat',statsTitle:'Stats',startHelperMsg:'',
-    st_setup:'Setup',st_playing:'Playing',ph_night:'Night',ph_day:'Day',t_lplayers:'Living Players',t_mairelabel:'Maire',t_votecount:'Votes:',you:'(You)',generalChat:'General',
-    t_dayt:'Day Timer (s)', t_nightt:'Night Timer (s)', t_start:'Start Game',
-    d_villager:'A regular townsperson. Vote during the day to eliminate suspects.',
-    d_werewolf:'A wolf disguised as human. Kill one villager each night.',
-    d_witch:'Can save or kill once per game with magical potions.',
-    d_seer:'Can see one player\'s true role each night.',
-    d_hunter:'When voted out, can eliminate one player.',
-    d_guard:'Protect one player each night from being killed.',
-    d_mayor:'Your vote counts twice during elections.',
-  },
-  fr:{
-    appTitle:'Loup-Garou',appSubtitle:'Jeu de Déduction Sociale',nameLabel:'Votre nom',createOrJoin:'Créer ou rejoindre?',btnCreate:'Créer',btnJoin:'Rejoindre',roomCodeLabel:'Code de salle',copyPrompt:'Partagez ce code avec d\'autres:',copyBtn:'Copier le code',copyHint:'Code copié!',leaveBtn:'Quitter',
-    playerLabel:'joueurs',playersTitle:'Joueurs',setupTitle:'Configuration',timerTitle:'Chronomètres',dayTimerLabel:'Jour (secondes)',nightTimerLabel:'Nuit (secondes)',rolesTitle:'Rôles',chatHeader:'Chat',statsTitle:'Statistiques',startHelperMsg:'',
-    st_setup:'Configuration',st_playing:'Jeu en cours',ph_night:'Nuit',ph_day:'Jour',t_lplayers:'Joueurs en Vie',t_mairelabel:'Maire',t_votecount:'Votes:',you:'(Vous)',generalChat:'Général',
-    t_dayt:'Chrono jour (s)', t_nightt:'Chrono nuit (s)', t_start:'Démarrer',
-    d_villager:'Un habitant ordinaire. Votez pendant le jour pour éliminer les suspects.',
-    d_werewolf:'Un loup déguisé en humain. Tuez un villageois chaque nuit.',
-    d_witch:'Peut sauver ou tuer une fois par jeu avec des potions magiques.',
-    d_seer:'Peut voir le vrai rôle d\'un joueur chaque nuit.',
-    d_hunter:'Quand voté, peut éliminer un joueur.',
-    d_guard:'Protégez un joueur chaque nuit d\'être tué.',
-    d_mayor:'Votre vote compte deux fois pendant les élections.',
-  },
-  ar:{
-    appTitle:'لوب غارو',appSubtitle:'لعبة الخصم الاجتماعي',nameLabel:'اسمك',createOrJoin:'إنشاء أو الانضمام؟',btnCreate:'إنشاء',btnJoin:'انضمام',roomCodeLabel:'رمز الغرفة',copyPrompt:'شارك هذا الرمز مع الآخرين:',copyBtn:'نسخ الرمز',copyHint:'تم نسخ الرمز!',leaveBtn:'المغادرة',
-    playerLabel:'لاعبين',playersTitle:'اللاعبون',setupTitle:'الإعداد',timerTitle:'المؤقتات',dayTimerLabel:'النهار (ثواني)',nightTimerLabel:'الليل (ثواني)',rolesTitle:'الأدوار',chatHeader:'الدردشة',statsTitle:'الإحصائيات',startHelperMsg:'',
-    st_setup:'الإعداد',st_playing:'جارٍ الآن',ph_night:'الليل',ph_day:'النهار',t_lplayers:'اللاعبون الأحياء',t_mairelabel:'العمدة',t_votecount:'الأصوات:',you:'(أنت)',generalChat:'عام',
-    t_dayt:'مدة النهار (ثا)', t_nightt:'مدة الليل (ثا)', t_start:'ابدأ اللعبة',
-    d_villager:'سكان عاديون. صوت خلال اليوم للقضاء على المشبوهين.',
-    d_werewolf:'ذئب متنكر في صورة بشر. اقتل أحد السكان كل ليلة.',
-    d_witch:'يمكنه إنقاذ أو قتل مرة واحدة في اللعبة باستخدام الجرعات السحرية.',
-    d_seer:'يمكنه رؤية دور لاعب واحد الحقيقي كل ليلة.',
-    d_hunter:'عند التصويت عليه، يمكنه القضاء على لاعب واحد.',
-    d_guard:'حماية لاعب واحد كل ليلة من القتل.',
-    d_mayor:'يتم احتساب صوتك مرتين أثناء الانتخابات.',
-  }
-};
-
-function tr(key){ return STRINGS[lang]?.[key]||key; }
-function setLang(l){ lang=l; const bts=document.querySelectorAll('.lb'); bts.forEach(b=>b.classList.remove('active')); event.target.classList.add('active'); applyTranslations(); }
-function applyTranslations(){ document.getElementById('appTitle').textContent=tr('appTitle'); document.getElementById('appSubtitle').textContent=tr('appSubtitle'); document.getElementById('nameLabel').textContent=tr('nameLabel'); document.getElementById('createOrJoin').textContent=tr('createOrJoin'); document.getElementById('btnCreate').textContent=tr('btnCreate'); document.getElementById('btnJoin').textContent=tr('btnJoin'); document.getElementById('roomCodeLabel').textContent=tr('roomCodeLabel'); document.getElementById('copyPrompt').textContent=tr('copyPrompt'); document.getElementById('copyBtn').textContent=tr('copyBtn'); document.getElementById('leaveBtn').textContent=tr('leaveBtn'); document.getElementById('playerLabel').textContent=tr('playerLabel'); document.getElementById('playersTitle').textContent=tr('playersTitle'); document.getElementById('setupTitle').textContent=tr('setupTitle'); document.getElementById('timerTitle').textContent=tr('timerTitle'); document.getElementById('dayTimerLabel').textContent=tr('dayTimerLabel'); document.getElementById('nightTimerLabel').textContent=tr('nightTimerLabel'); document.getElementById('rolesTitle').textContent=tr('rolesTitle'); document.getElementById('chatHeader').textContent=tr('chatHeader'); document.getElementById('statsTitle').textContent=tr('statsTitle'); }
-
-// ════════════════════════════════════════════
-// ROLES
-// ════════════════════════════════════════════
-const ROLES_DEF={
-  werewolf:{e:'🐺',t:'Werewolf',team:'werewolf',name_en:'Werewolf',name_fr:'Loup-Garou',name_ar:'ذئب بشري'},
-  villager:{e:'🧑',t:'Villager',team:'village',name_en:'Villager',name_fr:'Villageois',name_ar:'قروي'},
-  witch:{e:'🧙',t:'Witch',team:'village',name_en:'Witch',name_fr:'Sorcière',name_ar:'ساحرة'},
-  seer:{e:'👁️',t:'Seer',team:'village',name_en:'Seer',name_fr:'Voyante',name_ar:'عرّافة'},
-  hunter:{e:'🏹',t:'Hunter',team:'village',name_en:'Hunter',name_fr:'Chasseur',name_ar:'صياد'},
-  guard:{e:'🛡️',t:'Guard',team:'village',name_en:'Guard',name_fr:'Garde',name_ar:'حارس'},
-  mayor:{e:'👑',t:'Mayor',team:'village',name_en:'Mayor',name_fr:'Maire',name_ar:'عمدة'},
-};
-const ALL_ROLES=Object.keys(ROLES_DEF);
-const ROLE_DEFAULTS=[
-  {id:'werewolf',label_en:'Werewolf',label_fr:'Loup-Garou',label_ar:'ذئب بشري',team:'werewolf',emoji:'🐺',default:true},
-  {id:'villager',label_en:'Villager',label_fr:'Villageois',label_ar:'قروي',team:'village',emoji:'🧑',default:true},
-  {id:'witch',label_en:'Witch',label_fr:'Sorcière',label_ar:'ساحرة',team:'village',emoji:'🧙',default:false},
-  {id:'seer',label_en:'Seer',label_fr:'Voyante',label_ar:'عرّافة',team:'village',emoji:'👁️',default:false},
-  {id:'hunter',label_en:'Hunter',label_fr:'Chasseur',label_ar:'صياد',team:'village',emoji:'🏹',default:false},
-  {id:'guard',label_en:'Guard',label_fr:'Garde',label_ar:'حارس',team:'village',emoji:'🛡️',default:false},
-  {id:'mayor',label_en:'Mayor',label_fr:'Maire',label_ar:'عمدة',team:'village',emoji:'👑',default:false},
-];
+const T = {
+en:{
+  t_title:'Loup-Garou', t_sub:'Join the game of deception and survival',
+  t_name:'Your Name', t_code:'Room Code', t_join:'Join Game', t_create:'Create Room',
+  t_shareCode:'Share this code with friends:',
+  t_gtitle:'Loup-Garou', t_lphase:'Phase:', t_lplayers:'Players:', t_lroom:'Room:', t_lstatus:'Status:', t_leave:'Leave',
+  t_linfo:'Game Info', t_lalive:'Alive:', t_ldead:'Dead:', t_lwolves:'Wolves:', t_lvillage:'Villagers:', t_lrole:'Your Role',
+  t_setup:'Game Setup', t_nplayers:'Number of Players (4–20)', t_roles:'Select Roles',
+  t_dayt:'Day Timer (s)', t_nightt:'Night Timer (s)', t_start:'Start Game',
+  t_wait:'Waiting for host to start…', t_chat:'Game Chat', t_send:'▶',
+  st_setup:'Setup', st_playing:'Playing', ph_night:'Night Phase', ph_day:'Day Phase',
+  you:'(You)',
+  // role names
+  villager:'Villager', werewolf:'Werewolf', seer:'Seer', witch:'Witch', hunter:'Hunter',
+  cupid:'Cupid', littlegirl:'Little Girl', thief:'Thief', elder:'Elder', scapegoat:'Scapegoat',
+  villageidiot:'Village Idiot', fluteplayer:'Flute Player', bodyguard:'Bodyguard', savior:'Savior',
+  crow:'Crow', whitewerewolf:'White Werewolf', fox:'Fox', bigbadwolf:'Big Bad Wolf',
+  wolffather:'Wolf Father', wildchild:'Wild Child', beartamer:'Bear Tamer',
+  devotedservant:'Devoted Servant', rustyswordknight:'Rusty Sword Knight', gypsy:'Gypsy',
+  judge:'Judge', actor:'Actor', wolfhound:'Wolf-Hound', threebrothers:'Three Brothers',
+  twosisters:'Two Sisters', pyromaniac:'Pyromaniac', necromancer:'Necromancer',
+  sleepwalker:'Sleepwalker', apprenticeseer:'Apprentice Seer', angel:'Angel',
+  sectleader:'Sect Leader', assassin:'Assassin', hermit:'Hermit', alphawolf:'Alpha Wolf',
+  berserker:'Berserker', blackcat:'Black Cat', kamikaze:'Kamikaze', puppeteer:'Puppeteer',
+  demonchild:'Demon Child', corruptedbutcher:'Corrupted Butcher', spiderwoman:'Spider Woman',
+  trickster:'Trickster', gravedigger:'Grave Digger',
+  // descriptions
+  d_villager:'No special power. Vote and deduce to find the wolves.',
+  d_werewolf:'Each night, choose a victim. Stay hidden among the villagers.',
+  d_seer:'Each night, learn the true role of one player.',
+  d_witch:'You hold a life potion and a death potion. Use them wisely.',
+  d_hunter:'When eliminated, you shoot one other player dead.',
+  d_cupid:'At game start, link two lovers. If one dies, the other follows.',
+  d_littlegirl:'You may peek at the wolves during the night — at your own risk.',
+  d_thief:'At game start, swap your card with an unused role card.',
+  d_elder:'Survives the first wolf attack. If the village votes them out, all villagers lose their powers.',
+  d_scapegoat:'If the village vote ends in a tie, you are eliminated instead.',
+  d_villageidiot:'Revealed as the idiot if voted out — stays alive but loses voting rights.',
+  d_fluteplayer:'Each night, enchant two players. Win alone when all living players are enchanted.',
+  d_bodyguard:'Each night, protect one player from the wolf attack.',
+  d_savior:'Each night, save one player from death. Cannot save the same player two nights in a row.',
+  d_crow:'Each night, secretly accuse a player — they start the next day with 2 extra votes against them.',
+  d_whitewerewolf:'A lone wolf. Every other night you may kill one of your own wolf pack.',
+  d_fox:'Each night, sniff three adjacent players. If no wolf among them, you lose your power.',
+  d_bigbadwolf:'Like a werewolf but also kills an extra villager each night while no wolf has died.',
+  d_wolffather:'A powerful wolf who can infect one player, silently turning them into a werewolf.',
+  d_wildchild:'Choose a role model at game start. If they die, you become a werewolf.',
+  d_beartamer:'At dawn, a grunt signals if the bear tamer\'s neighbors include a werewolf.',
+  d_devotedservant:'If the current leader is eliminated, you may take their role secretly.',
+  d_rustyswordknight:'The wolf who kills you becomes infected and dies the following night.',
+  d_gypsy:'Can activate special event cards to alter the course of the game.',
+  d_judge:'Once per game, signal the moderator to force an extra elimination vote.',
+  d_actor:'Secretly holds 3 role cards and may switch to one each round.',
+  d_wolfhound:'At game start, privately choose to be a villager or a werewolf.',
+  d_threebrothers:'Three brothers who wake together each night to communicate silently.',
+  d_twosisters:'Two sisters who wake together each night to share information.',
+  d_pyromaniac:'Each night, douse a player. When you ignite, all doused players (and yourself) perish.',
+  d_necromancer:'Can commune with dead players and channel their abilities once.',
+  d_sleepwalker:'A villager who accidentally wakes with the wolves, seeing faces but not roles.',
+  d_apprenticeseer:'If the seer dies, you inherit their nightly power to reveal a role.',
+  d_angel:'Win alone if you are the very first player eliminated; otherwise become a plain villager.',
+  d_sectleader:'Each night, recruit a living player. Win when all surviving players have joined your sect.',
+  d_assassin:'Holds a secret list of targets. Win alone if every target is eliminated.',
+  d_hermit:'Lives outside the village. Wolves may choose to skip attacking you.',
+  d_alphawolf:'Once per game, convert a villager into a werewolf instead of killing them.',
+  d_berserker:'Immune to wolf attacks for the first two nights.',
+  d_blackcat:'If eliminated by village vote, all players lose their special powers for one night.',
+  d_kamikaze:'When eliminated, instantly reveals the identity of every werewolf.',
+  d_puppeteer:'Each night, hijack one player\'s action or vote.',
+  d_demonchild:'Starts as a villager. If the Wolf Father contacts you, you become a werewolf.',
+  d_corruptedbutcher:'A wolf who distributes fake role cards to mislead the seer.',
+  d_spiderwoman:'Each night, web two players together — if one is targeted, so is the other.',
+  d_trickster:'Once per game, secretly swap the roles of two players.',
+  d_gravedigger:'Each night, read and use the ability of one dead player.',
+  // maire & team chat
+  maire:'Mayor', runForMaire:'Run for Mayor', voteMaire:'Vote for Mayor',
+  skipDay:'Skip Day Vote', maireElected:'Mayor elected!', candidates:'Candidates:',
+  noCandidates:'No candidates yet', maireIs:'Mayor:', maireVotes:'(2 votes)',
+  teamChat:'Team Chat', generalChat:'General',
+  wolvesChat:'Wolves', sistersChat:'Sisters', brothersChat:'Brothers',
+},
+fr:{
+  t_title:'Loup-Garou', t_sub:'Rejoignez le jeu de la tromperie et de la survie',
+  t_name:'Votre nom', t_code:'Code de salle', t_join:'Rejoindre', t_create:'Créer une salle',
+  t_shareCode:'Partagez ce code avec vos amis :',
+  t_gtitle:'Loup-Garou', t_lphase:'Phase :', t_lplayers:'Joueurs :', t_lroom:'Salle :', t_lstatus:'État :', t_leave:'Quitter',
+  t_linfo:'Infos', t_lalive:'Vivants :', t_ldead:'Morts :', t_lwolves:'Loups :', t_lvillage:'Villageois :', t_lrole:'Votre rôle',
+  t_setup:'Configuration', t_nplayers:'Nombre de joueurs (4–20)', t_roles:'Choisir les rôles',
+  t_dayt:'Chrono jour (s)', t_nightt:'Chrono nuit (s)', t_start:'Démarrer',
+  t_wait:'En attente du meneur…', t_chat:'Chat', t_send:'▶',
+  st_setup:'Préparation', st_playing:'En cours', ph_night:'Phase de nuit', ph_day:'Phase de jour',
+  you:'(Vous)',
+  villager:'Villageois', werewolf:'Loup-Garou', seer:'Voyante', witch:'Sorcière', hunter:'Chasseur',
+  cupid:'Cupidon', littlegirl:'Petite Fille', thief:'Voleur', elder:'Ancien', scapegoat:'Bouc Émissaire',
+  villageidiot:'Idiot du Village', fluteplayer:'Joueur de Flûte', bodyguard:'Garde du Corps', savior:'Sauveur',
+  crow:'Corbeau', whitewerewolf:'Loup Blanc', fox:'Renard', bigbadwolf:'Grand Méchant Loup',
+  wolffather:'Père des Loups', wildchild:'Enfant Sauvage', beartamer:"Montreur d'Ours",
+  devotedservant:'Servante Dévouée', rustyswordknight:"Chevalier à l'Épée Rouillée", gypsy:'Gitane',
+  judge:'Juge', actor:'Acteur', wolfhound:'Chien-Loup', threebrothers:'Trois Frères',
+  twosisters:'Deux Sœurs', pyromaniac:'Pyromane', necromancer:'Nécromancien',
+  sleepwalker:'Somnambule', apprenticeseer:'Apprentie Voyante', angel:'Ange',
+  sectleader:'Meneur de Secte', assassin:'Assassin', hermit:'Ermite', alphawolf:'Loup Alpha',
+  berserker:'Berserker', blackcat:'Chat Noir', kamikaze:'Kamikaze', puppeteer:'Marionnettiste',
+  demonchild:'Enfant Démoniaque', corruptedbutcher:'Boucher Corrompu', spiderwoman:'Femme-Araignée',
+  trickster:'Filou', gravedigger:'Fossoyeur',
+  d_villager:'Aucun pouvoir. Votez et déduisez pour débusquer les loups.',
+  d_werewolf:'Chaque nuit, choisissez une victime. Restez caché parmi les villageois.',
+  d_seer:'Chaque nuit, découvrez le vrai rôle d\'un joueur.',
+  d_witch:'Vous avez une potion de vie et une potion de mort. Utilisez-les avec sagesse.',
+  d_hunter:'Quand vous êtes éliminé, vous emportez un autre joueur avec vous.',
+  d_cupid:'Au début, liez deux amoureux. Si l\'un meurt, l\'autre le suit.',
+  d_littlegirl:'Vous pouvez espionner les loups la nuit — à vos risques et périls.',
+  d_thief:'Au début, échangez votre carte avec une carte de rôle inutilisée.',
+  d_elder:'Survit au premier assaut des loups. Si le village l\'élimine, tous perdent leurs pouvoirs.',
+  d_scapegoat:'En cas d\'égalité au vote, vous êtes éliminé à la place.',
+  d_villageidiot:'Révélé comme idiot si éliminé — reste en vie mais perd le droit de vote.',
+  d_fluteplayer:'Chaque nuit, envoûtez deux joueurs. Gagnez seul quand tous les vivants sont envoûtés.',
+  d_bodyguard:'Chaque nuit, protégez un joueur contre l\'attaque des loups.',
+  d_savior:'Chaque nuit, sauvez un joueur de la mort. Impossible de protéger le même deux nuits de suite.',
+  d_crow:'Chaque nuit, accusez secrètement un joueur — il commence le lendemain avec 2 votes contre lui.',
+  d_whitewerewolf:'Loup solitaire. Une nuit sur deux, vous pouvez tuer un membre de votre propre meute.',
+  d_fox:'Chaque nuit, flairez trois joueurs adjacents. Si aucun loup, vous perdez votre pouvoir.',
+  d_bigbadwolf:'Comme un loup, mais tue un villageois supplémentaire tant qu\'aucun loup n\'est mort.',
+  d_wolffather:'Loup puissant qui peut infecter un joueur et en faire discrètement un loup.',
+  d_wildchild:'Choisissez un modèle au début. S\'il meurt, vous devenez loup-garou.',
+  d_beartamer:'À l\'aube, un grognement signale si les voisins du montreur sont des loups.',
+  d_devotedservant:'Si le meneur est éliminé, vous pouvez prendre son rôle secrètement.',
+  d_rustyswordknight:'Le loup qui vous tue est infecté et mourra la nuit suivante.',
+  d_gypsy:'Peut activer des cartes événements spéciaux pour modifier le cours du jeu.',
+  d_judge:'Une fois par partie, signalez au meneur de forcer un vote d\'élimination supplémentaire.',
+  d_actor:'Possède secrètement 3 cartes de rôle et peut en changer à chaque tour.',
+  d_wolfhound:'Au début, choisissez privément d\'être villageois ou loup-garou.',
+  d_threebrothers:'Trois frères qui se réveillent ensemble chaque nuit pour communiquer en silence.',
+  d_twosisters:'Deux sœurs qui se réveillent ensemble chaque nuit pour partager des informations.',
+  d_pyromaniac:'Chaque nuit, arrosez un joueur. Quand vous craquez l\'allumette, tous les arrosés périssent.',
+  d_necromancer:'Peut communiquer avec les morts et utiliser une fois leurs capacités.',
+  d_sleepwalker:'Villageois qui se réveille accidentellement avec les loups, sans savoir qui est qui.',
+  d_apprenticeseer:'Si la voyante meurt, vous héritez de son pouvoir de révéler un rôle chaque nuit.',
+  d_angel:'Gagnez seul si vous êtes le tout premier éliminé ; sinon, devenez un simple villageois.',
+  d_sectleader:'Chaque nuit, recrutez un vivant. Gagnez quand tous les survivants ont rejoint votre secte.',
+  d_assassin:'Liste secrète de cibles. Gagnez seul si toutes sont éliminées.',
+  d_hermit:'Vit hors du village. Les loups peuvent choisir de ne pas vous attaquer.',
+  d_alphawolf:'Une fois par partie, convertissez un villageois en loup plutôt que de le tuer.',
+  d_berserker:'Immunisé contre les attaques de loups lors des deux premières nuits.',
+  d_blackcat:'Si éliminé par le vote du village, tous perdent leurs pouvoirs spéciaux une nuit.',
+  d_kamikaze:'À votre élimination, révèle immédiatement l\'identité de tous les loups.',
+  d_puppeteer:'Chaque nuit, prenez le contrôle de l\'action ou du vote d\'un joueur.',
+  d_demonchild:'Commence villageois. Si le Père des Loups vous contacte, vous devenez loup.',
+  d_corruptedbutcher:'Loup qui distribue de fausses cartes de rôle pour tromper la voyante.',
+  d_spiderwoman:'Chaque nuit, reliez deux joueurs — si l\'un est ciblé, l\'autre l\'est aussi.',
+  d_trickster:'Une fois par partie, échangez secrètement les rôles de deux joueurs.',
+  d_gravedigger:'Chaque nuit, lisez et utilisez la capacité d\'un joueur mort.',
+  // maire & team chat
+  maire:'Maire', runForMaire:'Se présenter comme Maire', voteMaire:'Voter pour le Maire',
+  skipDay:'Passer le vote du jour', maireElected:'Maire élu !', candidates:'Candidats :',
+  noCandidates:'Pas encore de candidats', maireIs:'Maire :', maireVotes:'(2 votes)',
+  teamChat:'Chat d\'équipe', generalChat:'Général',
+  wolvesChat:'Loups', sistersChat:'Sœurs', brothersChat:'Frères',
+},
+ar:{
+  t_title:'ذئب البشر', t_sub:'انضم إلى لعبة الخداع والبقاء',
+  t_name:'اسمك', t_code:'كود الغرفة', t_join:'انضم', t_create:'إنشاء غرفة',
+  t_shareCode:'شارك هذا الكود مع أصدقائك:',
+  t_gtitle:'ذئب البشر', t_lphase:'المرحلة:', t_lplayers:'اللاعبون:', t_lroom:'الغرفة:', t_lstatus:'الحالة:', t_leave:'خروج',
+  t_linfo:'معلومات', t_lalive:'أحياء:', t_ldead:'أموات:', t_lwolves:'ذئاب:', t_lvillage:'قرويون:', t_lrole:'دورك',
+  t_setup:'إعداد اللعبة', t_nplayers:'عدد اللاعبين (4–20)', t_roles:'اختر الأدوار',
+  t_dayt:'مدة النهار (ثا)', t_nightt:'مدة الليل (ثا)', t_start:'ابدأ اللعبة',
+  t_wait:'بانتظار المضيف للبدء…', t_chat:'الدردشة', t_send:'▶',
+  st_setup:'الإعداد', st_playing:'يلعب', ph_night:'مرحلة الليل', ph_day:'مرحلة النهار',
+  you:'(أنت)',
+  villager:'قروي', werewolf:'ذئب البشر', seer:'العرافة', witch:'الساحرة', hunter:'الصياد',
+  cupid:'كيوبيد', littlegirl:'الفتاة الصغيرة', thief:'اللص', elder:'الشيخ', scapegoat:'كبش الفداء',
+  villageidiot:'أبله القرية', fluteplayer:'عازف الناي', bodyguard:'الحارس الشخصي', savior:'المنقذ',
+  crow:'الغراب', whitewerewolf:'الذئب الأبيض', fox:'الثعلب', bigbadwolf:'الذئب الكبير الشرير',
+  wolffather:'أبو الذئاب', wildchild:'الطفل البري', beartamer:'مروض الدب',
+  devotedservant:'الخادمة المخلصة', rustyswordknight:'فارس السيف الصدئ', gypsy:'الغجرية',
+  judge:'القاضي', actor:'الممثل', wolfhound:'كلب الذئب', threebrothers:'الإخوة الثلاثة',
+  twosisters:'الأختان', pyromaniac:'مجنون النار', necromancer:'الساحر الأسود',
+  sleepwalker:'سائر النوم', apprenticeseer:'تلميذة العرافة', angel:'الملاك',
+  sectleader:'زعيم الطائفة', assassin:'القاتل المأجور', hermit:'الناسك', alphawolf:'الذئب الألفا',
+  berserker:'المحارب المتوحش', blackcat:'القطة السوداء', kamikaze:'الكاميكاز', puppeteer:'محرك الدمى',
+  demonchild:'الطفل الشيطاني', corruptedbutcher:'الجزار الفاسد', spiderwoman:'المرأة العنكبوت',
+  trickster:'المخادع', gravedigger:'حفار القبور',
+  d_villager:'لا قوة خاصة. صوّت واستنتج لإيجاد الذئاب.',
+  d_werewolf:'كل ليلة اختر ضحية. ابق مختبئاً بين القرويين.',
+  d_seer:'كل ليلة اكشف الدور الحقيقي للاعب واحد.',
+  d_witch:'تملك جرعة حياة وجرعة موت. استخدمهما بحكمة.',
+  d_hunter:'عند إقصائك، تطلق رصاصتك الأخيرة على لاعب آخر.',
+  d_cupid:'في البداية اربط عاشقَين. إذا مات أحدهما مات الآخر.',
+  d_littlegirl:'يمكنك التجسس على الذئاب ليلاً — على مسؤوليتك الخاصة.',
+  d_thief:'في البداية استبدل بطاقتك ببطاقة دور غير مستخدمة.',
+  d_elder:'ينجو من أول هجوم للذئاب. إذا أقصاه القرويون فقد الجميع قدراتهم.',
+  d_scapegoat:'إذا تعادل التصويت تُقصى أنت بدلاً من الآخرين.',
+  d_villageidiot:'يُكشف كأبله عند إقصائه — يبقى حياً لكن يفقد حق التصويت.',
+  d_fluteplayer:'كل ليلة سحّر لاعبَين. اربح وحدك حين يُسحر جميع الأحياء.',
+  d_bodyguard:'كل ليلة احمِ لاعباً واحداً من هجوم الذئاب.',
+  d_savior:'كل ليلة أنقذ لاعباً من الموت. لا يمكن حماية نفس اللاعب ليلتَين متتاليتَين.',
+  d_crow:'كل ليلة اتهم سراً لاعباً — يبدأ اليوم التالي وعليه صوتان إضافيان.',
+  d_whitewerewolf:'ذئب منفرد. كل ليلة أخرى يمكنك قتل أحد أفراد مجموعتك.',
+  d_fox:'كل ليلة شمّ ثلاثة لاعبين متجاورين. إذا لم يكن بينهم ذئب فقدت قدرتك.',
+  d_bigbadwolf:'كالذئب لكنه يقتل قروياً إضافياً كل ليلة ما لم يُقتل أي ذئب.',
+  d_wolffather:'ذئب قوي يستطيع إصابة لاعب وتحويله سراً إلى ذئب.',
+  d_wildchild:'اختر قدوة في البداية. إذا مات أصبحت ذئباً.',
+  d_beartamer:'عند الفجر يصدر الدب زئيراً إذا كان أحد جيران المروّض ذئباً.',
+  d_devotedservant:'إذا أُقصي الزعيم يمكنك أخذ دوره سراً.',
+  d_rustyswordknight:'الذئب الذي يقتلك يُصاب ويموت في الليلة التالية.',
+  d_gypsy:'تستطيع تفعيل بطاقات أحداث خاصة لتغيير مجرى اللعبة.',
+  d_judge:'مرة واحدة في اللعبة اطلب من المحكّم إجراء تصويت إضافي.',
+  d_actor:'يحمل سراً 3 بطاقات أدوار ويستطيع التبديل بينها كل جولة.',
+  d_wolfhound:'في البداية اختر سراً أن تكون قروياً أو ذئباً.',
+  d_threebrothers:'ثلاثة إخوة يستيقظون معاً كل ليلة للتواصل الصامت.',
+  d_twosisters:'أختان تستيقظان معاً كل ليلة لتبادل المعلومات.',
+  d_pyromaniac:'كل ليلة رشّ لاعباً. حين تشعل النار يهلك كل المرشوشين ومعهم أنت.',
+  d_necromancer:'يتواصل مع الأموات ويستطيع استخدام قدراتهم مرة واحدة.',
+  d_sleepwalker:'قروي يستيقظ بالخطأ مع الذئاب يرى الوجوه دون أن يعرف الأدوار.',
+  d_apprenticeseer:'إذا ماتت العرافة ترث قدرتها في كشف دور واحد كل ليلة.',
+  d_angel:'اربح وحدك إذا كنت أول من يُقصى؛ وإلا تصبح قروياً عادياً.',
+  d_sectleader:'كل ليلة جنّد لاعباً حياً. اربح حين ينضم جميع الناجين إلى طائفتك.',
+  d_assassin:'يملك قائمة سرية من الأهداف. اربح وحدك إذا أقصيت جميعها.',
+  d_hermit:'يعيش خارج القرية. الذئاب قد يتجنبون مهاجمته.',
+  d_alphawolf:'مرة واحدة في اللعبة حوّل قروياً إلى ذئب بدلاً من قتله.',
+  d_berserker:'محصّن ضد هجمات الذئاب خلال الليلتَين الأوليَيَن.',
+  d_blackcat:'إذا أُقصي بالتصويت يفقد الجميع قدراتهم الخاصة لليلة واحدة.',
+  d_kamikaze:'عند إقصائه يكشف فوراً هوية جميع الذئاب.',
+  d_puppeteer:'كل ليلة يتحكم في تصرف أو تصويت لاعب واحد.',
+  d_demonchild:'يبدأ قروياً. إذا تواصل معه أبو الذئاب أصبح ذئباً.',
+  d_corruptedbutcher:'ذئب يوزع بطاقات أدوار مزيفة لتضليل العرافة.',
+  d_spiderwoman:'كل ليلة تربط لاعبَين — إذا استُهدف أحدهما استُهدف الآخر.',
+  d_trickster:'مرة واحدة في اللعبة يبدّل سراً أدوار لاعبَين.',
+  d_gravedigger:'كل ليلة يقرأ ويستخدم قدرة لاعب ميت.',
+  // maire & team chat
+  maire:'العمدة', runForMaire:'ترشح للعمدة', voteMaire:'صوّت للعمدة',
+  skipDay:'تخطي تصويت النهار', maireElected:'تم انتخاب العمدة!', candidates:'المرشحون:',
+  noCandidates:'لا مرشحين بعد', maireIs:'العمدة:', maireVotes:'(صوتان)',
+  teamChat:'دردشة الفريق', generalChat:'عام',
+  wolvesChat:'الذئاب', sistersChat:'الأختان', brothersChat:'الإخوة',
+}};
 
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-let myId=null, myName='', roomCode=null, isLeader=false;
-let gameState=null;
-let cfg={dayTimer:60,nightTimer:45,roleCounts:{werewolf:1},roles:['werewolf','villager']};
-let myRole=null;
-let activeChatTab='general';
-let fbOk=false, db=null;
-let _previousAlive={};
-let _deathAnimQueue=[];
-let _lastStepId=null, _advancingStep=false;
+let lang='en', db=null, fbOk=false;
+let myId=null, myName=null, roomCode=null, gameState=null, myRole=null, isLeader=false;
+let cfg={roles:['werewolf','seer','witch','villager'], roleCounts:{werewolf:1, villager:1}, dayTimer:60, nightTimer:45};
+let timerTO=null;
+let activeChatTab='general'; // 'general', 'wolves', 'twosisters', 'threebrothers'
+let _previousAlive={}; // track alive states for death animation
+let _gameOver=false; // prevent actions after game end
+
+// ════════════════════════════════════════════
+// PLAYER COLORS — unique color per player
+// ════════════════════════════════════════════
+const PLAYER_COLORS=[
+  '#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6',
+  '#1abc9c','#e67e22','#e84393','#00cec9','#fdcb6e',
+  '#6c5ce7','#fab1a0','#55efc4','#fd79a8','#74b9ff',
+  '#a29bfe','#ffeaa7','#dfe6e9','#ff7675','#81ecec'
+];
+function getPlayerColor(playerId){
+  if(!gameState?.players) return '#ccc';
+  const ids=Object.keys(gameState.players).sort();
+  const idx=ids.indexOf(playerId);
+  return PLAYER_COLORS[idx % PLAYER_COLORS.length];
+}
+
+// ════════════════════════════════════════════
+// DEATH ANIMATION
+// ════════════════════════════════════════════
+function showDeathAnimation(playerName, playerRole){
+  const overlay=document.getElementById('deathOverlay');
+  const rd=ROLES_DEF[playerRole];
+  document.getElementById('deathEmoji').textContent='💀';
+  document.getElementById('deathName').textContent=playerName;
+  document.getElementById('deathRole').textContent=(rd?.e||'')+ ' ' + tr(playerRole||'villager');
+  document.getElementById('deathLabel').textContent=
+    lang==='ar'?'تم إقصاؤه':lang==='fr'?'Éliminé':'Eliminated';
+  overlay.classList.add('active');
+  setTimeout(()=>{
+    overlay.classList.remove('active');
+  }, 4000);
+}
+
+// Detect newly dead players and trigger animation
+function checkForDeaths(players){
+  if(!players||!gameState||gameState.status!=='playing') return;
+  const newDead=[];
+  players.forEach(p=>{
+    if(!p.alive && _previousAlive[p.id]===true){
+      newDead.push(p);
+    }
+  });
+  // Update tracking
+  players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
+  // Show animation for first newly dead player (queue if multiple)
+  if(newDead.length>0){
+    let delay=0;
+    newDead.forEach(p=>{
+      setTimeout(()=>showDeathAnimation(p.name, p.role), delay);
+      delay+=4200;
+    });
+  }
+}
+
+// ════════════════════════════════════════════
+// WIN CONDITION CHECK
+// ════════════════════════════════════════════
+function checkWinCondition(){
+  if(!gameState||gameState.status!=='playing') return null;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const wolves=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf');
+  const nonWolves=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf');
+
+  // Wolves win: wolves >= non-wolves
+  if(wolves.length>0 && wolves.length>=nonWolves.length){
+    return {winner:'werewolf',
+      msg:lang==='ar'?'🐺 فاز الذئاب! سيطروا على القرية!':
+          lang==='fr'?'🐺 Les Loups-Garous gagnent ! Ils ont pris le contrôle du village !':
+                      '🐺 Werewolves win! They have taken over the village!'};
+  }
+  // Village wins: all wolves dead
+  if(wolves.length===0 && alive.length>0){
+    return {winner:'village',
+      msg:lang==='ar'?'🏘️ فاز القرويون! تم القضاء على جميع الذئاب!':
+          lang==='fr'?'🏘️ Les Villageois gagnent ! Tous les loups sont éliminés !':
+                      '🏘️ Villagers win! All werewolves have been eliminated!'};
+  }
+  return null;
+}
+
+function showGameOver(result){
+  _gameOver=true;
+  const playView=document.getElementById('playView');
+  playView.innerHTML=`
+    <div style="text-align:center;padding:2rem">
+      <div style="font-size:4rem;margin-bottom:1rem">${result.winner==='werewolf'?'🐺':'🏘️'}</div>
+      <div class="phase-title" style="color:${result.winner==='werewolf'?'var(--blood-glow)':'var(--green)'}">
+        ${result.winner==='werewolf'?(lang==='ar'?'فوز الذئاب!':lang==='fr'?'Victoire des Loups !':'Werewolves Win!'):(lang==='ar'?'فوز القرويين!':lang==='fr'?'Victoire du Village !':'Village Wins!')}
+      </div>
+      <div style="font-size:1.1rem;color:var(--ghost);margin:1rem 0">${result.msg}</div>
+      <div style="margin-top:1.5rem;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
+        <div style="color:var(--moon);font-family:'Cinzel',serif;margin-bottom:.6rem">${lang==='ar'?'جميع اللاعبين:':lang==='fr'?'Tous les joueurs :':'All Players:'}</div>
+        ${Object.values(gameState.players||{}).map(p=>{
+          const rd=ROLES_DEF[p.role];
+          return `<div class="pi" style="opacity:${p.alive?1:.5}">
+            <div class="pstatus ${p.alive?'alive':'dead'}"></div>
+            <span>${rd?.e||'?'}</span>
+            <div style="flex:1;font-weight:700">${p.name}</div>
+            <span style="color:var(--moon-pale);font-size:.8rem">${tr(p.role||'villager')}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div id="readySection" style="margin-top:1.5rem">
+        <div id="readyStatus" style="font-size:.85rem;color:var(--moon-pale);margin-bottom:.6rem"></div>
+        <button class="btn" style="padding:.8rem 2rem;font-size:1.05rem;margin-right:.5rem" onclick="doReady()">🔄 ${lang==='ar'?'مستعد للعب مرة أخرى':lang==='fr'?'Prêt à rejouer':'Ready to Play Again'}</button>
+        <button class="btn btn-secondary" style="padding:.8rem 1.5rem;font-size:.95rem" onclick="doLeave()">${lang==='ar'?'خروج':lang==='fr'?'Quitter':'Leave Game'}</button>
+      </div>
+    </div>`;
+  playView.style.display='flex';
+  // Listen for ready states
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/readyPlayers`).on('value',snap=>{
+      renderReadyStatus(snap.val()||{});
+    });
+  }
+}
+
+function doReady(){
+  if(!myId) return;
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/readyPlayers/${myId}`).set({name:myName,ts:Date.now()});
+  } else if(gameState){
+    if(!gameState.readyPlayers) gameState.readyPlayers={};
+    gameState.readyPlayers[myId]={name:myName,ts:Date.now()};
+    renderReadyStatus(gameState.readyPlayers);
+    // In offline mode, if all players ready, restart immediately
+    const players=Object.values(gameState.players||{});
+    if(Object.keys(gameState.readyPlayers).length>=players.length) doRestart();
+  }
+}
+
+function renderReadyStatus(readyPlayers){
+  const el=document.getElementById('readyStatus');
+  if(!el) return;
+  const players=Object.values(gameState?.players||{});
+  const readyIds=Object.keys(readyPlayers);
+  const readyCount=readyIds.length;
+  const totalCount=players.length;
+
+  let html=`<div style="margin-bottom:.4rem">${readyCount}/${totalCount} ${lang==='ar'?'مستعدون':lang==='fr'?'prêts':'ready'}</div>`;
+  html+='<div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap">';
+  players.forEach(p=>{
+    const isReady=readyIds.includes(p.id);
+    html+=`<span style="padding:.2rem .5rem;border-radius:3px;font-size:.75rem;background:${isReady?'var(--green)':'var(--purple)'};color:${isReady?'#fff':'var(--ghost)'};border:1px solid ${isReady?'var(--green)':'var(--moon)'}">${p.name} ${isReady?'✓':'…'}</span>`;
+  });
+  html+='</div>';
+  el.innerHTML=html;
+
+  // If all ready and I'm leader, restart the game
+  if(isLeader && readyCount>=totalCount && totalCount>0){
+    doRestart();
+  }
+}
+
+function doRestart(){
+  if(!isLeader) return;
+  const players=Object.values(gameState?.players||{});
+  if(players.length<4) return;
+
+  // Reset state and assign new random roles
+  _gameOver=false;
+  _previousAlive={};
+  _lastStepId=null;
+
+  const roles=assignRoles(players.length);
+
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    players.forEach((p,i)=>{
+      upd[`games/${roomCode}/players/${p.id}/role`]=roles[i];
+      upd[`games/${roomCode}/players/${p.id}/alive`]=true;
+      upd[`games/${roomCode}/players/${p.id}/idiotRevealed`]=null;
+    });
+    upd[`games/${roomCode}/status`]='playing';
+    upd[`games/${roomCode}/phase`]='night';
+    upd[`games/${roomCode}/phaseStart`]=Date.now();
+    upd[`games/${roomCode}/dayNum`]=1;
+    upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+    upd[`games/${roomCode}/nightActions`]=null;
+    upd[`games/${roomCode}/dayVotes`]=null;
+    upd[`games/${roomCode}/witchPotions`]=null;
+    upd[`games/${roomCode}/maire`]=null;
+    upd[`games/${roomCode}/maireCandidates`]=null;
+    upd[`games/${roomCode}/maireVotes`]=null;
+    upd[`games/${roomCode}/maireSkipDay`]=null;
+    upd[`games/${roomCode}/readyPlayers`]=null;
+    upd[`games/${roomCode}/teamChat`]=null;
+    db.ref(`games/${roomCode}/readyPlayers`).off();
+    db.ref().update(upd,()=>{
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    });
+  } else {
+    players.forEach((p,i)=>{
+      gameState.players[p.id].role=roles[i];
+      gameState.players[p.id].alive=true;
+      delete gameState.players[p.id].idiotRevealed;
+    });
+    Object.assign(gameState,{
+      status:'playing', phase:'night', phaseStart:Date.now(), dayNum:1,
+      nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},
+      nightActions:null, dayVotes:null, witchPotions:null,
+      maire:null, maireCandidates:null, maireVotes:null, maireSkipDay:null,
+      readyPlayers:null, teamChat:null
+    });
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+  }
+}
 
 // ════════════════════════════════════════════
 // FIREBASE
 // ════════════════════════════════════════════
+const FB_CONFIG={
+  apiKey:"AIzaSyDWmug1e7a8ahUI0ErCbbZ70rW8-jw2kzY",
+  authDomain:"loup-garou-game-41471.firebaseapp.com",
+  databaseURL:"https://loup-garou-game-41471-default-rtdb.firebaseio.com",
+  projectId:"loup-garou-game-41471",
+  storageBucket:"loup-garou-game-41471.firebasestorage.app",
+  messagingSenderId:"31396402640",
+  appId:"1:31396402640:web:46c382244ab1b471a555d5"
+};
+
 function initFB(){
+  if(db) return; // already initialized
   try{
-    const firebaseConfig={
-      apiKey:'AIzaSyCAo4mDlqHpD5_0eKj9P40JxYB0b7eGyb8',
-      authDomain:'lgfinal-f34cf.firebaseapp.com',
-      databaseURL:'https://lgfinal-f34cf-default-rtdb.firebaseio.com',
-      projectId:'lgfinal-f34cf',
-      storageBucket:'lgfinal-f34cf.appspot.com',
-      messagingSenderId:'522833738922',
-      appId:'1:522833738922:web:c86ecd2f8f57fd68353b60'
-    };
-    if(!window.firebase){
-      const s=document.createElement('script');
-      s.src='https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
-      document.head.appendChild(s);
-      s.onload=()=>{
-        const s2=document.createElement('script');
-        s2.src='https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js';
-        document.head.appendChild(s2);
-        s2.onload=()=>{ firebase.initializeApp(firebaseConfig); db=firebase.database(); fbOk=true; };
-      };
+    if(typeof firebase==='undefined' || !window._fbReady){
+      fbOk=false; db=null;
+      return;
     }
-  }catch(e){ console.log('Firebase init skipped:', e.message); }
+    if(!firebase.apps.length){
+      firebase.initializeApp(FB_CONFIG);
+    }
+    db=firebase.database();
+    fbOk=true;
+    console.log('✅ Firebase ready');
+  }catch(ex){
+    console.warn('Firebase init failed',ex);
+    fbOk=false; db=null;
+  }
+}
+
+// Try to init Firebase once scripts have loaded
+function initFBWithRetry(callback, tries=0){
+  // Use _fbReady flag set by our loader script
+  if(window._fbReady && typeof firebase!=='undefined'){
+    initFB();
+    if(callback) callback();
+    return;
+  }
+  // CDN completely failed — go offline
+  if(window._fbLoadFailed){
+    console.warn('Firebase CDN failed — running in offline mode');
+    if(callback) callback();
+    return;
+  }
+  // Still loading — wait up to 10 seconds (100 tries × 100ms)
+  if(tries>100){
+    console.warn('Firebase took too long — running in offline mode');
+    if(callback) callback();
+    return;
+  }
+  setTimeout(()=>initFBWithRetry(callback, tries+1), 100);
 }
 
 // ════════════════════════════════════════════
-// CREATE / JOIN
+// LANGUAGE
+// ════════════════════════════════════════════
+function tr(k){ return T[lang]?.[k] ?? T.en[k] ?? k; }
+
+function setLang(l){
+  lang=l;
+  document.documentElement.lang=l;
+  document.documentElement.dir=l==='ar'?'rtl':'ltr';
+  document.querySelectorAll('.lb').forEach(b=>b.classList.toggle('active',b.dataset.l===l));
+  applyTranslations();
+  buildRolesGrid();
+}
+
+function applyTranslations(){
+  // translate every element whose id starts with t_ or st_ or ph_
+  document.querySelectorAll('[id]').forEach(el=>{
+    const v=tr(el.id);
+    if(v!==el.id){
+      // Skip buttons and elements with children (dynamic content)
+      if(el.children.length>0) return;
+      // Skip elements that are inside actionBtns or playerList (dynamic gameplay UI)
+      if(el.closest('#actionBtns')||el.closest('#playerList')||el.closest('#playView')) return;
+      el.textContent=v;
+    }
+  });
+}
+
+// ════════════════════════════════════════════
+// ROLES GRID
+// ════════════════════════════════════════════
+// Roles that support multiple copies
+const MULTI_ROLES={
+  werewolf:      {min:1,max:10},
+  villager:      {min:0,max:15},
+  threebrothers: {min:3,max:3},
+  twosisters:    {min:2,max:2},
+};
+
+function changeCount(role,delta){
+  if(!isLeader) return;
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const mn=MULTI_ROLES[role]?.min??1, mx=MULTI_ROLES[role]?.max??10;
+  cfg.roleCounts[role]=Math.max(mn,Math.min(mx,(cfg.roleCounts[role]??mn)+delta));
+  const el=document.getElementById('cnt_'+role);
+  if(el) el.textContent=cfg.roleCounts[role];
+  updateRolePreview();
+  pushCfg();
+}
+
+function buildRolesGrid(){
+  const grid=document.getElementById('rolesGrid');
+  if(!grid) return;
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
+  if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
+
+  const order=['village','werewolf','solo'];
+  const sorted=Object.entries(ROLES_DEF).sort((a,b)=>order.indexOf(a[1].team)-order.indexOf(b[1].team));
+  const canEdit=isLeader;
+
+  grid.innerHTML=sorted.map(([k,r])=>{
+    const isMulti=!!MULTI_ROLES[k];
+    const isFixed=isMulti&&MULTI_ROLES[k].min===MULTI_ROLES[k].max;
+    const alwaysOn=k==='werewolf'||k==='villager';
+    const checked=alwaysOn?true:cfg.roles.includes(k);
+    const chkDis=(!canEdit||alwaysOn)?'disabled':'';
+    const count=isMulti?(cfg.roleCounts[k]??MULTI_ROLES[k].min):1;
+
+    let qtyHtml='';
+    if(isMulti&&!isFixed){
+      if(canEdit){
+        qtyHtml=`<span onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:2px;margin-left:auto;flex-shrink:0">
+          <button onclick="changeCount('${k}',-1)" style="width:20px;height:20px;border:1px solid var(--moon);background:var(--void);color:var(--moon-pale);border-radius:3px;cursor:pointer;font-size:1rem;line-height:1;padding:0;font-family:inherit">−</button>
+          <span id="cnt_${k}" style="min-width:18px;text-align:center;color:var(--moon-pale);font-weight:700;font-size:.85rem">${count}</span>
+          <button onclick="changeCount('${k}',1)" style="width:20px;height:20px;border:1px solid var(--moon);background:var(--void);color:var(--moon-pale);border-radius:3px;cursor:pointer;font-size:1rem;line-height:1;padding:0;font-family:inherit">+</button>
+        </span>`;
+      } else {
+        qtyHtml=`<span style="margin-left:auto;color:var(--moon-pale);font-weight:700;font-size:.82rem;flex-shrink:0">×${count}</span>`;
+      }
+    } else if(isFixed&&checked){
+      qtyHtml=`<span style="margin-left:auto;color:var(--moon);font-size:.72rem;flex-shrink:0">(×${count})</span>`;
+    }
+
+    return `<label class="rc t-${r.team}" style="${alwaysOn?'opacity:.75;':''}">
+      <input type="checkbox" value="${k}" ${checked?'checked':''} ${chkDis} onchange="toggleRole('${k}',this.checked)">
+      <span class="rc-emoji">${r.e}</span>
+      <span style="flex:1">${tr(k)}</span>
+      ${qtyHtml}
+    </label>`;
+  }).join('');
+
+  updateRolePreview();
+}
+
+function updateRolePreview(){
+  let preview=document.getElementById('rolePreview');
+  if(!preview){
+    preview=document.createElement('div');
+    preview.id='rolePreview';
+    preview.style.cssText='margin-top:.8rem;padding:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:6px;font-size:.82rem;line-height:1.8';
+    const grid=document.getElementById('rolesGrid');
+    grid?.parentNode?.insertBefore(preview, grid.nextSibling);
+  }
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const wc=cfg.roleCounts.werewolf??1;
+  const vc=cfg.roleCounts.villager??1;
+  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  let cr=cfg.roles; if(!Array.isArray(cr)) cr=cr?Object.values(cr):[];
+  const specials=cr.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
+  let specTotal=0;
+  specials.forEach(r=>{ specTotal+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
+  const total=wc+specTotal+vc;
+  const parts=[];
+  parts.push(`${wc}× 🐺 ${tr('werewolf')}`);
+  specials.forEach(r=>{
+    const cnt=r==='threebrothers'?3:r==='twosisters'?2:1;
+    parts.push(`${cnt>1?cnt+'× ':''}${ROLES_DEF[r]?.e||'?'} ${tr(r)}`);
+  });
+  if(vc>0) parts.push(`${vc}× 🧑‍🌾 ${tr('villager')}`);
+  preview.innerHTML=`
+    <div style="color:var(--moon-pale);font-family:'Cinzel',serif;font-size:.8rem;margin-bottom:.35rem">
+      📋 ${lang==='ar'?`إجمالي الأدوار: ${total} لاعب`:lang==='fr'?`Total rôles : ${total} joueurs`:`Total roles: ${total} players`}
+    </div>
+    <div style="color:var(--ghost)">${parts.join(' · ')}</div>
+    <div style="color:var(--moon);font-size:.73rem;margin-top:.25rem;opacity:.8">
+      ${lang==='ar'?'يجب أن يساوي عدد اللاعبين المتصلين':lang==='fr'?'Doit correspondre au nombre de joueurs connectés':'Must match connected player count'}
+    </div>`;
+}
+
+function toggleRole(k,on){
+  if(on){ if(!cfg.roles.includes(k)) cfg.roles.push(k); }
+  else   { cfg.roles=cfg.roles.filter(r=>r!==k); }
+  updateRolePreview();
+  pushCfg();
+}
+
+function pushCfg(){
+  if(fbOk&&db&&roomCode) db.ref(`games/${roomCode}/config`).set(cfg);
+}
+
+// ════════════════════════════════════════════
+// LOGIN ACTIONS
 // ════════════════════════════════════════════
 function doCreate(){
-  const n=document.getElementById('inName').value.trim();
-  if(!n){ alert(lang==='ar'?'أدخل اسمك':lang==='fr'?'Veuillez entrer votre nom':'Please enter your name'); return; }
-  myName=n; myId=Math.random().toString(36).substr(2,9);
-  roomCode=(Math.random().toString(36).substr(2,6)).toUpperCase();
-  isLeader=true;
+  const name=document.getElementById('inName').value.trim();
+  if(!name){alert(tr('t_name')+' ?');return;}
+  myId='p_'+Date.now(); myName=name;
+  roomCode=genCode(); isLeader=true;
+  // Show code immediately so user can share it
+  const box=document.getElementById('createdCodeBox');
+  document.getElementById('createdCodeVal').textContent=roomCode;
+  box.style.display='block';
+  initFBWithRetry(()=>enterRoom());
+}
+
+function doJoin(){
+  const name=document.getElementById('inName').value.trim();
+  const code=document.getElementById('inCode').value.trim().toUpperCase();
+  if(!name||!code){alert(tr('t_name')+' / '+tr('t_code'));return;}
+  myId='p_'+Date.now(); myName=name; roomCode=code; isLeader=false;
+  initFBWithRetry(()=>enterRoom());
+}
+
+function genCode(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('');
+}
+
+async function enterRoom(){
+  if(!fbOk || !db) {
+    // Try to init — Firebase might just not be loaded yet
+    initFB();
+  }
+  if(!fbOk||!db){ offlineEnter(); return; }
+  try{
+    const ref=db.ref(`games/${roomCode}`);
+    const snap=await ref.once('value');
+    if(!snap.exists()){
+      if(!isLeader){
+        alert('❌ '+(lang==='ar'?'الغرفة غير موجودة':lang==='fr'?'Salle introuvable':'Room not found'));
+        return;
+      }
+      // Create room
+      await ref.set({
+        code:roomCode, leader:myId,
+        status:'setup', phase:'setup',
+        players:{}, config:cfg, chat:[],
+        createdAt:Date.now()
+      });
+      console.log('🆕 Room created',roomCode);
+    } else {
+      // Sync config from existing room
+      const d=snap.val();
+      if(d.config) cfg=d.config;
+      // If I'm the original leader, restore leader status
+      if(d.leader===myId) isLeader=true;
+      console.log('✅ Room joined',roomCode);
+    }
+    // Add self
+    await ref.child(`players/${myId}`).set(
+      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
+    );
+    // Clean up on disconnect
+    ref.child(`players/${myId}`).onDisconnect().remove();
+    // Live listener
+    ref.on('value', snap=>{
+      gameState=snap.val();
+      if(gameState?.config) {
+        cfg=gameState.config;
+        if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
+        if(!cfg.roleCounts) cfg.roleCounts={werewolf:1,villager:1};
+      }
+      // Derive leader status from Firebase data
+      if(gameState?.leader===myId) isLeader=true;
+      // Check if maire requested skip day
+      if(isLeader && gameState?.maireSkipDay && gameState?.phase==='day'){
+        doMaireSkipDay();
+      }
+      // Check if all voted for maire
+      if(isLeader && gameState?.maireCandidates && gameState?.maireVotes && !gameState?.maire){
+        checkMaireElection();
+      }
+      renderGame();
+    });
+    showGame();
+  }catch(ex){
+    console.error(ex);
+    alert('⚠️ '+(lang==='ar'?'خطأ في الاتصال':lang==='fr'?'Erreur de connexion':'Connection error'));
+    offlineEnter();
+  }
+}
+
+function offlineEnter(){
+  console.log('Offline mode');
   gameState={
     code:roomCode, leader:myId, status:'setup', phase:'setup',
     players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}},
     config:cfg, chat:[], createdAt:Date.now()
   };
-  if(fbOk&&db){
-    db.ref(`games/${roomCode}`).set(gameState);
-    db.ref(`games/${roomCode}`).on('value',snap=>{
-      const data=snap.val();
-      if(data) Object.assign(gameState,data);
-      renderGame();
-    });
-  }
-  document.getElementById('roomCodeDisplay').textContent=roomCode;
-  document.getElementById('createdCodeBox').style.display='block';
   showGame();
   renderGame();
 }
 
-function doJoin(){
-  const n=document.getElementById('inName').value.trim();
-  const c=document.getElementById('inCode').value.trim().toUpperCase();
-  if(!n||!c){ alert(lang==='ar'?'أدخل الاسم والرمز':lang==='fr'?'Entrez le nom et le code':'Enter name and code'); return; }
-  myName=n; myId=Math.random().toString(36).substr(2,9); roomCode=c; isLeader=false;
-  if(fbOk&&db){
-    db.ref(`games/${roomCode}`).once('value',snap=>{
-      if(!snap.exists()){ alert('Invalid code'); return; }
-      gameState=snap.val();
-      gameState.players[myId]={id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()};
-      db.ref(`games/${roomCode}/players/${myId}`).set(gameState.players[myId]);
-      db.ref(`games/${roomCode}`).on('value',snap=>{
-        const data=snap.val();
-        if(data) Object.assign(gameState,data);
-        renderGame();
-      });
-      showGame();
-      renderGame();
-    });
-  } else {
-    alert('Firebase not available'); return;
-  }
-}
-
-function copyCodeToClipboard(){ navigator.clipboard.writeText(roomCode).then(()=>{ alert(tr('copyHint')); }).catch(err=>console.error('Copy failed:',err)); }
-
-// ════════════════════════════════════════════
-// UI
-// ════════════════════════════════════════════
 function showGame(){
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
   document.getElementById('hRoom').textContent=roomCode;
+  document.getElementById('hPlayerName').textContent=myName||'';
+  buildRolesGrid();
   applyTranslations();
 }
 
@@ -489,151 +1140,186 @@ function cfgChanged(){
 }
 
 // ════════════════════════════════════════════
-// START - FIXED BUTTON LOGIC
+// START
 // ════════════════════════════════════════════
 function doStartGame(){
   // Robust leader check: use both local flag and Firebase data
   const amLeader = isLeader || (gameState?.leader === myId);
-  if(!amLeader){ console.warn('❌ Not leader, cannot start'); alert('Only the party leader can start the game'); return; }
-  
+  if(!amLeader){ console.warn('Not leader, cannot start'); return; }
+
+  // If Firebase is available, always fetch fresh player data to avoid
+  // race conditions where gameState hasn't synced yet
+  if(fbOk && db && roomCode){
+    const btn=document.getElementById('t_start');
+    if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'جارٍ البدء…':lang==='fr'?'Démarrage…':'Starting…'; }
+    db.ref(`games/${roomCode}/players`).once('value').then(snap=>{
+      const freshPlayers = snap.val() ? Object.values(snap.val()) : [];
+      _doStartWithPlayers(freshPlayers);
+    }).catch(err=>{
+      const btn=document.getElementById('t_start');
+      if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
+      console.error('Failed to read players:', err);
+      alert('⚠️ '+(lang==='ar'?'خطأ في قراءة اللاعبين':lang==='fr'?'Erreur de lecture des joueurs':'Error reading players: ')+err.message);
+    });
+    return;
+  }
+
+  // Offline path — use local gameState directly
   const players = gameState?.players ? Object.values(gameState.players) : [];
-  const n = players.length;
-  
+  _doStartWithPlayers(players);
+}
+
+function _doStartWithPlayers(players){
+  const n=players.length;
   if(n < 2){
+    const btn=document.getElementById('t_start');
+    if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
     alert(lang==='ar'?'تحتاج لاعبَين على الأقل':lang==='fr'?'Minimum 2 joueurs':'Need at least 2 players');
     return;
   }
-  
   if(!cfg.roleCounts) cfg.roleCounts={};
-  const _wc = cfg.roleCounts.werewolf ?? 1;
-  if(_wc >= n){
+  const _wc=cfg.roleCounts.werewolf??1;
+  if(_wc>=n){
+    const btn=document.getElementById('t_start');
+    if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
     alert(lang==='ar'?'عدد الذئاب أكثر من اللاعبين!':lang==='fr'?'Trop de loups !':'Too many wolves for the player count!');
     return;
   }
-  
   isLeader = true;
   const roles = assignRoles(n);
-  
   if(fbOk && db && roomCode){
-    const upd = {};
-    players.forEach((p, i) => { 
-      upd[`games/${roomCode}/players/${p.id}/role`] = roles[i]; 
+    const upd={};
+    players.forEach((p,i)=>{ upd[`games/${roomCode}/players/${p.id}/role`]=roles[i]; });
+    upd[`games/${roomCode}/status`]='playing';
+    upd[`games/${roomCode}/phase`]='night';
+    upd[`games/${roomCode}/phaseStart`]=Date.now();
+    upd[`games/${roomCode}/dayNum`]=1;
+    // Reset witch potions: each witch gets 1 life + 1 death potion
+    upd[`games/${roomCode}/witchPotions`]=null;
+    players.forEach((p,i)=>{
+      if(roles[i]==='witch') upd[`games/${roomCode}/witchPotions/${p.id}`]={life:true,death:true};
     });
-    upd[`games/${roomCode}/status`] = 'playing';
-    upd[`games/${roomCode}/phase`] = 'night';
-    upd[`games/${roomCode}/phaseStart`] = Date.now();
-    upd[`games/${roomCode}/dayNum`] = 1;
-    upd[`games/${roomCode}/witchPotions`] = null;
-    
-    players.forEach((p, i) => {
-      if(roles[i] === 'witch') upd[`games/${roomCode}/witchPotions/${p.id}`] = {life:true, death:true};
-    });
-    
-    upd[`games/${roomCode}/nightTurn`] = {stepId:'__init__', stepIndex:-1, turnStart:Date.now()};
-    upd[`games/${roomCode}/nightActions`] = null;
-    upd[`games/${roomCode}/dayVotes`] = null;
-    
-    db.ref().update(upd).then(() => {
-      console.log('✅ Game started successfully');
-      _lastStepId = null;
-      _advancingStep = false;
-      setTimeout(() => { if(isLeader) advanceNightTurn(0); }, 600);
-    }).catch(err => {
-      console.error('❌ Start game error:', err);
-      alert('⚠️ Error starting game: ' + err.message);
+    upd[`games/${roomCode}/nightTurn`]={stepId:'__init__',stepIndex:-1,turnStart:Date.now()};
+    upd[`games/${roomCode}/nightActions`]=null;
+    upd[`games/${roomCode}/dayVotes`]=null;
+    db.ref().update(upd).then(()=>{
+      console.log('✅ Game started');
+      _lastStepId=null;
+      _advancingStep=false;
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },600);
+    }).catch(err=>{
+      const btn=document.getElementById('t_start');
+      if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
+      console.error('Start game error:', err);
+      alert('⚠️ Error starting game: '+err.message);
     });
   } else {
-    players.forEach((p, i) => { gameState.players[p.id].role = roles[i]; });
-    gameState.witchPotions = {};
-    players.forEach((p, i) => {
-      if(roles[i] === 'witch') gameState.witchPotions[p.id] = {life:true, death:true};
+    players.forEach((p,i)=>{ gameState.players[p.id].role=roles[i]; });
+    gameState.witchPotions={};
+    players.forEach((p,i)=>{
+      if(roles[i]==='witch') gameState.witchPotions[p.id]={life:true,death:true};
     });
-    Object.assign(gameState, {
-      status:'playing', phase:'night', phaseStart:Date.now(), dayNum:1,
-      nightTurn:{stepId:'__init__', stepIndex:-1, turnStart:Date.now()},
-      nightActions:null, dayVotes:null
+    Object.assign(gameState,{
+      status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1,
+      nightTurn:{stepId:'__init__',stepIndex:-1,turnStart:Date.now()},
+      nightActions:null,dayVotes:null
     });
-    _lastStepId = null;
-    _advancingStep = false;
+    _lastStepId=null;
+    _advancingStep=false;
     renderGame();
-    setTimeout(() => advanceNightTurn(0), 600);
+    setTimeout(()=>advanceNightTurn(0),600);
   }
 }
 
+function assignRoles(n){
+  if(!cfg.roleCounts) cfg.roleCounts={};
+  const wc=cfg.roleCounts.werewolf??1;
+  const vc=cfg.roleCounts.villager??1;
+  let cr=cfg.roles; if(!Array.isArray(cr)) cr=cr?Object.values(cr):[];
+  const WOLF_ROLES=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+  const specials=cr.filter(r=>r!=='werewolf'&&r!=='villager'&&!WOLF_ROLES.includes(r));
+  const out=[];
+  for(let i=0;i<wc;i++) out.push('werewolf');
+  specials.forEach(r=>{
+    if(r==='threebrothers'){ out.push('threebrothers','threebrothers','threebrothers'); }
+    else if(r==='twosisters'){ out.push('twosisters','twosisters'); }
+    else { out.push(r); }
+  });
+  // Pad with villagers to reach n
+  while(out.length<n) out.push('villager');
+  // Trim if over (wolves+specials already exceed n)
+  while(out.length>n) out.pop();
+  return out.sort(()=>Math.random()-.5);
+}
+
 // ════════════════════════════════════════════
-// GAME RENDER
+// RENDER
 // ════════════════════════════════════════════
 function renderGame(){
   if(!gameState) return;
-  const players = gameState.players ? Object.values(gameState.players) : [];
-  document.getElementById('hPlayers').textContent = players.length;
-  document.getElementById('hRoom').textContent = roomCode || '';
+  const players=gameState.players?Object.values(gameState.players):[];
+  document.getElementById('hPlayers').textContent=players.length;
+  document.getElementById('hRoom').textContent=roomCode||'';
 
-  if(gameState.status === 'setup'){
-    document.getElementById('setupView').style.display = 'block';
-    document.getElementById('playView').style.display = 'none';
-    document.getElementById('hStatus').textContent = tr('st_setup');
-    document.getElementById('hPhase').textContent = '—';
-    
-    // **CRITICAL FIX: Proper leader check**
+  if(gameState.status==='setup'){
+    document.getElementById('setupView').style.display='block';
+    document.getElementById('playView').style.display='none';
+    document.getElementById('hStatus').textContent=tr('st_setup');
+    document.getElementById('hPhase').textContent='—';
+    // Robust leader check
     const amLeader = isLeader || (gameState?.leader === myId);
     if(amLeader) isLeader = true;
-    
-    // Show start button ONLY for leader
-    document.getElementById('hostStart').style.display = amLeader ? 'block' : 'none';
-    document.getElementById('guestWait').style.display = amLeader ? 'none' : 'block';
-    
+    document.getElementById('hostStart').style.display=amLeader?'block':'none';
+    document.getElementById('guestWait').style.display=amLeader?'none':'block';
     // Sync config inputs for non-leaders
     if(gameState.config){
-      const c = gameState.config;
-      document.getElementById('cfgDay').value = c.dayTimer || 60;
-      document.getElementById('cfgNight').value = c.nightTimer || 45;
-      if(c.roleCounts){ if(!cfg.roleCounts) cfg.roleCounts = {}; Object.assign(cfg.roleCounts, c.roleCounts); }
+      const c=gameState.config;
+      document.getElementById('cfgDay').value=c.dayTimer||60;
+      document.getElementById('cfgNight').value=c.nightTimer||45;
+      if(c.roleCounts){ if(!cfg.roleCounts) cfg.roleCounts={}; Object.assign(cfg.roleCounts,c.roleCounts); }
     }
-    
     // disable/enable inputs for guests
-    ['cfgDay', 'cfgNight'].forEach(id => {
-      document.getElementById(id).disabled = !isLeader;
+    ['cfgDay','cfgNight'].forEach(id=>{
+      document.getElementById(id).disabled=!isLeader;
     });
-    
     buildRolesGrid();
     renderStats(players);
-    
-    // Helper message
-    const _helperEl = document.getElementById('startHelperMsg');
+    // Helper message: show role total vs connected players
+    const _helperEl=document.getElementById('startHelperMsg');
     if(_helperEl && isLeader){
-      if(!cfg.roleCounts) cfg.roleCounts = {};
-      const _wc = cfg.roleCounts.werewolf ?? 1;
-      const _vc = cfg.roleCounts.villager ?? 1;
-      let _cr = cfg.roles; 
-      if(!Array.isArray(_cr)) _cr = _cr ? Object.values(_cr) : [];
-      const _WR = ['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
-      const _sr = _cr.filter(r => r !== 'werewolf' && r !== 'villager' && !_WR.includes(r));
-      let _st = 0; 
-      _sr.forEach(r => { _st += (r === 'threebrothers' ? 3 : r === 'twosisters' ? 2 : 1); });
-      const _total = _wc + _st + _vc;
-      const _conn = players.length;
-      const _ok = _total === _conn;
-      _helperEl.style.background = _ok ? 'rgba(16,185,129,.15)' : 'rgba(212,160,23,.12)';
-      _helperEl.style.border = _ok ? '1px solid var(--green)' : '1px solid var(--moon)';
-      _helperEl.style.color = _ok ? 'var(--green)' : 'var(--moon-pale)';
-      _helperEl.innerHTML = _ok
-        ? `✅ ${_conn} ${lang === 'ar' ? 'لاعبين — جاهز للبدء!' : lang === 'fr' ? 'joueurs — prêt à démarrer !' : 'players ready — good to go!'}`
-        : `${lang === 'ar' ? 'إجمالي الأدوار' : lang === 'fr' ? 'Total rôles' : 'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang === 'ar' ? 'متصلون' : lang === 'fr' ? 'Connectés' : 'Connected'}: <strong>${_conn}</strong>`;
+      if(!cfg.roleCounts) cfg.roleCounts={};
+      const _wc=cfg.roleCounts.werewolf??1;
+      const _vc=cfg.roleCounts.villager??1;
+      let _cr=cfg.roles; if(!Array.isArray(_cr)) _cr=_cr?Object.values(_cr):[];
+      const _WR=['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','whitewerewolf'];
+      const _sr=_cr.filter(r=>r!=='werewolf'&&r!=='villager'&&!_WR.includes(r));
+      let _st=0; _sr.forEach(r=>{ _st+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
+      const _total=_wc+_st+_vc;
+      const _conn=players.length;
+      const _ok=_total===_conn;
+      _helperEl.style.background=_ok?'rgba(16,185,129,.15)':'rgba(212,160,23,.12)';
+      _helperEl.style.border=_ok?'1px solid var(--green)':'1px solid var(--moon)';
+      _helperEl.style.color=_ok?'var(--green)':'var(--moon-pale)';
+      _helperEl.innerHTML=_ok
+        ?`✅ ${_conn} ${lang==='ar'?'لاعبين — جاهز للبدء!':lang==='fr'?'joueurs — prêt à démarrer !':'players ready — good to go!'}`
+        :`${lang==='ar'?'إجمالي الأدوار':lang==='fr'?'Total rôles':'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang==='ar'?'متصلون':lang==='fr'?'Connectés':'Connected'}: <strong>${_conn}</strong>`;
     }
-  } else if(gameState.status === 'playing'){
-    document.getElementById('setupView').style.display = 'none';
-    document.getElementById('playView').style.display = 'flex';
-    document.getElementById('hStatus').textContent = tr('st_playing');
-    document.getElementById('hPhase').textContent = gameState.phase === 'night' ? tr('ph_night') : tr('ph_day');
+  } else if(gameState.status==='playing'){
+    document.getElementById('setupView').style.display='none';
+    document.getElementById('playView').style.display='flex';
+    document.getElementById('hStatus').textContent=tr('st_playing');
+    document.getElementById('hPhase').textContent=gameState.phase==='night'?tr('ph_night'):tr('ph_day');
 
     // Initialize alive tracking on first render
-    if(Object.keys(_previousAlive).length === 0){
-      players.forEach(p => { _previousAlive[p.id] = p.alive; });
+    if(Object.keys(_previousAlive).length===0){
+      players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
     }
 
+    // Check for newly dead players and show death animation
     checkForDeaths(players);
-    const winResult = checkWinCondition();
+
+    // Check win condition
+    const winResult=checkWinCondition();
     if(winResult){
       showGameOver(winResult);
       renderChat();
@@ -641,23 +1327,22 @@ function renderGame(){
       return;
     }
 
-    const me = gameState.players?.[myId];
+    const me=gameState.players?.[myId];
     if(me?.role){
-      myRole = me.role;
-      const rd = ROLES_DEF[myRole];
-      document.getElementById('rEmoji').textContent = rd?.e || '❓';
-      document.getElementById('rName').textContent = tr(myRole);
-      document.getElementById('rDesc').textContent = tr('d_' + myRole);
+      myRole=me.role;
+      const rd=ROLES_DEF[myRole];
+      document.getElementById('rEmoji').textContent=rd?.e||'❓';
+      document.getElementById('rName').textContent=tr(myRole);
+      document.getElementById('rDesc').textContent=tr('d_'+myRole);
     }
     renderPlayerList(players);
     renderStats(players);
     renderPhase();
     startTimerIfNeeded();
-    
-    // Leader checks
+    // Leader checks for turn/vote completion on every state update
     if(isLeader){
-      if(gameState.phase === 'night') checkTurnComplete();
-      else if(gameState.phase === 'day') checkDayVoteComplete();
+      if(gameState.phase==='night') checkTurnComplete();
+      else if(gameState.phase==='day') checkDayVoteComplete();
     }
   }
   renderChat();
@@ -665,130 +1350,1102 @@ function renderGame(){
 }
 
 function renderStats(players){
-  const alive = players.filter(p => p.alive);
-  const dead = players.filter(p => !p.alive);
-  document.getElementById('iAlive').textContent = alive.length;
-  document.getElementById('iDead').textContent = dead.length;
-  if(gameState.status === 'playing'){
-    document.getElementById('iWolves').textContent = alive.filter(p => ROLES_DEF[p.role]?.team === 'werewolf').length;
-    document.getElementById('iVillage').textContent = alive.filter(p => ROLES_DEF[p.role]?.team !== 'werewolf').length;
+  const alive=players.filter(p=>p.alive);
+  const dead=players.filter(p=>!p.alive);
+  document.getElementById('iAlive').textContent=alive.length;
+  document.getElementById('iDead').textContent=dead.length;
+  if(gameState.status==='playing'){
+    document.getElementById('iWolves').textContent=alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf').length;
+    document.getElementById('iVillage').textContent=alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf').length;
   }
 }
 
 function renderPlayerList(players){
-  const el = document.getElementById('playerList');
-  el.innerHTML = `<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.9rem;margin-bottom:.6rem">${tr('t_lplayers')}</div>` +
-    players.map(p => {
+  const el=document.getElementById('playerList');
+  el.innerHTML=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.9rem;margin-bottom:.6rem">${tr('t_lplayers')}</div>`+
+    players.map(p=>{
+      const pc=getPlayerColor(p.id);
       return `
-      <div class="pi" style="${p.id === myId ? 'border:1px solid var(--moon-pale);background:rgba(212,160,23,.12)' : ''}">
-        <div class="pstatus ${p.alive ? 'alive' : 'dead'}"></div>
-        <div style="flex:1;font-weight:${p.id === myId ? '700' : '400'};font-size:${p.id === myId ? '.95rem' : '.88rem'};color:${p.id === myId ? 'var(--moon-pale)' : 'var(--ghost)'}">${p.name}</div>
-        ${p.id === myId ? `<span style="color:var(--moon);font-size:.75rem;font-weight:700">${tr('you')}</span>` : ''}
+      <div class="pi" style="${p.id===myId?'border:1px solid var(--moon-pale);background:rgba(212,160,23,.12)':''}">
+        <div class="pstatus ${p.alive?'alive':'dead'}"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:${pc};flex-shrink:0;border:1px solid rgba(255,255,255,.2)"></div>
+        <div style="flex:1;font-weight:${p.id===myId?'700':'400'};font-size:${p.id===myId?'.95rem':'.88rem'};color:${p.id===myId?'var(--moon-pale)':'var(--ghost)'}">${p.name}</div>
+        ${p.id===myId?`<span style="color:var(--moon);font-size:.75rem;font-weight:700">${tr('you')}</span>`:''}
       </div>`;
     }).join('');
 }
 
 // ════════════════════════════════════════════
-// NIGHT PHASE
+// NIGHT TURN ORDER
+// Each entry: { role(s), label, condition(gs,dayNum) }
+// roles = array of roles that share this turn (e.g. all wolves act together)
 // ════════════════════════════════════════════
-function advanceNightTurn(idx){
-  if(!isLeader) return;
-  if(_advancingStep) return;
-  _advancingStep = true;
-  setTimeout(() => { _advancingStep = false; }, 1000);
+const NIGHT_SEQUENCE = [
+  // Day-1-only roles
+  { id:'cupid',      roles:['cupid'],                               label:{en:'Cupid',fr:'Cupidon',ar:'كيوبيد'},         onlyDay1:true  },
+  { id:'thief',      roles:['thief'],                               label:{en:'Thief',fr:'Voleur',ar:'اللص'},            onlyDay1:true  },
+  { id:'wildchild',  roles:['wildchild'],                           label:{en:'Wild Child',fr:'Enfant Sauvage',ar:'الطفل البري'}, onlyDay1:true },
+  { id:'wolfhound',  roles:['wolfhound'],                           label:{en:'Wolf-Hound',fr:'Chien-Loup',ar:'كلب الذئب'}, onlyDay1:true },
+  // Every night
+  { id:'seer',       roles:['seer'],                                label:{en:'Seer',fr:'Voyante',ar:'العرافة'}           },
+  { id:'apprenticeseer', roles:['apprenticeseer'],                  label:{en:'Apprentice Seer',fr:'Apprentie Voyante',ar:'تلميذة العرافة'}, condition:(gs)=>!getAlive(gs).find(p=>p.role==='seer') },
+  { id:'fox',        roles:['fox'],                                 label:{en:'Fox',fr:'Renard',ar:'الثعلب'}              },
+  { id:'bodyguard',  roles:['bodyguard'],                           label:{en:'Bodyguard',fr:'Garde du Corps',ar:'الحارس الشخصي'} },
+  { id:'savior',     roles:['savior'],                              label:{en:'Savior',fr:'Sauveur',ar:'المنقذ'}          },
+  { id:'wolves',     roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher'], label:{en:'Werewolves',fr:'Loups-Garous',ar:'الذئاب'} },
+  { id:'whitewerewolf', roles:['whitewerewolf'],                    label:{en:'White Werewolf',fr:'Loup Blanc',ar:'الذئب الأبيض'}, condition:(gs,dn)=>dn%2===0 },
+  { id:'witch',      roles:['witch'],                               label:{en:'Witch',fr:'Sorcière',ar:'الساحرة'}         },
+  { id:'fluteplayer',roles:['fluteplayer'],                         label:{en:'Flute Player',fr:'Joueur de Flûte',ar:'عازف الناي'} },
+  { id:'crow',       roles:['crow'],                                label:{en:'Crow',fr:'Corbeau',ar:'الغراب'}            },
+  { id:'pyromaniac', roles:['pyromaniac'],                          label:{en:'Pyromaniac',fr:'Pyromane',ar:'مجنون النار'} },
+  { id:'puppeteer',  roles:['puppeteer'],                           label:{en:'Puppeteer',fr:'Marionnettiste',ar:'محرك الدمى'} },
+  { id:'necromancer',roles:['necromancer'],                         label:{en:'Necromancer',fr:'Nécromancien',ar:'الساحر الأسود'} },
+  { id:'gravedigger',roles:['gravedigger'],                         label:{en:'Grave Digger',fr:'Fossoyeur',ar:'حفار القبور'} },
+  { id:'sectleader', roles:['sectleader'],                          label:{en:'Sect Leader',fr:'Meneur de Secte',ar:'زعيم الطائفة'} },
+  { id:'twosisters', roles:['twosisters'],                          label:{en:'Two Sisters',fr:'Deux Sœurs',ar:'الأختان'} },
+  { id:'threebrothers',roles:['threebrothers'],                     label:{en:'Three Brothers',fr:'Trois Frères',ar:'الإخوة الثلاثة'} },
+];
+
+function getAlive(gs){
+  return gs?.players ? Object.values(gs.players).filter(p=>p.alive) : [];
 }
 
-function checkTurnComplete(){ /* placeholder */ }
-function checkDayVoteComplete(){ /* placeholder */ }
+// Build the sequence for this night: skip roles not present or whose condition fails
+function buildNightQueue(gs, dayNum){
+  const aliveRoles=new Set(getAlive(gs).map(p=>p.role));
+  return NIGHT_SEQUENCE.filter(step=>{
+    if(step.onlyDay1 && dayNum!==1) return false;
+    if(step.condition && !step.condition(gs, dayNum)) return false;
+    return step.roles.some(r=>aliveRoles.has(r));
+  });
+}
 
 // ════════════════════════════════════════════
-// UTILITIES
+// PHASE RENDER
 // ════════════════════════════════════════════
-function assignRoles(n){
-  const roles = [];
-  if(!cfg.roleCounts) cfg.roleCounts = {};
-  const wc = cfg.roleCounts.werewolf ?? 1;
-  const vc = cfg.roleCounts.villager ?? 1;
-  for(let i = 0; i < wc && roles.length < n; i++) roles.push('werewolf');
-  for(let i = 0; i < vc && roles.length < n; i++) roles.push('villager');
-  while(roles.length < n) roles.push('villager');
-  return roles.sort(() => Math.random() - 0.5);
+function renderPhase(){
+  const ph=gameState.phase;
+  const ab=document.getElementById('actionBtns');
+  ab.innerHTML='';
+
+  if(ph==='day'){
+    document.getElementById('phaseTitle').textContent=tr('ph_day');
+    document.getElementById('phaseDesc').textContent=
+      lang==='ar'?'صوّت لإقصاء لاعب':lang==='fr'?'Votez pour éliminer un joueur':'Vote to eliminate a player';
+    renderDayVoting();
+    return;
+  }
+
+  // NIGHT
+  document.getElementById('phaseTitle').textContent=tr('ph_night');
+  const turn=gameState.nightTurn||{};
+  const stepId=turn.stepId;
+
+  // Find the step definition
+  const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
+  const stepLabel=step ? (step.label[lang]||step.label.en) : '…';
+  const isMyTurn = step && step.roles.includes(myRole);
+  const me=gameState.players?.[myId];
+  const iAmAlive = me?.alive;
+
+  if(!stepId || stepId==='__init__'){
+    document.getElementById('phaseDesc').textContent=lang==='ar'?'الليل يبدأ…':lang==='fr'?'La nuit commence…':'Night begins…';
+    return;
+  }
+
+  // What everyone sees
+  if(!isMyTurn || !iAmAlive){
+    document.getElementById('phaseDesc').textContent=
+      lang==='ar'? `${stepLabel} يتصرف الآن… 🌙` :
+      lang==='fr'? `${stepLabel} agit maintenant… 🌙` :
+                   `${stepLabel} is acting now… 🌙`;
+    // Show "waiting" with subtle progress dots
+    ab.innerHTML=`<div style="color:var(--ghost);opacity:.5;font-size:.85rem;margin-top:.5rem">
+      ${lang==='ar'?'انتظر دورك':lang==='fr'?'Attendez votre tour':'Waiting for your turn…'}
+    </div>`;
+    return;
+  }
+
+  // It's MY turn
+  document.getElementById('phaseDesc').textContent=
+    lang==='ar'? `دورك! ${stepLabel}` :
+    lang==='fr'? `C'est votre tour ! ${stepLabel}` :
+                 `Your turn! ${stepLabel}`;
+
+  const actions=gameState.nightActions||{};
+  const alreadyActed = !!actions[myId];
+  if(alreadyActed){
+    ab.innerHTML=`<div style="color:var(--green);font-size:.95rem;font-weight:700">✓ ${lang==='ar'?'تم تسجيل اختيارك':lang==='fr'?'Choix enregistré':'Choice recorded'}</div>`;
+    return;
+  }
+
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive&&p.id!==myId);
+  const aliveAll=players.filter(p=>p.alive);
+
+  // ── WOLVES ──
+  if(stepId==='wolves'){
+    alive.filter(p=>ROLES_DEF[p.role]?.team!=='werewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'kill',target:p.id})));
+  }
+  // ── WHITE WEREWOLF (kill own pack) ──
+  else if(stepId==='whitewerewolf'){
+    alive.filter(p=>ROLES_DEF[p.role]?.team==='werewolf').forEach(p=>addBtn(ab,p.name,'kill',()=>submitAction({type:'ww_kill',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── SEER / APPRENTICE SEER ──
+  else if(stepId==='seer'||stepId==='apprenticeseer'){
+    alive.forEach(p=>addBtn(ab,p.name,'seer',()=>{
+      const role=gameState.players[p.id]?.role||'unknown';
+      const team=ROLES_DEF[role]?.team||'?';
+      const result=lang==='ar'?(team==='werewolf'?'🐺 ذئب':'✓ بريء'):lang==='fr'?(team==='werewolf'?'🐺 Loup':'✓ Innocent'):(team==='werewolf'?'🐺 Werewolf':'✓ Innocent');
+      submitAction({type:'seer',target:p.id,result});
+      setTimeout(()=>alert('🔮 '+p.name+': '+result),100);
+    }));
+  }
+  // ── BODYGUARD ──
+  else if(stepId==='bodyguard'){
+    const lastProtected=gameState.nightActions?._bodyguardLast;
+    aliveAll.filter(p=>p.id!==lastProtected).forEach(p=>addBtn(ab,p.name,'protect',()=>submitAction({type:'protect',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── SAVIOR ──
+  else if(stepId==='savior'){
+    const lastSaved=gameState.nightActions?._saviorLast;
+    aliveAll.filter(p=>p.id!==lastSaved).forEach(p=>addBtn(ab,p.name,'protect',()=>submitAction({type:'savior_save',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── WITCH ──
+  else if(stepId==='witch'){
+    const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
+    const wolfVictimId=gameState.nightActions?._wolfVictim;
+    let hasBtns=false;
+    // Show potion status
+    const lifeIcon=potions.life?'🟢':'⚫';
+    const deathIcon=potions.death?'🔴':'⚫';
+    const potionLabel=document.createElement('div');
+    potionLabel.style.cssText='font-size:.82rem;color:var(--moon-pale);margin-bottom:.5rem';
+    potionLabel.innerHTML=`${lifeIcon} ${lang==='ar'?'جرعة الحياة':lang==='fr'?'Potion de vie':'Life Potion'}: ${potions.life?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')} &nbsp;|&nbsp; ${deathIcon} ${lang==='ar'?'جرعة الموت':lang==='fr'?'Potion de mort':'Death Potion'}: ${potions.death?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')}`;
+    ab.appendChild(potionLabel);
+    if(potions.life&&wolfVictimId){
+      const v=players.find(p=>p.id===wolfVictimId);
+      if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name,'save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
+    }
+    if(potions.death){
+      alive.forEach(p=>{ addBtn(ab,(lang==='ar'?'سمّ ':lang==='fr'?'Empoisonner ':'Poison ')+p.name,'kill',()=>submitWitch('poison',p.id)); hasBtns=true; });
+    }
+    if(!hasBtns) ab.innerHTML+=`<div style="opacity:.5;font-size:.85rem">${lang==='ar'?'لا جرعات':lang==='fr'?'Plus de potions':'No potions left'}</div>`;
+    addSkipBtn(ab);
+  }
+  // ── CUPID ──
+  else if(stepId==='cupid'){
+    const chosen=gameState.nightActions?.['_cupid_chosen']||[];
+    if(chosen.length<2){
+      aliveAll.filter(p=>!chosen.includes(p.id)).forEach(p=>addBtn(ab,p.name,'special',()=>{
+        const cur=gameState.nightActions?.['_cupid_chosen']||[];
+        if(cur.length===0){
+          writeAction({'_cupid_chosen':[p.id]});
+        } else {
+          submitAction({type:'cupid',target:p.id,partner:cur[0]});
+          writeAction({'_cupid_chosen':[...cur,p.id]});
+          setTimeout(()=>alert('💘 '+lang==='ar'?'تم ربط العاشقَين':lang==='fr'?'Amoureux liés':'Lovers linked!'),100);
+        }
+      }));
+      ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.85rem;margin-bottom:.5rem">${lang==='ar'?`اختر ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} لاعب(ين)`:lang==='fr'?`Choisissez ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} joueur(s)`:`Choose ${2-(gameState.nightActions?.['_cupid_chosen']||[]).length} player(s)`}</div>`+ab.innerHTML;
+    }
+  }
+  // ── THIEF ──
+  else if(stepId==='thief'){
+    const extras=gameState.thiefCards||[];
+    if(extras.length){
+      extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'special',()=>submitAction({type:'thief',take:r})); });
+    } else { addSkipBtn(ab); }
+  }
+  // ── WILDCHILD ──
+  else if(stepId==='wildchild'){
+    alive.forEach(p=>addBtn(ab,p.name,'special',()=>{
+      submitAction({type:'wildchild_model',target:p.id});
+      setTimeout(()=>alert('🧒 '+(lang==='ar'?'قدوتك: ':lang==='fr'?'Modèle : ':'Role model: ')+p.name),100);
+    }));
+  }
+  // ── WOLFHOUND ──
+  else if(stepId==='wolfhound'){
+    addBtn(ab,lang==='ar'?'قروي':lang==='fr'?'Villageois':'Villager','protect',()=>submitAction({type:'wolfhound_choose',pick:'villager'}));
+    addBtn(ab,lang==='ar'?'ذئب':lang==='fr'?'Loup-Garou':'Werewolf','kill',()=>submitAction({type:'wolfhound_choose',pick:'werewolf'}));
+  }
+  // ── FOX ──
+  else if(stepId==='fox'){
+    // Fox sniffs a group of 3; simplified: pick one player to sniff
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'شمّ ':lang==='fr'?'Flairer ':'Sniff ')+p.name,'seer',()=>{
+      const role=gameState.players[p.id]?.role;
+      const isWolf=ROLES_DEF[role]?.team==='werewolf';
+      submitAction({type:'fox_sniff',target:p.id,found:isWolf});
+      setTimeout(()=>alert('🦊 '+(isWolf?(lang==='ar'?'🐺 ذئب بالقرب!':lang==='fr'?'🐺 Loup proche !':'🐺 Wolf nearby!'):(lang==='ar'?'لا ذئاب':lang==='fr'?'Pas de loup':'No wolf'))),100);
+    }));
+    addSkipBtn(ab);
+  }
+  // ── FLUTE PLAYER ──
+  else if(stepId==='fluteplayer'){
+    let enchanted=(gameState.nightActions?._fluteEnchanted||[]);
+    const notYet=alive.filter(p=>!enchanted.includes(p.id));
+    const need=2-((gameState.nightActions?._fluteThisNight||[]).length);
+    if(need>0 && notYet.length){
+      notYet.forEach(p=>addBtn(ab,(lang==='ar'?'سحر ':lang==='fr'?'Envoûter ':'Enchant ')+p.name,'special',()=>{
+        const cur=gameState.nightActions?._fluteThisNight||[];
+        if(cur.length<2){
+          const upd={type:'flute',target:p.id};
+          writeAction({'_fluteThisNight':[...cur,p.id],'_fluteEnchanted':[...enchanted,p.id]});
+          if(cur.length===1) submitAction(upd);
+        }
+      }));
+    } else { submitAction({type:'flute',target:null}); }
+  }
+  // ── CROW ──
+  else if(stepId==='crow'){
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'اتهم ':lang==='fr'?'Accuser ':'Accuse ')+p.name,'kill',()=>submitAction({type:'crow_accuse',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── PYROMANIAC ──
+  else if(stepId==='pyromaniac'){
+    const doused=gameState.nightActions?._pyroDoused||[];
+    alive.filter(p=>!doused.includes(p.id)).forEach(p=>addBtn(ab,(lang==='ar'?'رشّ ':lang==='fr'?'Arroser ':'Douse ')+p.name,'kill',()=>submitAction({type:'pyro_douse',target:p.id})));
+    if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','kill',()=>submitAction({type:'pyro_ignite'}));
+    addSkipBtn(ab);
+  }
+  // ── PUPPETEER ──
+  else if(stepId==='puppeteer'){
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'تحكم في ':lang==='fr'?'Contrôler ':'Control ')+p.name,'special',()=>submitAction({type:'puppet',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── NECROMANCER ──
+  else if(stepId==='necromancer'){
+    const dead=players.filter(p=>!p.alive);
+    dead.forEach(p=>addBtn(ab,(lang==='ar'?'استحضر ':lang==='fr'?'Invoquer ':'Channel ')+p.name,'special',()=>submitAction({type:'necro',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── GRAVEDIGGER ──
+  else if(stepId==='gravedigger'){
+    const dead=players.filter(p=>!p.alive);
+    dead.forEach(p=>addBtn(ab,(lang==='ar'?'استخدم قدرة ':lang==='fr'?'Utiliser ':'Use ability of ')+p.name,'special',()=>submitAction({type:'grave',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── SECT LEADER ──
+  else if(stepId==='sectleader'){
+    alive.forEach(p=>addBtn(ab,(lang==='ar'?'جنّد ':lang==='fr'?'Recruter ':'Recruit ')+p.name,'special',()=>submitAction({type:'sect_recruit',target:p.id})));
+    addSkipBtn(ab);
+  }
+  // ── TWO SISTERS ──
+  else if(stepId==='twosisters'){
+    // Sisters just see each other — they auto-act, show info
+    const sisters=aliveAll.filter(p=>p.role==='twosisters');
+    ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem">👯 ${lang==='ar'?'أختك هي: ':lang==='fr'?'Votre sœur est : ':'Your sister is: '} <strong>${sisters.filter(p=>p.id!==myId).map(p=>p.name).join(', ')||'?'}</strong></div>`;
+    setTimeout(()=>submitAction({type:'sisters_meet'}),1500);
+  }
+  // ── THREE BROTHERS ──
+  else if(stepId==='threebrothers'){
+    const brothers=aliveAll.filter(p=>p.role==='threebrothers');
+    ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.88rem">👬 ${lang==='ar'?'إخوتك هم: ':lang==='fr'?'Vos frères sont : ':'Your brothers are: '} <strong>${brothers.filter(p=>p.id!==myId).map(p=>p.name).join(', ')||'?'}</strong></div>`;
+    setTimeout(()=>submitAction({type:'brothers_meet'}),1500);
+  }
 }
 
-function buildRolesGrid(){
-  const el = document.getElementById('rolesGrid');
-  if(!el) return;
-  el.innerHTML = ROLE_DEFAULTS.map((r, idx) => {
-    const chk = cfg.roles && cfg.roles.includes(r.id);
-    return `
-    <label class="rc t-${r.team}">
-      <input type="checkbox" ${chk ? 'checked' : ''} onchange="toggleRole('${r.id}')" />
-      <span class="rc-emoji">${r.emoji}</span>
-      <span>${lang === 'ar' ? r.label_ar : lang === 'fr' ? r.label_fr : r.label_en}</span>
-    </label>`;
-  }).join('');
+function addBtn(container, label, type, onclick){
+  const btn=document.createElement('button');
+  btn.className='btn'+(type==='protect'?' btn-secondary':'');
+  btn.style.cssText='font-size:.82rem;padding:.45rem .9rem;margin:.2rem;'+(type==='save'?'background:var(--green);':type==='seer'?'background:var(--purple);border:1px solid var(--moon);':'');
+  btn.textContent=label;
+  btn.onclick=onclick;
+  container.appendChild(btn);
+}
+function addSkipBtn(container){
+  addBtn(container, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>submitAction({type:'skip'}));
 }
 
-function toggleRole(rid){
-  if(!cfg.roles) cfg.roles = [];
-  if(!Array.isArray(cfg.roles)) cfg.roles = Object.values(cfg.roles);
-  if(cfg.roles.includes(rid)) cfg.roles = cfg.roles.filter(r => r !== rid);
-  else cfg.roles.push(rid);
-  updateRolePreview();
-  pushCfg();
+// Write action to Firebase or local without marking "done"
+function writeAction(fields){
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    Object.entries(fields).forEach(([k,v])=>{ upd[`games/${roomCode}/nightActions/${k}`]=v; });
+    db.ref().update(upd);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    Object.assign(gameState.nightActions,fields);
+  }
 }
 
-function updateRolePreview(){ /* update role counts preview */ }
-function pushCfg(){
-  if(fbOk && db && roomCode){
-    db.ref(`games/${roomCode}/config`).set(cfg);
+// Submit MY action (marks me as done for this turn)
+function submitAction(action){
+  const data={...action, by:myId, ts:Date.now()};
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    upd[`games/${roomCode}/nightActions/${myId}`]=data;
+    if(action.type==='kill'||action.type==='bigbad_kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=action.target;
+    if(action.type==='protect')    upd[`games/${roomCode}/nightActions/_bodyguardProtected`]=action.target;
+    if(action.type==='savior_save') upd[`games/${roomCode}/nightActions/_saviorProtected`]=action.target;
+    db.ref().update(upd);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions[myId]=data;
+    if(action.type==='kill') gameState.nightActions._wolfVictim=action.target;
+    if(action.type==='protect') gameState.nightActions._bodyguardProtected=action.target;
+    if(action.type==='savior_save') gameState.nightActions._saviorProtected=action.target;
+    checkTurnComplete();
+    renderGame();
+  }
+}
+
+function submitWitch(type, targetId){
+  const action={type:'witch_'+type, target:targetId, by:myId, ts:Date.now()};
+  const potionKey=type==='save'?'life':'death';
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    upd[`games/${roomCode}/nightActions/${myId}`]=action;
+    upd[`games/${roomCode}/witchPotions/${myId}/${potionKey}`]=false;
+    db.ref().update(upd);
+  } else if(gameState){
+    if(!gameState.nightActions) gameState.nightActions={};
+    gameState.nightActions[myId]=action;
+    if(!gameState.witchPotions) gameState.witchPotions={};
+    if(!gameState.witchPotions[myId]) gameState.witchPotions[myId]={life:true,death:true};
+    gameState.witchPotions[myId][potionKey]=false;
+    checkTurnComplete();
+    renderGame();
   }
 }
 
 // ════════════════════════════════════════════
-// GAMEPLAY
+// TURN ADVANCEMENT (leader only)
 // ════════════════════════════════════════════
-function checkWinCondition(){ return null; }
-function checkForDeaths(players){ /* placeholder */ }
-function renderPhase(){ /* placeholder */ }
-function startTimerIfNeeded(){ /* placeholder */ }
-function showGameOver(result){ /* placeholder */ }
-function closeDeathOverlay(){ document.getElementById('deathOverlay').classList.remove('active'); }
-function getPlayerColor(id){ const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731', '#5f27cd']; return colors[Object.keys(gameState.players).indexOf(id) % colors.length]; }
+let _lastStepId=null; // prevent re-triggering
+let _advancingStep=false; // lock to prevent double-advance
+
+function checkTurnComplete(){
+  if(!isLeader) return;
+  if(gameState?.phase!=='night') return;
+  if(_advancingStep) return;
+
+  const turn=gameState.nightTurn||{};
+  const stepId=turn.stepId;
+
+  // No turn started yet or init sentinel — kick off turn 0
+  if(!stepId || stepId==='__init__'){
+    _advancingStep=true;
+    advanceNightTurn(0);
+    setTimeout(()=>{ _advancingStep=false; },600);
+    return;
+  }
+
+  const step=NIGHT_SEQUENCE.find(s=>s.id===stepId);
+  // Unknown step id — advance from current position
+  if(!step){
+    _advancingStep=true;
+    advanceNightTurnFromCurrent();
+    setTimeout(()=>{ _advancingStep=false; },600);
+    return;
+  }
+
+  const players=Object.values(gameState.players||{});
+  const actingPlayers=players.filter(p=>p.alive && step.roles.includes(p.role));
+  const actions=gameState.nightActions||{};
+  const allDone=actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]);
+
+  if(allDone && stepId!==_lastStepId){
+    _lastStepId=stepId;
+    _advancingStep=true;
+    advanceNightTurnFromCurrent();
+    setTimeout(()=>{ _advancingStep=false; },600);
+  }
+}
+
+function advanceNightTurnFromCurrent(){
+  const queue=buildNightQueue(gameState, gameState.dayNum||1);
+  const curIdx=queue.findIndex(s=>s.id===(gameState.nightTurn?.stepId));
+  advanceNightTurn(curIdx+1, queue);
+}
+
+function advanceNightTurn(idx, queue){
+  if(!queue) queue=buildNightQueue(gameState, gameState.dayNum||1);
+  if(idx>=queue.length){
+    // All turns done → resolve night → go to day
+    resolveNightAndAdvance();
+    return;
+  }
+  const step=queue[idx];
+  const update={ stepId:step.id, stepIndex:idx, turnStart:Date.now() };
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/nightTurn`).set(update);
+  } else if(gameState){
+    gameState.nightTurn=update;
+    renderGame();
+  }
+}
+
+// ════════════════════════════════════════════
+// NIGHT RESOLUTION
+// ════════════════════════════════════════════
+function resolveNightAndAdvance(){
+  if(!isLeader) return;
+  const gs=gameState;
+  const actions=gs.nightActions||{};
+  const players={...(gs.players||{})};
+
+  // Collect who dies
+  const killSet=new Set();
+
+  // Wolf kill
+  const wolfVictim=actions._wolfVictim;
+  if(wolfVictim) killSet.add(wolfVictim);
+
+  // Witch poison
+  Object.values(actions).forEach(a=>{
+    if(a?.type==='witch_poison'&&a.target) killSet.add(a.target);
+  });
+
+  // Pyromaniac ignite
+  const ignite=Object.values(actions).find(a=>a?.type==='pyro_ignite');
+  if(ignite){
+    const doused=actions._pyroDoused||[];
+    doused.forEach(id=>killSet.add(id));
+    // pyro dies too
+    const pyro=Object.values(players).find(p=>p.role==='pyromaniac');
+    if(pyro) killSet.add(pyro.id);
+  }
+
+  // White werewolf kill
+  const wwKill=Object.values(actions).find(a=>a?.type==='ww_kill');
+  if(wwKill?.target) killSet.add(wwKill.target);
+
+  // Remove protections
+  const bodyguardProtected=actions._bodyguardProtected;
+  const saviorProtected=actions._saviorProtected;
+  const witchSaved=Object.values(actions).find(a=>a?.type==='witch_save');
+  if(bodyguardProtected) killSet.delete(bodyguardProtected);
+  if(saviorProtected)    killSet.delete(saviorProtected);
+  if(witchSaved?.target) killSet.delete(witchSaved.target);
+
+  // Berserker: immune first 2 nights
+  const dayNum=gs.dayNum||1;
+  if(dayNum<=2){
+    Object.values(players).forEach(p=>{ if(p.role==='berserker') killSet.delete(p.id); });
+  }
+
+  // Mark dead
+  const upd={};
+  killSet.forEach(id=>{ if(players[id]) upd[`games/${roomCode}/players/${id}/alive`]=false; });
+
+  // Update savior's last-saved memory (can't save same person twice)
+  const saviorAction=Object.values(actions).find(a=>a?.type==='savior_save');
+  if(saviorAction?.target) upd[`games/${roomCode}/nightActions/_saviorLast`]=saviorAction.target;
+
+  // Bodyguard last protected
+  if(bodyguardProtected) upd[`games/${roomCode}/nightActions/_bodyguardLast`]=bodyguardProtected;
+
+  // Advance to day
+  const nextDay=(gs.dayNum||1);
+  upd[`games/${roomCode}/phase`]='day';
+  upd[`games/${roomCode}/phaseStart`]=Date.now();
+  upd[`games/${roomCode}/dayNum`]=nextDay;
+  upd[`games/${roomCode}/nightTurn`]={stepId:null};
+  upd[`games/${roomCode}/nightActions`]={
+    _saviorLast: saviorAction?.target||null,
+    _bodyguardLast: bodyguardProtected||null,
+    _fluteEnchanted: actions._fluteEnchanted||[],
+    _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
+  };
+  upd[`games/${roomCode}/dayVotes`]=null;
+  upd[`games/${roomCode}/maireCandidates`]=null;
+  upd[`games/${roomCode}/maireVotes`]=null;
+
+  if(fbOk&&db&&roomCode){
+    db.ref().update(upd);
+  } else {
+    killSet.forEach(id=>{ if(gs.players[id]) gs.players[id].alive=false; });
+    Object.assign(gs,{phase:'day',phaseStart:Date.now(),dayNum:nextDay,nightTurn:{stepId:null},nightActions:{
+      _saviorLast: saviorAction?.target||null,
+      _bodyguardLast: bodyguardProtected||null,
+      _fluteEnchanted: actions._fluteEnchanted||[],
+      _pyroDoused: ignite ? [] : (actions._pyroDoused||[]),
+    }});
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
+    renderGame();
+  }
+}
+
+// ════════════════════════════════════════════
+// DAY VOTING
+// ════════════════════════════════════════════
+function renderDayVoting(){
+  const ab=document.getElementById('actionBtns');
+  const me=gameState.players?.[myId];
+  if(!me?.alive){ ab.innerHTML=`<div style="opacity:.5">${lang==='ar'?'أنت خارج اللعبة':lang==='fr'?'Vous êtes éliminé':'You are eliminated'}</div>`; return; }
+
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const aliveOthers=alive.filter(p=>p.id!==myId);
+  const dayVotes=gameState.dayVotes||{};
+  const voted=!!dayVotes[myId];
+  const maireId=gameState.maire;
+  const maireAlive=maireId && gameState.players?.[maireId]?.alive;
+
+  // Build all HTML as a single string to avoid innerHTML vs appendChild conflicts
+  let html='';
+
+  // ── STEP 1: Maire election (always shown first) ──
+  html+=buildMaireHtml(players);
+
+  // ── STEP 2: Block elimination vote until maire is elected or no candidates ──
+  const candidates=gameState.maireCandidates||{};
+  const candidateIds=Object.keys(candidates);
+  const maireElectionPending=!maireAlive && candidateIds.length>0;
+  if(maireElectionPending){
+    html+=`<div style="font-size:.82rem;opacity:.6;margin-top:.6rem">${
+      lang==='ar'?'⏳ انتظر انتهاء انتخاب العمدة قبل التصويت للإقصاء':
+      lang==='fr'?'⏳ Attendez la fin de l\'élection du Maire avant de voter':'⏳ Wait for the Mayor election to finish before voting'
+    }</div>`;
+    ab.innerHTML=html;
+    return;
+  }
+
+  // ── STEP 3: Elimination vote with colored dots ──
+  const tally={};
+  const voterMap={};
+  Object.entries(dayVotes).forEach(([pid,a])=>{
+    if(a?.type==='vote'&&a.target){
+      const w=a.voteWeight||1;
+      tally[a.target]=(tally[a.target]||0)+w;
+      if(!voterMap[a.target]) voterMap[a.target]=[];
+      const pName=gameState.players?.[pid]?.name||'?';
+      voterMap[a.target].push({id:pid, name:pName, color:getPlayerColor(pid), weight:w});
+    }
+  });
+  const crowAccused=(gameState.nightActions||{})._crowAccused;
+  if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+
+  html+=`<div style="color:var(--moon);font-family:'Cinzel',serif;font-size:.88rem;margin:.6rem 0 .3rem">${
+    lang==='ar'?'🗳 تصويت الإقصاء':lang==='fr'?'🗳 Vote d\'élimination':'🗳 Elimination Vote'
+  }</div>`;
+
+  if(voted){
+    const myVote=players.find(p=>p.id===dayVotes[myId]?.target);
+    html+=`<div style="color:var(--green);font-size:.9rem;margin-top:.3rem">✓ ${lang==='ar'?'صوّتت ضد':lang==='fr'?'Voté contre':'Voted against'}: <strong>${myVote?.name||'?'}</strong></div>`;
+  } else {
+    aliveOthers.forEach(p=>{
+      const votes=tally[p.id]||0;
+      html+=`<button class="btn" style="font-size:.82rem;padding:.45rem .9rem;margin:.2rem" onclick="doVote('${p.id}')">${p.name}${votes>0?' ('+votes+')':''}</button>`;
+    });
+  }
+
+  // Show detailed tally with colored voter dots
+  if(Object.keys(tally).length){
+    html+='<div style="margin-top:.7rem;width:100%">';
+    Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([id,v])=>{
+      const name=players.find(p=>p.id===id)?.name||'?';
+      const voters=voterMap[id]||[];
+      const dots=voters.map(vt=>{
+        let d=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`;
+        if(vt.weight>1) d+=`<span class="vote-dot" style="background:${vt.color}" title="${vt.name} (x2)"></span>`;
+        return d;
+      }).join('');
+      html+=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.82rem">
+        <span style="color:var(--moon-pale);min-width:80px">${name}: <strong>${v}</strong></span>
+        <span>${dots}</span>
+      </div>`;
+    });
+    html+='</div>';
+
+    // Voter color legend
+    html+='<div class="voter-legend">';
+    alive.filter(p=>!!dayVotes[p.id]).forEach(p=>{
+      html+=`<span><span class="vote-dot" style="background:${getPlayerColor(p.id)}"></span>${p.name}</span>`;
+    });
+    html+='</div>';
+  }
+
+  ab.innerHTML=html;
+}
+
+function doVote(targetId){
+  if(!myId) return;
+  const maireId=gameState.maire;
+  const voteWeight=(myId===maireId)?2:1;
+  const action={type:'vote',target:targetId,by:myId,ts:Date.now(),voteWeight};
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/dayVotes/${myId}`).set(action);
+  } else if(gameState){
+    if(!gameState.dayVotes) gameState.dayVotes={};
+    gameState.dayVotes[myId]=action;
+    checkDayVoteComplete();
+    renderGame();
+  }
+}
+
+function checkDayVoteComplete(){
+  if(!isLeader) return;
+  if(gameState?.phase!=='day') return;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const dayVotes=gameState.dayVotes||{};
+  const allVoted=alive.every(p=>!!dayVotes[p.id]);
+  if(allVoted && alive.length>0) resolveDayAndAdvance();
+}
+
+function resolveDayAndAdvance(){
+  if(!isLeader) return;
+  const gs=gameState;
+  const players=Object.values(gs.players||{});
+  const dayVotes=gs.dayVotes||{};
+  const actions=gs.nightActions||{};
+
+  // Tally
+  const tally={};
+  Object.values(dayVotes).forEach(a=>{ if(a?.type==='vote'&&a.target) tally[a.target]=(tally[a.target]||0)+(a.voteWeight||1); });
+  const crowAccused=actions._crowAccused;
+  if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+
+  // Find max
+  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  const upd={};
+
+  if(sorted.length){
+    const maxVotes=sorted[0][1];
+    const tied=sorted.filter(([,v])=>v===maxVotes);
+    if(tied.length===1){
+      // Eliminate player
+      const eliminatedId=tied[0][0];
+      const eliminated=players.find(p=>p.id===eliminatedId);
+      // Village idiot: revealed but stays alive
+      if(eliminated?.role==='villageidiot'){
+        upd[`games/${roomCode}/players/${eliminatedId}/idiotRevealed`]=true;
+      } else {
+        upd[`games/${roomCode}/players/${eliminatedId}/alive`]=false;
+      }
+      // Scapegoat: if tied, scapegoat dies instead — handled above (no tie here)
+    } else {
+      // Tie: eliminate scapegoat if present
+      const scapegoat=players.find(p=>p.alive&&p.role==='scapegoat');
+      if(scapegoat) upd[`games/${roomCode}/players/${scapegoat.id}/alive`]=false;
+    }
+  }
+
+  // Advance to next night
+  _lastStepId=null; // Reset so night turns can advance properly
+  const nextNight=(gs.dayNum||1)+1;
+  upd[`games/${roomCode}/phase`]='night';
+  upd[`games/${roomCode}/phaseStart`]=Date.now();
+  upd[`games/${roomCode}/dayNum`]=nextNight;
+  upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+  upd[`games/${roomCode}/nightActions`]={
+    _saviorLast: actions._saviorLast||null,
+    _bodyguardLast: actions._bodyguardLast||null,
+    _fluteEnchanted: actions._fluteEnchanted||[],
+    _pyroDoused: actions._pyroDoused||[],
+  };
+  upd[`games/${roomCode}/dayVotes`]=null;
+  upd[`games/${roomCode}/maireCandidates`]=null;
+  upd[`games/${roomCode}/maireVotes`]=null;
+
+  if(fbOk&&db&&roomCode){
+    // Also apply elimination locally before Firebase write for immediate feedback
+    Object.entries(upd).forEach(([path,val])=>{
+      const m=path.match(/players\/([^/]+)\/alive/);
+      if(m && val===false && gs.players[m[1]]) gs.players[m[1]].alive=false;
+    });
+    db.ref().update(upd,()=>{
+      // After write, kick off first night turn
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    });
+  } else {
+    // Apply eliminations locally
+    Object.entries(upd).forEach(([path,val])=>{
+      const m=path.match(/players\/([^/]+)\/alive/);
+      if(m && val===false && gs.players[m[1]]) gs.players[m[1]].alive=false;
+      const m2=path.match(/players\/([^/]+)\/idiotRevealed/);
+      if(m2 && gs.players[m2[1]]) gs.players[m2[1]].idiotRevealed=true;
+    });
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
+    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+  }
+}
+
+// ════════════════════════════════════════════
+// TIMER — per turn during night, per phase during day
+// ════════════════════════════════════════════
+let _lastTimerKey = null;
+function startTimerIfNeeded(){
+  // Build a key representing what the timer is currently counting for
+  const ph = gameState?.phase;
+  const turnId = gameState?.nightTurn?.stepId;
+  const key = ph==='night' ? ('night:'+turnId) : ('day:'+gameState?.dayNum);
+  if(key !== _lastTimerKey){
+    _lastTimerKey = key;
+    startTimer();
+  }
+}
+
+function startTimer(){
+  if(timerTO) clearTimeout(timerTO);
+  tick();
+}
+function tick(){
+  if(!gameState) return;
+  const ph=gameState.phase;
+  let start, dur;
+  if(ph==='night'){
+    const turn=gameState.nightTurn||{};
+    start=turn.turnStart||gameState.phaseStart;
+    dur=cfg.nightTimer||45;
+  } else {
+    start=gameState.phaseStart;
+    dur=cfg.dayTimer||60;
+  }
+  if(!start){ timerTO=setTimeout(tick,1000); return; }
+  const rem=Math.max(0,Math.ceil(dur-(Date.now()-start)/1000));
+  document.getElementById('phaseTimer').textContent=rem;
+  if(rem>0){
+    timerTO=setTimeout(tick,1000);
+  } else {
+    // Timer expired for this turn
+    if(ph==='night'){
+      if(isLeader) autoSkipTurn();
+    } else {
+      if(isLeader) resolveDayAndAdvance();
+    }
+  }
+}
+
+function autoSkipTurn(){
+  // Force-submit skip for any acting players who haven't acted
+  const turn=gameState.nightTurn||{};
+  const step=NIGHT_SEQUENCE.find(s=>s.id===turn.stepId);
+  if(!step){ advanceNightTurnFromCurrent(); return; }
+  const players=Object.values(gameState.players||{});
+  const actingPlayers=players.filter(p=>p.alive&&step.roles.includes(p.role));
+  const actions=gameState.nightActions||{};
+  const pending=actingPlayers.filter(p=>!actions[p.id]);
+  if(pending.length===0){ advanceNightTurnFromCurrent(); return; }
+  if(fbOk&&db&&roomCode){
+    const upd={};
+    pending.forEach(p=>{ upd[`games/${roomCode}/nightActions/${p.id}`]={type:'skip',by:p.id,ts:Date.now(),auto:true}; });
+    db.ref().update(upd,()=>advanceNightTurnFromCurrent());
+  } else {
+    pending.forEach(p=>{ gameState.nightActions[p.id]={type:'skip',by:p.id,ts:Date.now(),auto:true}; });
+    advanceNightTurnFromCurrent();
+  }
+}
+
+// ════════════════════════════════════════════
+// MAIRE (Mayor) SYSTEM
+// ════════════════════════════════════════════
+function buildMaireHtml(players){
+  const me=gameState.players?.[myId];
+  if(!me?.alive) return '';
+  const maireId=gameState.maire;
+  const maireName=maireId?gameState.players?.[maireId]?.name:null;
+  const alive=players.filter(p=>p.alive);
+  const MAX_CANDIDATES=3;
+
+  // Show current maire if elected and alive
+  if(maireId && gameState.players?.[maireId]?.alive){
+    let html=`<div class="maire-bar"><div class="maire-title">👑 ${tr('maireIs')} <strong>${maireName}</strong> ${tr('maireVotes')}</div>`;
+    if(myId===maireId){
+      html+=`<button class="btn" style="font-size:.8rem;padding:.35rem .7rem;margin-top:.3rem;background:var(--moon);color:var(--void)" onclick="maireSkipDay()">⏭ ${tr('skipDay')}</button>`;
+    }
+    html+=`</div>`;
+    return html;
+  }
+
+  // No maire yet — show candidacy / voting
+  const candidates=gameState.maireCandidates||{};
+  const candidateIds=Object.keys(candidates).filter(cId=>gameState.players?.[cId]?.alive);
+  const maireVotes=gameState.maireVotes||{};
+  const iAmCandidate=!!candidates[myId];
+  const iVotedMaire=!!maireVotes[myId];
+  const slotsFull=candidateIds.length>=MAX_CANDIDATES;
+
+  let html=`<div class="maire-bar"><div class="maire-title">👑 ${tr('maire')}</div>`;
+
+  // Run for maire button (max 3 candidates)
+  if(!iAmCandidate && !slotsFull){
+    html+=`<button class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .7rem;margin:.3rem" onclick="runForMaire()">🏛 ${tr('runForMaire')}</button>`;
+    html+=`<div class="slots-info">${candidateIds.length}/${MAX_CANDIDATES} ${lang==='ar'?'مرشحين':lang==='fr'?'candidats':'candidates'}</div>`;
+  } else if(iAmCandidate){
+    html+=`<div style="color:var(--green);font-size:.8rem;margin:.2rem">✓ ${lang==='ar'?'أنت مرشح':lang==='fr'?'Vous êtes candidat':'You are a candidate'}</div>`;
+  } else if(slotsFull && !iAmCandidate){
+    html+=`<div style="font-size:.78rem;opacity:.6;margin:.2rem">${lang==='ar'?'اكتمل عدد المرشحين':lang==='fr'?'Places de candidature complètes':'Candidate slots full'}</div>`;
+  }
+
+  // Show candidates to ALL players with colored vote dots
+  if(candidateIds.length>0){
+    html+=`<div style="font-size:.8rem;color:var(--moon-pale);margin-top:.4rem">${tr('candidates')}</div>`;
+
+    // Build maire vote tally with voter tracking
+    const maireTally={};
+    const maireVoterMap={};
+    Object.entries(maireVotes).forEach(([pid,v])=>{
+      if(v?.target){
+        maireTally[v.target]=(maireTally[v.target]||0)+1;
+        if(!maireVoterMap[v.target]) maireVoterMap[v.target]=[];
+        maireVoterMap[v.target].push({id:pid, name:gameState.players?.[pid]?.name||'?', color:getPlayerColor(pid)});
+      }
+    });
+
+    html+=`<div class="candidate-list">`;
+    candidateIds.forEach(cId=>{
+      const cName=gameState.players?.[cId]?.name||'?';
+      const cColor=getPlayerColor(cId);
+      const votes=maireTally[cId]||0;
+      const voters=maireVoterMap[cId]||[];
+      const dots=voters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+
+      html+=`<div class="candidate-card">`;
+      html+=`<div style="display:flex;align-items:center;gap:.3rem"><span class="vote-dot" style="background:${cColor};width:14px;height:14px"></span><span class="c-name">${cName}</span></div>`;
+      html+=`<div class="c-votes">${votes} ${lang==='ar'?'أصوات':lang==='fr'?'votes':'votes'} ${dots}</div>`;
+      if(!iVotedMaire && cId!==myId){
+        html+=`<button class="btn btn-secondary" style="font-size:.72rem;padding:.2rem .5rem;margin-top:.3rem" onclick="voteMaire('${cId}')">🗳 ${tr('voteMaire')}</button>`;
+      }
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+
+    // Voter legend for maire
+    const maireVoterIds=Object.keys(maireVotes);
+    if(maireVoterIds.length>0){
+      html+=`<div class="voter-legend" style="margin-top:.4rem">`;
+      maireVoterIds.forEach(pid=>{
+        const pName=gameState.players?.[pid]?.name||'?';
+        html+=`<span><span class="vote-dot" style="background:${getPlayerColor(pid)}"></span>${pName}</span>`;
+      });
+      html+=`</div>`;
+    }
+  } else {
+    html+=`<div style="font-size:.78rem;opacity:.5;margin-top:.2rem">${tr('noCandidates')}</div>`;
+  }
+  html+=`</div>`;
+  return html;
+}
+
+function runForMaire(){
+  if(!myId) return;
+  const me=gameState?.players?.[myId];
+  if(!me?.alive) return; // dead can't run
+  const candidates=gameState?.maireCandidates||{};
+  if(Object.keys(candidates).length>=3) return; // max 3
+  if(candidates[myId]) return; // already a candidate
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/maireCandidates/${myId}`).set({name:myName,ts:Date.now()});
+  } else if(gameState){
+    if(!gameState.maireCandidates) gameState.maireCandidates={};
+    gameState.maireCandidates[myId]={name:myName,ts:Date.now()};
+    renderGame();
+  }
+}
+
+function voteMaire(candidateId){
+  if(!myId) return;
+  const me=gameState?.players?.[myId];
+  if(!me?.alive) return; // dead can't vote
+  const vote={target:candidateId,by:myId,ts:Date.now()};
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/maireVotes/${myId}`).set(vote);
+    // Check if all alive voted for maire
+    setTimeout(()=>checkMaireElection(),500);
+  } else if(gameState){
+    if(!gameState.maireVotes) gameState.maireVotes={};
+    gameState.maireVotes[myId]=vote;
+    checkMaireElection();
+    renderGame();
+  }
+}
+
+function checkMaireElection(){
+  if(!isLeader) return;
+  const players=Object.values(gameState.players||{});
+  const alive=players.filter(p=>p.alive);
+  const aliveIds=new Set(alive.map(p=>p.id));
+  const maireVotes=gameState.maireVotes||{};
+  // Only count votes from alive players
+  const aliveVoters=Object.keys(maireVotes).filter(pid=>aliveIds.has(pid));
+  // Elect when all alive players have voted
+  if(aliveVoters.length<alive.length) return;
+  // Tally (only alive votes)
+  const tally={};
+  aliveVoters.forEach(pid=>{
+    const v=maireVotes[pid];
+    if(v?.target) tally[v.target]=(tally[v.target]||0)+1;
+  });
+  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length) return;
+  const winnerId=sorted[0][0];
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/maire`).set(winnerId);
+  } else if(gameState){
+    gameState.maire=winnerId;
+    renderGame();
+  }
+}
+
+function maireSkipDay(){
+  if(!myId || gameState.maire!==myId) return;
+  if(!isLeader){
+    // Tell leader to skip via Firebase
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/maireSkipDay`).set(Date.now());
+    }
+    return;
+  }
+  doMaireSkipDay();
+}
+
+function doMaireSkipDay(){
+  if(!isLeader) return;
+  const gs=gameState;
+  const actions=gs.nightActions||{};
+  _lastStepId=null;
+  const nextNight=(gs.dayNum||1)+1;
+  const upd={};
+  upd[`games/${roomCode}/phase`]='night';
+  upd[`games/${roomCode}/phaseStart`]=Date.now();
+  upd[`games/${roomCode}/dayNum`]=nextNight;
+  upd[`games/${roomCode}/nightTurn`]={stepId:null,stepIndex:-1,turnStart:Date.now()};
+  upd[`games/${roomCode}/nightActions`]={
+    _saviorLast: actions._saviorLast||null,
+    _bodyguardLast: actions._bodyguardLast||null,
+    _fluteEnchanted: actions._fluteEnchanted||[],
+    _pyroDoused: actions._pyroDoused||[],
+  };
+  upd[`games/${roomCode}/dayVotes`]=null;
+  upd[`games/${roomCode}/maireCandidates`]=null;
+  upd[`games/${roomCode}/maireVotes`]=null;
+  upd[`games/${roomCode}/maireSkipDay`]=null;
+  if(fbOk&&db&&roomCode){
+    db.ref().update(upd,()=>{
+      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+    });
+  } else {
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
+    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+  }
+}
+
+// ════════════════════════════════════════════
+// TEAM CHAT SYSTEM
+// ════════════════════════════════════════════
+const TEAM_CHANNELS={
+  wolves:   {roles:['werewolf','bigbadwolf','alphawolf','wolffather','corruptedbutcher','wolfhound'], label:{en:'Wolves',fr:'Loups',ar:'الذئاب'}, color:'var(--blood-glow)'},
+  twosisters: {roles:['twosisters'], label:{en:'Sisters',fr:'Sœurs',ar:'الأختان'}, color:'#e879f9'},
+  threebrothers: {roles:['threebrothers'], label:{en:'Brothers',fr:'Frères',ar:'الإخوة'}, color:'#60a5fa'},
+};
+
+function getMyTeamChannels(){
+  if(!myRole) return [];
+  let channels=[];
+  Object.entries(TEAM_CHANNELS).forEach(([key,ch])=>{
+    if(ch.roles.includes(myRole)) channels.push(key);
+  });
+  // wolfhound: only if they chose werewolf
+  if(myRole==='wolfhound'){
+    const myAction=gameState?.nightActions?.[myId];
+    if(myAction?.type==='wolfhound_choose' && myAction.pick==='werewolf'){
+      if(!channels.includes('wolves')) channels.push('wolves');
+    } else {
+      channels=channels.filter(c=>c!=='wolves');
+    }
+  }
+  return channels;
+}
+
+function renderChatTabs(){
+  const tabsEl=document.getElementById('chatTabs');
+  if(!tabsEl) return;
+  const myChannels=getMyTeamChannels();
+  if(myChannels.length===0 && gameState?.status!=='playing'){
+    tabsEl.innerHTML='';
+    activeChatTab='general';
+    return;
+  }
+  let html=`<button class="chat-tab ${activeChatTab==='general'?'active':''}" onclick="switchChatTab('general')">${tr('generalChat')}</button>`;
+  myChannels.forEach(ch=>{
+    const chDef=TEAM_CHANNELS[ch];
+    const label=chDef.label[lang]||chDef.label.en;
+    html+=`<button class="chat-tab ${activeChatTab===ch?'active':''}" style="border-color:${chDef.color}" onclick="switchChatTab('${ch}')">${label}</button>`;
+  });
+  tabsEl.innerHTML=html;
+}
+
+function switchChatTab(tab){
+  activeChatTab=tab;
+  renderChatTabs();
+  renderChat();
+}
 
 // ════════════════════════════════════════════
 // CHAT
 // ════════════════════════════════════════════
 function renderChat(){
-  const el = document.getElementById('chatMsgs');
-  if(!el) return;
-  const raw = gameState?.chat || [];
-  const msgs = Array.isArray(raw) ? raw : Object.values(raw);
-  el.innerHTML = msgs.map(m => `<div class="cm"><div class="cn">${m.n}</div><div class="ct">${m.t}</div></div>`).join('');
-  el.scrollTop = el.scrollHeight;
+  const el=document.getElementById('chatMsgs');
+  renderChatTabs();
+  if(activeChatTab==='general'){
+    const raw=gameState?.chat||[];
+    const msgs=Array.isArray(raw)?raw:Object.values(raw);
+    el.innerHTML=msgs.map(m=>`<div class="cm"><div class="cn">${m.n}</div><div class="ct">${m.t}</div></div>`).join('');
+  } else {
+    const teamMsgs=gameState?.teamChat?.[activeChatTab];
+    const raw=teamMsgs||[];
+    const msgs=Array.isArray(raw)?raw:Object.values(raw);
+    const chDef=TEAM_CHANNELS[activeChatTab];
+    const borderColor=chDef?chDef.color:'var(--moon)';
+    el.innerHTML=msgs.map(m=>`<div class="cm" style="border-left-color:${borderColor}"><div class="cn">${m.n}</div><div class="ct">${m.t}</div></div>`).join('');
+  }
+  el.scrollTop=el.scrollHeight;
 }
 
 function sendChat(){
-  const inp = document.getElementById('chatIn');
-  const txt = inp.value.trim();
-  if(!txt) return;
-  const msg = {n:myName, t:txt, ts:Date.now()};
-  if(fbOk && db && roomCode){
-    db.ref(`games/${roomCode}/chat`).push(msg);
-  } else if(gameState){
-    if(!Array.isArray(gameState.chat)) gameState.chat = [];
-    gameState.chat.push(msg);
-    renderChat();
+  const inp=document.getElementById('chatIn');
+  const txt=inp.value.trim(); if(!txt) return;
+  const msg={n:myName,t:txt,ts:Date.now()};
+
+  if(activeChatTab==='general'){
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/chat`).push(msg);
+    } else if(gameState){
+      if(!Array.isArray(gameState.chat)) gameState.chat=[];
+      gameState.chat.push(msg);
+      renderChat();
+    }
+  } else {
+    // Team chat - verify player belongs to this channel
+    const myChannels=getMyTeamChannels();
+    if(!myChannels.includes(activeChatTab)){ inp.value=''; return; }
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/teamChat/${activeChatTab}`).push(msg);
+    } else if(gameState){
+      if(!gameState.teamChat) gameState.teamChat={};
+      if(!Array.isArray(gameState.teamChat[activeChatTab])) gameState.teamChat[activeChatTab]=[];
+      gameState.teamChat[activeChatTab].push(msg);
+      renderChat();
+    }
   }
-  inp.value = '';
+  inp.value='';
 }
 
 // ════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════
-window.addEventListener('load', () => {
+window.addEventListener('load',()=>{
   setLang('en');
-  setTimeout(() => initFB(), 200);
+  // Pre-warm Firebase in background so it's ready when user clicks Create/Join
+  setTimeout(()=>initFB(), 200);
 });
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
