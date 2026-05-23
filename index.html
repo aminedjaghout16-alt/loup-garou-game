@@ -329,6 +329,8 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .hunter-target-btn:hover{background:var(--blood-glow);color:#fff;box-shadow:0 0 20px rgba(185,28,28,.5)}
 .hunter-skip-btn{padding:.4rem 1rem;background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.4);border-radius:6px;cursor:pointer;font-family:'Creepster',cursive;font-size:.85rem;margin-top:.5rem;transition:.2s}
 .hunter-skip-btn:hover{border-color:rgba(255,255,255,.5);color:rgba(255,255,255,.7)}
+.hunter-timer{font-family:'Creepster',cursive;font-size:1.5rem;margin-bottom:.8rem;color:var(--moon);letter-spacing:.05em;transition:color .3s}
+.hunter-timer.urgent{color:var(--blood-glow);text-shadow:0 0 12px rgba(185,28,28,.7)}
 
 /* ── GHOST SPECTATOR MODE ── */
 .ghost-overlay{position:absolute;inset:0;pointer-events:none;z-index:1}
@@ -513,6 +515,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   <div class="hunter-card">
     <div class="hunter-title">🏹 Hunter's Last Shot</div>
     <div class="hunter-sub" id="hunterSub">You have been eliminated. Choose your final target.</div>
+    <div class="hunter-timer" id="hunterTimer">⏳ 10</div>
     <div class="hunter-targets" id="hunterTargets"></div>
     <button class="hunter-skip-btn" onclick="hunterSkip()">— Pass —</button>
   </div>
@@ -1219,6 +1222,11 @@ function closeWinnerOverlay(){
 // HUNTER — last shot when eliminated
 // ════════════════════════════════════════════
 let _hunterPending=false;
+let _hunterTimerInterval=null;
+
+function _clearHunterTimer(){
+  if(_hunterTimerInterval){ clearInterval(_hunterTimerInterval); _hunterTimerInterval=null; }
+}
 
 function maybeShowHunterShot(deadPlayerId, callback){
   const p=gameState?.players?.[deadPlayerId];
@@ -1229,6 +1237,7 @@ function maybeShowHunterShot(deadPlayerId, callback){
   const ov=document.getElementById('hunterOverlay');
   const targets=document.getElementById('hunterTargets');
   const sub=document.getElementById('hunterSub');
+  const timerEl=document.getElementById('hunterTimer');
   sub.textContent=lang==='ar'?'لقد أُقصيت. اختر هدفك الأخير.':lang==='fr'?'Vous êtes éliminé. Choisissez votre cible finale.':'You have been eliminated. Choose your final target.';
   targets.innerHTML='';
   const alive=Object.values(gameState.players||{}).filter(x=>x.alive&&x.id!==deadPlayerId);
@@ -1240,9 +1249,25 @@ function maybeShowHunterShot(deadPlayerId, callback){
     targets.appendChild(btn);
   });
   ov.classList.add('active');
+  // 10-second countdown — auto-skip if hunter doesn't shoot
+  let timeLeft=10;
+  if(timerEl){ timerEl.textContent='\u23f3 '+timeLeft; timerEl.classList.remove('urgent'); }
+  _clearHunterTimer();
+  _hunterTimerInterval=setInterval(()=>{
+    timeLeft--;
+    if(timerEl){
+      timerEl.textContent='\u23f3 '+timeLeft;
+      if(timeLeft<=3) timerEl.classList.add('urgent');
+    }
+    if(timeLeft<=0){
+      _clearHunterTimer();
+      hunterSkip(callback);
+    }
+  },1000);
 }
 
 function hunterShoot(targetId, callback){
+  _clearHunterTimer();
   const ov=document.getElementById('hunterOverlay');
   ov.classList.remove('active');
   _hunterPending=false;
@@ -1268,10 +1293,12 @@ function hunterShoot(targetId, callback){
   setTimeout(()=>{ if(callback) callback(); }, 4600);
 }
 
-function hunterSkip(){
+function hunterSkip(callback){
+  _clearHunterTimer();
   const ov=document.getElementById('hunterOverlay');
   ov.classList.remove('active');
   _hunterPending=false;
+  if(typeof callback==='function') callback();
 }
 
 function checkHunterWinCondition(){
