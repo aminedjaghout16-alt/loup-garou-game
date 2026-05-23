@@ -143,6 +143,12 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .pc-vote-btn.mayor:hover{background:var(--moon-pale)}
 .pc-vote-btn.discard{background:var(--purple);color:var(--ghost);border:1px solid rgba(255,255,255,.15)}
 .pc-vote-btn.discard:hover{background:rgba(255,255,255,.1)}
+.pc-vote-btn.protect{background:rgba(16,185,129,.25);color:#6ee7b7;border:1px solid rgba(16,185,129,.4)}
+.pc-vote-btn.protect:hover{background:rgba(16,185,129,.4)}
+.pc-vote-btn.seer{background:rgba(139,92,246,.3);color:#c4b5fd;border:1px solid rgba(139,92,246,.4)}
+.pc-vote-btn.seer:hover{background:rgba(139,92,246,.5)}
+.pc-vote-btn.special{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.35)}
+.pc-vote-btn.special:hover{background:rgba(245,158,11,.35)}
 .pc-node.vote-selected .pc-avatar-wrap{border-color:var(--blood-glow);box-shadow:0 0 18px rgba(185,28,28,.6)}
 .pc-node.mayor-selected .pc-avatar-wrap{border-color:var(--moon-pale);box-shadow:0 0 18px rgba(212,160,23,.7)}
 .pc-vote-count{position:absolute;top:-6px;right:-6px;background:var(--blood-glow);color:#fff;
@@ -2139,6 +2145,15 @@ function renderPlayerList(players){
   const iAmIdiot=!!me?.idiotRevealed;
   const canVote = isDayVote && iAmAlive && !iAmIdiot;
 
+  // Night: determine if it's my turn so circle nodes become clickable
+  const isNight = gameState?.phase==='night';
+  const nightTurn=gameState?.nightTurn||{};
+  const nightStepId=nightTurn.stepId;
+  const nightStep=NIGHT_SEQUENCE.find(s=>s.id===nightStepId);
+  const _wolfhoundIsWolfNight = myRole==='wolfhound' && isWolfRole('wolfhound',gameState);
+  const isMyNightTurn = isNight && iAmAlive && nightStep && (nightStep.roles.includes(myRole)||(nightStepId==='wolves'&&_wolfhoundIsWolfNight));
+  const nightAlreadyActed = isMyNightTurn && (nightStepId==='bigbadwolf' ? !!gameState?.nightActions?._bigbadAction : !!gameState?.nightActions?.[myId]);
+
   const dayVotes=gameState?.dayVotes||{};
   const maireCandidates=gameState?.maireCandidates||{};
   const maireId=gameState?.maire;
@@ -2167,7 +2182,8 @@ function renderPlayerList(players){
     const y=cy+radius*Math.sin(angle);
     const isMe=p.id===myId;
     const isDead=!p.alive;
-    const isClickable = canVote && !isDead && !isMe;
+    const isNightClickable = isMyNightTurn && !nightAlreadyActed && !isDead && !isMe;
+    const isClickable = (canVote && !isDead && !isMe) || isNightClickable;
     const myEliVote=dayVotes[myId]?.target===p.id;
     const myMayorVote=maireVotes[myId]?.target===p.id;
     const voteCount=tally[p.id]||0;
@@ -2223,42 +2239,166 @@ function circleNodeClick(event, targetId){
   const node=document.getElementById('pcnode_'+targetId);
   if(!node) return;
 
-  const maireId=gameState?.maire;
-  const maireAlive=maireId && gameState?.players?.[maireId]?.alive;
-  const maireCandidates=gameState?.maireCandidates||{};
-  const candidateIds=Object.keys(maireCandidates).filter(cId=>gameState?.players?.[cId]?.alive);
-  const mayorPending=!maireAlive && candidateIds.length>0;
-  const alreadyVotedElim=!!gameState?.dayVotes?.[myId];
-  const alreadyVotedMayor=!!(gameState?.maireVotes?.[myId]);
-  const isCandidate=!!maireCandidates[targetId];
-
   const popup=document.createElement('div');
   popup.className='pc-vote-popup';
 
-  // Mayor vote button
-  if(mayorPending && isCandidate && !alreadyVotedMayor){
-    const mb=document.createElement('button');
-    mb.className='pc-vote-btn mayor';
-    mb.innerHTML=`&#x1F451; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x639;&#x645;&#x62F;&#x629;':lang==='fr'?'Voter Maire':'Vote Mayor'}`;
-    mb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); doMaireVote(targetId); };
-    popup.appendChild(mb);
+  // ── NIGHT: show night action buttons for this target ──
+  if(gameState?.phase==='night'){
+    const nightTurn=gameState?.nightTurn||{};
+    const stepId=nightTurn.stepId;
+    const me=gameState?.players?.[myId];
+    const iAmAlive=me?.alive;
+    const _wolfhoundIsWolf=myRole==='wolfhound'&&isWolfRole('wolfhound',gameState);
+    const nightStep=NIGHT_SEQUENCE.find(s=>s.id===stepId);
+    const isMyTurn=iAmAlive&&nightStep&&(nightStep.roles.includes(myRole)||(stepId==='wolves'&&_wolfhoundIsWolf));
+    const alreadyActed=stepId==='bigbadwolf'?!!gameState?.nightActions?._bigbadAction:!!gameState?.nightActions?.[myId];
+
+    if(!isMyTurn||alreadyActed){
+      closeCirclePopup(); return;
+    }
+
+    const tp=gameState.players?.[targetId];
+    const tname=tp?.name||'?';
+    const players=Object.values(gameState.players||{});
+    const alive=players.filter(p=>p.alive&&p.id!==myId);
+    const aliveAll=players.filter(p=>p.alive);
+
+    // Helper to add a night action button to the popup
+    const addNightBtn=(label,cls,fn)=>{
+      const b=document.createElement('button');
+      b.className='pc-vote-btn '+cls;
+      b.textContent=label;
+      b.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); fn(); };
+      popup.appendChild(b);
+    };
+
+    if(stepId==='wolves'){
+      const nonWolves=alive.filter(p=>!isWolfRole(p.role,gameState));
+      if(!nonWolves.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
+      if(myRole==='wolffather'&&!gameState.wolffatherUsed){
+        addNightBtn('🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>submitAction({type:'kill',target:targetId}));
+        addNightBtn('🦠 '+(lang==='ar'?'عدوى':lang==='fr'?'Infecter':'Infect')+' '+tname,'special',()=>submitAction({type:'wolffather_infect',target:targetId}));
+      } else if(myRole==='alphawolf'&&!gameState.alphawolfUsed){
+        addNightBtn('🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>submitAction({type:'kill',target:targetId}));
+        addNightBtn('👑 '+(lang==='ar'?'حوّل':lang==='fr'?'Convertir':'Convert')+' '+tname,'special',()=>submitAction({type:'alphawolf_convert',target:targetId}));
+      } else {
+        addNightBtn('🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>submitAction({type:'kill',target:targetId}));
+      }
+    } else if(stepId==='bigbadwolf'){
+      const wolfVictimId=gameState.nightActions?._wolfVictim;
+      if(isWolfRole(tp?.role,gameState)||targetId===wolfVictimId){ closeCirclePopup(); return; }
+      addNightBtn('🐺🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>{
+        const data={type:'bigbad_kill',target:targetId,by:myId,ts:Date.now()};
+        if(fbOk&&db&&roomCode){ const u={}; u[`games/${roomCode}/nightActions/_bigbadAction`]=data; u[`games/${roomCode}/nightActions/_bigbadVictim`]=targetId; db.ref().update(u); }
+        else if(gameState){ if(!gameState.nightActions) gameState.nightActions={}; gameState.nightActions._bigbadAction=data; gameState.nightActions._bigbadVictim=targetId; checkTurnComplete(); renderGame(); }
+      });
+    } else if(stepId==='whitewerewolf'){
+      if(!isWolfRole(tp?.role,gameState)||tp?.role==='whitewerewolf'){ closeCirclePopup(); return; }
+      addNightBtn('🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>submitAction({type:'ww_kill',target:targetId}));
+    } else if(stepId==='seer'||stepId==='apprenticeseer'){
+      if(!alive.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
+      addNightBtn('🔮 '+(lang==='ar'?'تحقق':lang==='fr'?'Voir':'See')+' '+tname,'seer',()=>{
+        const role=gameState.players[targetId]?.role||'unknown';
+        let isWolf=isWolfRole(role,gameState);
+        if(role==='corruptedbutcher') isWolf=false;
+        if(gameState.gypsyBlackCloud){ setTimeout(()=>alert('🔮 '+tname+': '+(lang==='ar'?'☁️ الرؤية مشوشة!':lang==='fr'?'☁️ Vision brouillée!':'☁️ Vision is clouded!')),100); submitAction({type:'seer',target:targetId,result:'clouded'}); return; }
+        const result=lang==='ar'?(isWolf?'🐺 ذئب':'✓ بريء'):lang==='fr'?(isWolf?'🐺 Loup':'✓ Innocent'):(isWolf?'🐺 Werewolf':'✓ Innocent');
+        submitAction({type:'seer',target:targetId,result});
+        setTimeout(()=>alert('🔮 '+tname+': '+result),100);
+      });
+    } else if(stepId==='bodyguard'){
+      const lastProtected=gameState.nightActions?._bodyguardLast;
+      if(targetId===lastProtected){ closeCirclePopup(); return; }
+      addNightBtn('🛡 '+(lang==='ar'?'احمِ':lang==='fr'?'Protéger':'Protect')+' '+tname,'protect',()=>submitAction({type:'protect',target:targetId}));
+    } else if(stepId==='savior'){
+      const lastSaved=gameState.nightActions?._saviorLast;
+      if(targetId===lastSaved){ closeCirclePopup(); return; }
+      addNightBtn('✨ '+(lang==='ar'?'أنقذ':lang==='fr'?'Sauver':'Save')+' '+tname,'protect',()=>submitAction({type:'savior_save',target:targetId}));
+    } else if(stepId==='witch'){
+      const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
+      const wolfVictimId=gameState.nightActions?._wolfVictim;
+      const bigbadVictimId=gameState.nightActions?._bigbadVictim;
+      let hasBtns=false;
+      if(potions.life&&(targetId===wolfVictimId||targetId===bigbadVictimId)){
+        addNightBtn('💚 '+(lang==='ar'?'أنقذ':lang==='fr'?'Sauver':'Save')+' '+tname,'protect',()=>submitWitch('save',targetId));
+        hasBtns=true;
+      }
+      if(potions.death&&targetId!==wolfVictimId&&targetId!==bigbadVictimId&&!isWolfRole(tp?.role,gameState)){
+        addNightBtn('🔴 '+(lang==='ar'?'سمّ':lang==='fr'?'Empoisonner':'Poison')+' '+tname,'vote',()=>submitWitch('poison',targetId));
+        hasBtns=true;
+      }
+      if(!hasBtns){ closeCirclePopup(); return; }
+    } else if(stepId==='fluteplayer'){
+      const enchanted=(gameState.nightActions?._fluteEnchanted||[]);
+      const thisNight=(gameState.nightActions?._fluteThisNight||[]);
+      if(enchanted.includes(targetId)||thisNight.includes(targetId)||targetId===myId){ closeCirclePopup(); return; }
+      addNightBtn('🎶 '+(lang==='ar'?'اسحر':lang==='fr'?'Enchanter':'Enchant')+' '+tname,'special',()=>{
+        const curThisNight=(gameState.nightActions?._fluteThisNight||[]);
+        const curEnchanted=(gameState.nightActions?._fluteEnchanted||[]);
+        if(curThisNight.includes(targetId)){ return; }
+        const newThisNight=[...curThisNight,targetId];
+        if(newThisNight.length>=2){
+          const newEnchanted=[...new Set([...curEnchanted,...newThisNight])];
+          const data={type:'flute',target:newThisNight[0],by:myId,ts:Date.now()};
+          const upd={};
+          if(fbOk&&db&&roomCode){ upd[`games/${roomCode}/nightActions/_fluteThisNight`]=newThisNight; upd[`games/${roomCode}/nightActions/_fluteEnchanted`]=newEnchanted; upd[`games/${roomCode}/nightActions/${myId}`]=data; db.ref().update(upd); }
+          else if(gameState){ if(!gameState.nightActions) gameState.nightActions={}; gameState.nightActions._fluteThisNight=newThisNight; gameState.nightActions._fluteEnchanted=newEnchanted; gameState.nightActions[myId]=data; checkTurnComplete(); renderGame(); }
+        } else {
+          if(fbOk&&db&&roomCode){ db.ref(`games/${roomCode}/nightActions/_fluteThisNight`).set(newThisNight); }
+          else if(gameState){ if(!gameState.nightActions) gameState.nightActions={}; gameState.nightActions._fluteThisNight=newThisNight; renderGame(); }
+        }
+      });
+    } else if(stepId==='crow'){
+      if(!alive.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
+      addNightBtn('🐦‍⬛ '+(lang==='ar'?'اتهم':lang==='fr'?'Accuser':'Accuse')+' '+tname,'vote',()=>submitAction({type:'crow',target:targetId}));
+    } else {
+      // Generic: target any alive non-self player
+      if(!alive.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
+      addNightBtn('🌙 '+(lang==='ar'?'اختر':lang==='fr'?'Choisir':'Choose')+' '+tname,'special',()=>submitAction({type:stepId,target:targetId}));
+    }
+
+    // Cancel button
+    const cb=document.createElement('button');
+    cb.className='pc-vote-btn discard';
+    cb.innerHTML=`&#x2716; ${lang==='ar'?'إلغاء':lang==='fr'?'Annuler':'Cancel'}`;
+    cb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); };
+    popup.appendChild(cb);
+
+  } else {
+    // ── DAY: voting popup ──
+    const maireId=gameState?.maire;
+    const maireAlive=maireId && gameState?.players?.[maireId]?.alive;
+    const maireCandidates=gameState?.maireCandidates||{};
+    const candidateIds=Object.keys(maireCandidates).filter(cId=>gameState?.players?.[cId]?.alive);
+    const mayorPending=!maireAlive && candidateIds.length>0;
+    const alreadyVotedElim=!!gameState?.dayVotes?.[myId];
+    const alreadyVotedMayor=!!(gameState?.maireVotes?.[myId]);
+    const isCandidate=!!maireCandidates[targetId];
+
+    if(mayorPending && isCandidate && !alreadyVotedMayor){
+      const mb=document.createElement('button');
+      mb.className='pc-vote-btn mayor';
+      mb.innerHTML=`&#x1F451; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x639;&#x645;&#x62F;&#x629;':lang==='fr'?'Voter Maire':'Vote Mayor'}`;
+      mb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); doMaireVote(targetId); };
+      popup.appendChild(mb);
+    }
+
+    if(!mayorPending && !alreadyVotedElim){
+      const vb=document.createElement('button');
+      vb.className='pc-vote-btn vote';
+      vb.innerHTML=`&#x1F5F3; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x625;&#x642;&#x635;&#x627;&#x621;':lang==='fr'?'&#xC9;liminer':'Vote Out'}`;
+      vb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); doVote(targetId); };
+      popup.appendChild(vb);
+    }
+
+    const db2=document.createElement('button');
+    db2.className='pc-vote-btn discard';
+    db2.innerHTML=`&#x2716; ${lang==='ar'?'&#x625;&#x644;&#x63A;&#x627;&#x621;':lang==='fr'?'Annuler':'Discard'}`;
+    db2.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); };
+    popup.appendChild(db2);
   }
 
-  // Elimination vote button
-  if(!mayorPending && !alreadyVotedElim){
-    const vb=document.createElement('button');
-    vb.className='pc-vote-btn vote';
-    vb.innerHTML=`&#x1F5F3; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x625;&#x642;&#x635;&#x627;&#x621;':lang==='fr'?'&#xC9;liminer':'Vote Out'}`;
-    vb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); doVote(targetId); };
-    popup.appendChild(vb);
-  }
-
-  // Discard button
-  const db2=document.createElement('button');
-  db2.className='pc-vote-btn discard';
-  db2.innerHTML=`&#x2716; ${lang==='ar'?'&#x625;&#x644;&#x63A;&#x627;&#x621;':lang==='fr'?'Annuler':'Discard'}`;
-  db2.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); };
-  popup.appendChild(db2);
+  if(popup.children.length===0){ closeCirclePopup(); return; }
 
   node.style.zIndex='10';
   node.appendChild(popup);
@@ -2328,7 +2468,9 @@ function renderPhase(){
   const ph=gameState.phase;
   const ab=document.getElementById('actionBtns');
   ab.innerHTML='';
-  ab._nightGrid=null;
+
+  // Hide the action-buttons panel during night (actions are done via circle node popups)
+  ab.style.display = ph==='night' ? 'none' : 'flex';
 
   if(ph==='day'){
     document.getElementById('phaseTitle').textContent=tr('ph_day');
@@ -2479,7 +2621,7 @@ function renderPhase(){
         renderGame();
       }
     }));
-    addBtn(ab, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','skip',()=>{
+    addBtn(ab, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>{
       const data={type:'skip',by:myId,ts:Date.now()};
       if(fbOk&&db&&roomCode){
         db.ref(`games/${roomCode}/nightActions/_bigbadAction`).set(data);
@@ -2619,7 +2761,7 @@ function renderPhase(){
   else if(stepId==='thief'){
     const extras=gameState.thiefCards||[];
     if(extras.length){
-      extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'skip',()=>submitAction({type:'thief',take:r})); });
+      extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'special',()=>submitAction({type:'thief',take:r})); });
     } else { addSkipBtn(ab); }
   }
   // ── WILDCHILD ──
@@ -2631,8 +2773,8 @@ function renderPhase(){
   }
   // ── WOLFHOUND ──
   else if(stepId==='wolfhound'){
-    addBtn(ab,lang==='ar'?'قروي':lang==='fr'?'Villageois':'Villager','skip',()=>submitAction({type:'wolfhound_choose',pick:'villager'}));
-    addBtn(ab,lang==='ar'?'ذئب':lang==='fr'?'Loup-Garou':'Werewolf','skip',()=>submitAction({type:'wolfhound_choose',pick:'werewolf'}));
+    addBtn(ab,lang==='ar'?'قروي':lang==='fr'?'Villageois':'Villager','protect',()=>submitAction({type:'wolfhound_choose',pick:'villager'}));
+    addBtn(ab,lang==='ar'?'ذئب':lang==='fr'?'Loup-Garou':'Werewolf','kill',()=>submitAction({type:'wolfhound_choose',pick:'werewolf'}));
   }
   // ── FOX ──
   else if(stepId==='fox'){
@@ -2769,7 +2911,7 @@ function renderPhase(){
         }
       });
     });
-    if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','skip',()=>submitAction({type:'pyro_ignite'}));
+    if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','kill',()=>submitAction({type:'pyro_ignite'}));
     addSkipBtn(ab);
   }
   // ── PUPPETEER ──
@@ -2897,7 +3039,7 @@ function renderPhase(){
     labelEl.textContent=lang==='ar'?'اختر حدثاً خاصاً':lang==='fr'?'Choisissez un événement spécial':'Choose a special event';
     ab.appendChild(labelEl);
     events.forEach(ev=>{
-      addBtn(ab,ev.label[lang]||ev.label.en,'skip',()=>{
+      addBtn(ab,ev.label[lang]||ev.label.en,'special',()=>{
         submitAction({type:'gypsy_event',event:ev.id});
         setTimeout(()=>alert('🔯 '+(lang==='ar'?'تم تفعيل الحدث!':lang==='fr'?'Événement activé !':'Event activated!')),100);
       });
@@ -2913,7 +3055,7 @@ function renderPhase(){
     ab.appendChild(labelEl);
     actorCards.forEach(r=>{
       const rd=ROLES_DEF[r]||{};
-      addBtn(ab,(rd.e||'')+' '+tr(r),'skip',()=>{
+      addBtn(ab,(rd.e||'')+'  '+tr(r),'special',()=>{
         submitAction({type:'actor_switch',take:r});
         setTimeout(()=>alert('🎪 '+(lang==='ar'?'أصبحت: ':lang==='fr'?'Vous êtes maintenant : ':'You are now: ')+tr(r)),100);
       });
@@ -2922,45 +3064,16 @@ function renderPhase(){
   }
 }
 
-function addBtn(container, label, type, onclick, isPlayerCard){
-  // For player-targeting night actions, use vote-card style
-  if(isPlayerCard || (type==='kill'||type==='seer'||type==='protect'||type==='save'||type==='special')){
-    // Check if container already has a vote-grid, if not create one
-    let grid=container._nightGrid;
-    if(!grid){
-      grid=document.createElement('div');
-      grid.className='vote-grid';
-      container.appendChild(grid);
-      container._nightGrid=grid;
-    }
-    const card=document.createElement('div');
-    card.className='vote-card night-target-card';
-    // Icon based on action type
-    const icon=type==='kill'?'🎯':type==='seer'?'🔮':type==='save'?'💊':type==='protect'?'🛡':type==='special'?'✨':'👉';
-    // Color indicator
-    const colorMap={kill:'var(--blood-glow)',seer:'var(--moon)',save:'var(--green)',protect:'#60a5fa',special:'#a78bfa'};
-    const borderColor=colorMap[type]||'rgba(255,255,255,.2)';
-    card.style.cssText=`border-color:${borderColor};cursor:pointer;`;
-    card.innerHTML=`<div class="vc-dot" style="background:${borderColor}"></div><span class="vc-name">${label}</span><div class="vc-count" style="color:${borderColor};font-size:.7rem">${icon}</div>`;
-    card.onclick=onclick;
-    // Hover effect
-    card.addEventListener('mouseenter',()=>{card.style.transform='translateY(-2px)';card.style.boxShadow=`0 4px 20px ${borderColor}55`;});
-    card.addEventListener('mouseleave',()=>{card.style.transform='';card.style.boxShadow='';});
-    grid.appendChild(card);
-  } else {
-    // Non-player action (skip, wolfhound choice, etc.) — keep as regular button
-    const btn=document.createElement('button');
-    btn.className='btn'+(type==='protect'?' btn-secondary':'');
-    btn.style.cssText='font-size:.82rem;padding:.45rem .9rem;margin:.2rem;'+(type==='save'?'background:var(--green);':type==='seer'?'background:var(--purple);border:1px solid var(--moon);':'');
-    btn.textContent=label;
-    btn.onclick=onclick;
-    container.appendChild(btn);
-  }
+function addBtn(container, label, type, onclick){
+  const btn=document.createElement('button');
+  btn.className='btn'+(type==='protect'?' btn-secondary':'');
+  btn.style.cssText='font-size:.82rem;padding:.45rem .9rem;margin:.2rem;'+(type==='save'?'background:var(--green);':type==='seer'?'background:var(--purple);border:1px solid var(--moon);':'');
+  btn.textContent=label;
+  btn.onclick=onclick;
+  container.appendChild(btn);
 }
 function addSkipBtn(container){
-  // Skip is a regular button, not a player card - clear grid reference so it goes outside
-  container._nightGrid=null;
-  addBtn(container, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','skip',()=>submitAction({type:'skip'}));
+  addBtn(container, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>submitAction({type:'skip'}));
 }
 
 // Write action to Firebase or local without marking "done"
