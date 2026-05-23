@@ -3857,7 +3857,7 @@ function resolveDayAndAdvance(){
     _phaseTransBlocked=true;
 
     setTimeout(()=>{
-      db.ref().update(upd,()=>{\
+      db.ref().update(upd,()=>{
         // After write, kick off first night turn (only if no win)
         if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
       });
