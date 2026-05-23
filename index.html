@@ -4670,22 +4670,38 @@ function doCreateOfflineGame(){
   myName=playerName;
   myId='player0';
   
-  // Create 7 bot players
+  // Proper role distribution
+  const roles=['seer','werewolf','villager','witch','hunter','bodyguard','doctor','villager'];
+  
   gameState={
     players:{},
     phase:'setup',
-    roles:Object.keys(ROLES_DEF).slice(0,8),
+    roles:roles,
     chat:[],
     teamChat:{},
     nightActions:{},
     dayVotes:{},
+    maireCandidates:{},
     isOffline:true,
-    difficulty:botDifficulty
+    difficulty:botDifficulty,
+    dayNum:0,
+    nightNum:1,
+    nightTurn:null
   };
   
-  const playerList=['villager','werewolf','seer','witch','hunter','bodyguard','doctor','savior'];
-  for(let i=0;i<8;i++){
-    const role=playerList[i];
+  // Add player
+  gameState.players[myId]={
+    id:myId,
+    name:myName,
+    role:'seer',
+    alive:true,
+    team:ROLES_DEF['seer'].team,
+    isBot:false
+  };
+  
+  // Add 7 bots
+  for(let i=0;i<7;i++){
+    const role=roles[i+1];
     gameState.players['bot'+i]={
       id:'bot'+i,
       name:BOT_NAMES[i],
@@ -4695,19 +4711,14 @@ function doCreateOfflineGame(){
       isBot:true
     };
   }
-  gameState.players[myId]={
-    id:myId,
-    name:myName,
-    role:'seer',
-    alive:true,
-    team:'village',
-    isBot:false
-  };
   
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
-  renderGame();
-  setTimeout(()=>doStartGame(),500);
+  
+  setTimeout(()=>{
+    renderGame();
+    setTimeout(()=>doStartGame(),400);
+  },300);
 }
 
 function getBotAction(botId){
@@ -4753,27 +4764,19 @@ function getBotAction(botId){
 
 function processBotActions(){
   if(!offlineGameMode) return;
-  Object.keys(gameState.players).forEach(pid=>{
-    const bot=gameState.players[pid];
-    if(bot.isBot&&bot.alive){
-      const action=getBotAction(pid);
-      if(action&&!gameState.nightActions[pid]){
-        gameState.nightActions[pid]={type:'action',target:action,by:pid,ts:Date.now()};
+  setTimeout(()=>{
+    Object.keys(gameState.players).forEach(pid=>{
+      const bot=gameState.players[pid];
+      if(bot.isBot&&bot.alive){
+        const action=getBotAction(pid);
+        if(action&&!gameState.nightActions[pid]){
+          gameState.nightActions[pid]={type:'action',target:action,by:pid,ts:Date.now()};
+        }
       }
-    }
-  });
-  setTimeout(()=>advanceNightTurn(null),1500);
+    });
+    checkTurnComplete();
+  },800);
 }
-
-// Override night turn advance for offline
-const _originalAdvanceNightTurn=window.advanceNightTurn||null;
-window.advanceNightTurn=function(stepIndex){
-  if(offlineGameMode&&gameState.phase==='night'&&stepIndex===0){
-    processBotActions();
-    return;
-  }
-  if(_originalAdvanceNightTurn) _originalAdvanceNightTurn(stepIndex);
-};
 
 // ════════════════════════════════════════════
 // BOOT
