@@ -2329,6 +2329,8 @@ function renderPhase(){
   const ab=document.getElementById('actionBtns');
   ab.innerHTML='';
   ab._nightGrid=null;
+
+  if(ph==='day'){
     document.getElementById('phaseTitle').textContent=tr('ph_day');
     // Bear Tamer dawn signal
     const bearMsg=gameState.bearSignal
