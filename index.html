@@ -2182,7 +2182,8 @@ function renderPlayerList(players){
     const y=cy+radius*Math.sin(angle);
     const isMe=p.id===myId;
     const isDead=!p.alive;
-    const isNightClickable = isMyNightTurn && !nightAlreadyActed && !isDead && !isMe;
+    const isWitchTurn = isMyNightTurn && nightStepId==='witch';
+    const isNightClickable = isMyNightTurn && !nightAlreadyActed && !isDead && (isWitchTurn ? true : !isMe);
     const isClickable = (canVote && !isDead && !isMe) || isNightClickable;
     const myEliVote=dayVotes[myId]?.target===p.id;
     const myMayorVote=maireVotes[myId]?.target===p.id;
@@ -2318,16 +2319,31 @@ function circleNodeClick(event, targetId){
       const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
       const wolfVictimId=gameState.nightActions?._wolfVictim;
       const bigbadVictimId=gameState.nightActions?._bigbadVictim;
-      let hasBtns=false;
+      const infectionHappened=Object.values(gameState.nightActions||{}).some(a=>a?.type==='wolffather_infect');
+      const allPlayers=Object.values(gameState.players||{});
+
+      // Always show context info at top of popup (victim + infection)
+      const infoDiv=document.createElement('div');
+      infoDiv.style.cssText='font-size:.75rem;color:var(--moon-pale);padding:.35rem .5rem;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:5px;margin-bottom:2px;text-align:center;line-height:1.5';
+      const victimName=wolfVictimId?(gameState.players?.[wolfVictimId]?.name||'?'):null;
+      const bigbadVictimName=bigbadVictimId?(gameState.players?.[bigbadVictimId]?.name||'?'):null;
+      const lifeIcon=potions.life?'🟢':'⚫'; const deathIcon=potions.death?'🔴':'⚫';
+      let infoHtml=`${lifeIcon} ${lang==='ar'?'حياة':lang==='fr'?'Vie':'Life'} &nbsp;${deathIcon} ${lang==='ar'?'موت':lang==='fr'?'Mort':'Death'}`;
+      if(victimName) infoHtml+=`<br>🐺 ${lang==='ar'?'ضحية':lang==='fr'?'Victime':'Victim'}: <strong>${victimName}</strong>${bigbadVictimName&&bigbadVictimName!==victimName?' + <strong>'+bigbadVictimName+'</strong>':''}`;
+      else infoHtml+=`<br>${lang==='ar'?'لا ضحية حتى الآن':lang==='fr'?'Pas de victime encore':'No victim yet'}`;
+      if(infectionHappened) infoHtml+=`<br>🦠 ${lang==='ar'?'عدوى حدثت!':lang==='fr'?'Infection cette nuit!':'Infection occurred!'}`;
+      infoDiv.innerHTML=infoHtml;
+      popup.appendChild(infoDiv);
+
+      // Save button — only for victims
       if(potions.life&&(targetId===wolfVictimId||targetId===bigbadVictimId)){
         addNightBtn('💚 '+(lang==='ar'?'أنقذ':lang==='fr'?'Sauver':'Save')+' '+tname,'protect',()=>submitWitch('save',targetId));
-        hasBtns=true;
       }
-      if(potions.death&&targetId!==wolfVictimId&&targetId!==bigbadVictimId&&!isWolfRole(tp?.role,gameState)){
+      // Poison button — any alive player (including witch herself), not the wolf victim, not a wolf
+      const tpAlive=allPlayers.find(p=>p.id===targetId&&p.alive);
+      if(potions.death&&tpAlive&&targetId!==wolfVictimId&&targetId!==bigbadVictimId){
         addNightBtn('🔴 '+(lang==='ar'?'سمّ':lang==='fr'?'Empoisonner':'Poison')+' '+tname,'vote',()=>submitWitch('poison',targetId));
-        hasBtns=true;
       }
-      if(!hasBtns){ closeCirclePopup(); return; }
     } else if(stepId==='fluteplayer'){
       const enchanted=(gameState.nightActions?._fluteEnchanted||[]);
       const thisNight=(gameState.nightActions?._fluteThisNight||[]);
