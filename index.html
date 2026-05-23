@@ -170,6 +170,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   border-radius:50%;width:18px;height:18px;font-size:.62rem;display:flex;align-items:center;
   justify-content:center;font-family:'Creepster',cursive;border:1px solid var(--abyss);z-index:4}
 .pc-mayor-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.9rem;z-index:4}
+.pc-mayor-x2-badge{position:absolute;bottom:-2px;right:-4px;background:var(--moon);color:var(--void);font-size:.5rem;font-weight:700;padding:1px 4px;border-radius:4px;z-index:4;letter-spacing:.02em;box-shadow:0 0 6px rgba(212,160,23,.5)}
 .pi{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;background:var(--purple);border:1px solid var(--moon);border-radius:4px;margin-bottom:.35rem;font-size:.88rem}
 .pstatus{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .pstatus.alive{background:var(--green)}
@@ -2267,6 +2268,9 @@ function renderPlayerList(players){
     }
     html+=`<div class="pc-status-dot ${p.alive?'alive':'dead'}"></div>`;
     if(voteCount>0) html+=`<div class="pc-vote-count">${voteCount}</div>`;
+    // Show ×2 badge if the mayor has voted on this player (matching crow +2 style)
+    const mayorVotedOnThis = !mayorPending && !!maireId && Object.values(dayVotes).some(a=>a?.type==='vote'&&a.target===p.id&&a.by===maireId&&(a.voteWeight||1)>=2);
+    if(mayorVotedOnThis) html+=`<div class="pc-mayor-x2-badge">&#x1F451;&#xD7;2</div>`;
     if(isMayor) html+=`<div class="pc-mayor-crown">&#x1F451;</div>`;
     html+=`</div>`;
     html+=`<div class="pc-name-box">`;
@@ -3772,13 +3776,17 @@ function renderDayVoting(){
         const v=tally[p.id]||0;
         const isCrowAccused=crowAccused&&crowAccused===p.id;
         const regularVoters=(voterMap[p.id]||[]).filter(vt=>!vt.isCrow);
-        const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
+        const dots=regularVoters.map(vt=>{
+          const mayorMark=vt.weight>=2?` <span style="color:var(--moon);font-weight:700;font-size:.7rem">×2</span>`:'';
+          return `<span style="display:inline-flex;align-items:center;gap:.1rem"><span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>${mayorMark}</span>`;
+        }).join('');
         const crowBadge=isCrowAccused?`<span style="color:#f59e0b;font-size:.85rem;font-weight:700;display:block;margin-top:.15rem">🐦‍⬛ +2</span>`:'';
+        const mayorBadge=regularVoters.some(vt=>vt.weight>=2)?`<span style="color:var(--moon);font-size:.78rem;font-weight:700;display:block;margin-top:.1rem">👑 ×2</span>`:'';
         html+=`<div class="vote-card${v>0||isCrowAccused?' has-votes':''}" style="cursor:default;${isCrowAccused?'border:2px solid #f59e0b;box-shadow:0 0 10px rgba(245,158,11,.3);':''}">
           <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
           <span class="vc-name">${p.name}</span>
           <div class="vc-count">${v>0?v+' vote'+(v>1?'s':''):isCrowAccused?'2 votes':''}</div>
-          ${crowBadge}
+          ${crowBadge}${mayorBadge}
           <div class="vc-dots">${dots}</div>
         </div>`;
       });
