@@ -2390,8 +2390,9 @@ function circleNodeClick(event, targetId){
     const alreadyVotedElim=!!gameState?.dayVotes?.[myId];
     const alreadyVotedMayor=!!(gameState?.maireVotes?.[myId]);
     const isCandidate=!!maireCandidates[targetId];
+    const iAmCandidate=!!maireCandidates[myId];
 
-    if(mayorPending && isCandidate && !alreadyVotedMayor){
+    if(mayorPending && isCandidate && !alreadyVotedMayor && !iAmCandidate){
       const mb=document.createElement('button');
       mb.className='pc-vote-btn mayor';
       mb.innerHTML=`&#x1F451; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x639;&#x645;&#x62F;&#x629;':lang==='fr'?'Voter Maire':'Vote Mayor'}`;
@@ -4255,6 +4256,9 @@ function voteMaire(candidateId){
   if(!myId) return;
   const me=gameState?.players?.[myId];
   if(!me?.alive) return; // dead can't vote
+  // Candidates cannot vote in the mayor election
+  const candidates=gameState?.maireCandidates||{};
+  if(candidates[myId]) return;
   const vote={target:candidateId,by:myId,ts:Date.now()};
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/maireVotes/${myId}`).set(vote);
@@ -4273,11 +4277,15 @@ function checkMaireElection(){
   const players=Object.values(gameState.players||{});
   const alive=players.filter(p=>p.alive);
   const aliveIds=new Set(alive.map(p=>p.id));
+  const candidates=gameState.maireCandidates||{};
+  const candidateIds=new Set(Object.keys(candidates));
   const maireVotes=gameState.maireVotes||{};
-  // Only count votes from alive players
-  const aliveVoters=Object.keys(maireVotes).filter(pid=>aliveIds.has(pid));
-  // Elect when all alive players have voted
-  if(aliveVoters.length<alive.length) return;
+  // Only count votes from alive non-candidate players
+  const aliveVoters=Object.keys(maireVotes).filter(pid=>aliveIds.has(pid)&&!candidateIds.has(pid));
+  // Eligible voters = alive players who are NOT candidates
+  const eligibleVoters=alive.filter(p=>!candidateIds.has(p.id));
+  // Elect when all eligible voters have voted
+  if(aliveVoters.length<eligibleVoters.length) return;
   // Tally (only alive votes)
   const tally={};
   aliveVoters.forEach(pid=>{
