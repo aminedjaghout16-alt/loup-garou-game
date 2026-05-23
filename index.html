@@ -2425,7 +2425,21 @@ function circleNodeClick(event, targetId){
       });
     } else if(stepId==='crow'){
       if(!alive.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
-      addNightBtn('🐦‍⬛ '+(lang==='ar'?'اتهم':lang==='fr'?'Accuser':'Accuse')+' '+tname,'vote',()=>submitAction({type:'crow',target:targetId}));
+      addNightBtn('🐦‍⬛ '+(lang==='ar'?'اتهم':lang==='fr'?'Accuser':'Accuse')+' '+tname,'vote',()=>{
+        const data={type:'crow_accuse',target:targetId,by:myId,ts:Date.now()};
+        if(fbOk&&db&&roomCode){
+          const upd={};
+          upd[`games/${roomCode}/nightActions/${myId}`]=data;
+          upd[`games/${roomCode}/crowAccused`]=targetId;
+          db.ref().update(upd);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions[myId]=data;
+          gameState.crowAccused=targetId;
+          checkTurnComplete();
+          renderGame();
+        }
+      });
     } else {
       // Generic: target any alive non-self player
       if(!alive.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
