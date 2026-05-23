@@ -265,6 +265,25 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 @keyframes ptSunSpin{0%,100%{filter:drop-shadow(0 0 30px #d4a017) rotate(0deg)}50%{filter:drop-shadow(0 0 60px #ffe566) rotate(20deg)}}
 @keyframes ptMoonPulse{0%,100%{filter:drop-shadow(0 0 20px #7c3aed)}50%{filter:drop-shadow(0 0 55px #a78bfa)}}
 
+/* ── GAME START INTRO ANIMATION ── */
+#gameStartOverlay{position:fixed;inset:0;z-index:10500;display:none;align-items:center;justify-content:center;pointer-events:all;background:#000;flex-direction:column;gap:0}
+#gameStartOverlay.active{display:flex}
+.gs-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,#1a0a2e 0%,#04040f 70%);opacity:0;animation:gsBgIn .6s ease forwards}
+.gs-particles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.gs-particle{position:absolute;border-radius:50%;animation:gsParticleFloat linear infinite;opacity:0}
+.gs-content{position:relative;z-index:2;text-align:center;opacity:0;transform:scale(.3) translateY(40px);animation:gsContentIn .8s .4s cubic-bezier(.17,.67,.1,1.35) forwards}
+.gs-wolf{font-size:6rem;display:block;margin-bottom:.5rem;filter:drop-shadow(0 0 40px #8b0000);animation:gsWolfPulse 1.2s .9s ease infinite}
+.gs-title{font-family:'Creepster',cursive;font-size:3.8rem;letter-spacing:.12em;display:block;color:var(--blood-glow);text-shadow:0 0 30px #8b0000,0 0 80px #b91c1c;margin-bottom:.3rem}
+.gs-sub{font-family:'Creepster',cursive;font-size:1.2rem;letter-spacing:.3em;color:var(--moon-pale);display:block;opacity:0;animation:gsFadeUp .5s 1.1s ease forwards}
+.gs-bar-wrap{width:220px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin:1.6rem auto 0;overflow:hidden;opacity:0;animation:gsFadeUp .4s 1.3s ease forwards}
+.gs-bar{height:100%;background:linear-gradient(90deg,var(--blood-glow),var(--moon));width:0;animation:gsBarFill 2.2s 1.4s ease forwards}
+@keyframes gsBgIn{to{opacity:1}}
+@keyframes gsContentIn{to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes gsWolfPulse{0%,100%{filter:drop-shadow(0 0 30px #8b0000)}50%{filter:drop-shadow(0 0 70px #ef4444) drop-shadow(0 0 120px #b91c1c)}}
+@keyframes gsFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes gsBarFill{to{width:100%}}
+@keyframes gsParticleFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:.6}90%{opacity:.3}100%{transform:translateY(-20px) scale(1.2);opacity:0}}
+
 /* ── ENHANCED KILL ANIMATION ── */
 #killOverlay{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;pointer-events:none}
 #killOverlay.active{display:flex;animation:killBgFlash .15s ease forwards}
@@ -449,6 +468,18 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
     <span class="ptrans-icon" id="ptransIcon">🌙</span>
     <span class="ptrans-label" id="ptransLabel">NIGHT</span>
     <span class="ptrans-sub" id="ptransSub">The village sleeps…</span>
+  </div>
+</div>
+
+<!-- ══ GAME START INTRO OVERLAY ══ -->
+<div id="gameStartOverlay">
+  <div class="gs-bg"></div>
+  <div class="gs-particles" id="gsParticles"></div>
+  <div class="gs-content">
+    <span class="gs-wolf">🐺</span>
+    <span class="gs-title" id="gsTitle">LOUP-GAROU</span>
+    <span class="gs-sub" id="gsSub">THE GAME BEGINS…</span>
+    <div class="gs-bar-wrap"><div class="gs-bar"></div></div>
   </div>
 </div>
 
@@ -885,32 +916,71 @@ function showKillFlash(){
 // PHASE TRANSITION ANIMATION
 // ════════════════════════════════════════════
 let _lastPhase=null;
-function maybeShowPhaseTransition(newPhase){
+let _phaseTransBlocked=false; // when true, night/day overlay is suppressed (used during elimination)
+
+function maybeShowPhaseTransition(newPhase, delayMs){
   if(!newPhase || newPhase===_lastPhase || _lastPhase===null){ _lastPhase=newPhase; return; }
+  if(_phaseTransBlocked){ _lastPhase=newPhase; return; } // swallow overlapping transition
   const fromPhase=_lastPhase;
   _lastPhase=newPhase;
-  const ov=document.getElementById('phaseTransOverlay');
-  const icon=document.getElementById('ptransIcon');
-  const label=document.getElementById('ptransLabel');
-  const sub=document.getElementById('ptransSub');
-  ov.classList.remove('to-day','to-night','active');
-  if(newPhase==='day'){
-    icon.textContent='☀️';
-    label.textContent=lang==='ar'?'النهار':lang==='fr'?'JOUR':'DAY';
-    sub.textContent=lang==='ar'?'القرية تستيقظ…':lang==='fr'?'Le village se réveille…':'The village awakens…';
-    ov.classList.add('to-day');
-  } else {
-    icon.textContent='🌙';
-    label.textContent=lang==='ar'?'الليل':lang==='fr'?'NUIT':'NIGHT';
-    sub.textContent=lang==='ar'?'القرية تنام…':lang==='fr'?'Le village s\'endort…':'Darkness falls…';
-    ov.classList.add('to-night');
+  const show=()=>{
+    const ov=document.getElementById('phaseTransOverlay');
+    const icon=document.getElementById('ptransIcon');
+    const label=document.getElementById('ptransLabel');
+    const sub=document.getElementById('ptransSub');
+    ov.classList.remove('to-day','to-night','active');
+    if(newPhase==='day'){
+      icon.textContent='☀️';
+      label.textContent=lang==='ar'?'النهار':lang==='fr'?'JOUR':'DAY';
+      sub.textContent=lang==='ar'?'القرية تستيقظ…':lang==='fr'?'Le village se réveille…':'The village awakens…';
+      ov.classList.add('to-day');
+    } else {
+      icon.textContent='🌙';
+      label.textContent=lang==='ar'?'الليل':lang==='fr'?'NUIT':'NIGHT';
+      sub.textContent=lang==='ar'?'القرية تنام…':lang==='fr'?'Le village s\'endort…':'Darkness falls…';
+      ov.classList.add('to-night');
+    }
+    ov.classList.add('active');
+    setTimeout(()=>{
+      ov.classList.remove('active','to-day','to-night');
+      ov.style.display='none';
+      setTimeout(()=>{ ov.style.display=''; },50);
+    }, 2800);
+  };
+  if(delayMs && delayMs>0) setTimeout(show, delayMs);
+  else show();
+}
+
+function showGameStartAnimation(onDone){
+  const ov=document.getElementById('gameStartOverlay');
+  const title=document.getElementById('gsTitle');
+  const sub=document.getElementById('gsSub');
+  // Localise text
+  title.textContent=lang==='ar'?'لـوب-جـارو':lang==='fr'?'LOUP-GAROU':'LOUP-GAROU';
+  sub.textContent=lang==='ar'?'تبدأ اللعبة…':lang==='fr'?'LE JEU COMMENCE…':'THE GAME BEGINS…';
+  // Spawn particles
+  const pc=document.getElementById('gsParticles');
+  pc.innerHTML='';
+  const colors=['#8b0000','#b91c1c','#d4a017','#7c3aed','#4c1d95'];
+  for(let i=0;i<22;i++){
+    const s=document.createElement('div');
+    s.className='gs-particle';
+    const size=4+Math.random()*10;
+    s.style.cssText=`left:${Math.random()*100}%;width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${2.5+Math.random()*2}s;animation-delay:${Math.random()*1.5}s`;
+    pc.appendChild(s);
   }
   ov.classList.add('active');
+  // Total display: ~4s, then fade out and call onDone
   setTimeout(()=>{
-    ov.classList.remove('active','to-day','to-night');
-    ov.style.display='none';
-    setTimeout(()=>{ ov.style.display=''; },50);
-  }, 2800);
+    ov.style.transition='opacity .5s';
+    ov.style.opacity='0';
+    setTimeout(()=>{
+      ov.classList.remove('active');
+      ov.style.transition='';
+      ov.style.opacity='';
+      if(onDone) onDone();
+    },500);
+  },3800);
 }
 
 // Detect newly dead players and trigger animation
@@ -1291,7 +1361,7 @@ function doRestart(){
   _previousAlive={};
   _lastStepId=null;
   _advancingStep=false;
-  _lastPhase=null;
+  _lastPhase=null; _phaseTransBlocked=false;
 
   // Restore playView DOM so renderGame() can find phaseTitle, actionBtns, playerList etc.
   _resetPlayView();
@@ -1706,7 +1776,7 @@ function doLeave(){
   }
   // Reset all local state
   gameState=null; myRole=null; myId=null; roomCode=null; isLeader=false;
-  _gameOver=false; _previousAlive={}; _lastStepId=null; _advancingStep=false;
+  _gameOver=false; _previousAlive={}; _lastStepId=null; _advancingStep=false; _phaseTransBlocked=false;
   // Clear dynamic UI so stale content never shows on next login
   _resetPlayView();
   const setupView=document.getElementById('setupView');
@@ -1821,8 +1891,10 @@ function _doStartWithPlayers(players){
       console.log('✅ Game started');
       _lastStepId=null;
       _advancingStep=false;
-      _lastPhase=null;
-      setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },600);
+      _lastPhase=null; _phaseTransBlocked=false;
+      showGameStartAnimation(()=>{
+        setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },600);
+      });
     }).catch(err=>{
       const btn=document.getElementById('t_start');
       if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
@@ -1866,9 +1938,11 @@ function _doStartWithPlayers(players){
     }
     _lastStepId=null;
     _advancingStep=false;
-    _lastPhase=null;
+    _lastPhase=null; _phaseTransBlocked=false;
     renderGame();
-    setTimeout(()=>advanceNightTurn(0),600);
+    showGameStartAnimation(()=>{
+      setTimeout(()=>advanceNightTurn(0),600);
+    });
   }
 }
 
@@ -3778,11 +3852,19 @@ function resolveDayAndAdvance(){
       }, DEATH_ANIM_MS + 300);
     }
 
+    // Block the auto phase-transition that would fire when Firebase writes phase:'night'
+    // We'll show it manually after all death animations finish
+    _phaseTransBlocked=true;
+
     setTimeout(()=>{
-      db.ref().update(upd,()=>{
+      db.ref().update(upd,()=>{\
         // After write, kick off first night turn (only if no win)
         if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
       });
+      // Unblock and show night overlay now that death anims are done
+      _phaseTransBlocked=false;
+      _lastPhase='day'; // reset so the transition fires
+      maybeShowPhaseTransition('night');
     }, transDelay);
   } else {
     // Apply eliminations locally
@@ -3799,6 +3881,7 @@ function resolveDayAndAdvance(){
     const elimCountOff=Object.entries(upd).filter(([p,v])=>p.includes('/alive')&&v===false).length;
     const DEATH_ANIM_MS=4200;
     const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 : 400;
+    _phaseTransBlocked=true;
     setTimeout(()=>{
       Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
       gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
@@ -3806,6 +3889,9 @@ function resolveDayAndAdvance(){
       gs.dayVotes={};
       gs.maireCandidates=null;
       gs.maireVotes=null;
+      _phaseTransBlocked=false;
+      _lastPhase='day';
+      maybeShowPhaseTransition('night');
       renderGame();
       setTimeout(()=>advanceNightTurn(0),800);
     }, transDelayOff);
