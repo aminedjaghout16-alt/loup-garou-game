@@ -1940,6 +1940,21 @@ function _doStartWithPlayers(players){
   }
   isLeader = true;
   const roles = assignRoles(n);
+  
+  // For offline mode, just start immediately
+  if(offlineGameMode){
+    players.forEach((p,i)=>{ p.role=roles[i]; });
+    gameState.phase='night';
+    gameState.phaseStart=Date.now();
+    gameState.dayNum=1;
+    gameState.nightTurn={stepId:null,stepIndex:-1,turnStart:Date.now()};
+    gameState.nightActions={};
+    gameState.status='playing';
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
+    return;
+  }
+  
   if(fbOk && db && roomCode){
     const upd={};
     players.forEach((p,i)=>{ upd[`games/${roomCode}/players/${p.id}/role`]=roles[i]; });
@@ -4669,6 +4684,10 @@ function doCreateOfflineGame(){
   botDifficulty=document.getElementById('difficultySelect').value;
   myName=playerName;
   myId='player0';
+  isLeader=true;
+  fbOk=false;
+  db=null;
+  roomCode=null;
   
   // Proper role distribution
   const roles=['seer','werewolf','villager','witch','hunter','bodyguard','doctor','villager'];
@@ -4686,7 +4705,8 @@ function doCreateOfflineGame(){
     difficulty:botDifficulty,
     dayNum:0,
     nightNum:1,
-    nightTurn:null
+    status:'setup',
+    leader:myId
   };
   
   // Add player
