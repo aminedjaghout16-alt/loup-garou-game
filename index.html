@@ -1720,6 +1720,7 @@ async function enterRoom(){
     // Clean up on disconnect
     ref.child(`players/${myId}`).onDisconnect().remove();
     // Live listener
+    let _prevStatus=null;
     ref.on('value', snap=>{
       gameState=snap.val();
       if(gameState?.config) {
@@ -1729,6 +1730,14 @@ async function enterRoom(){
       }
       // Derive leader status from Firebase data
       if(gameState?.leader===myId) isLeader=true;
+      // Show game start animation for non-leaders when game transitions to playing
+      if(!isLeader && _prevStatus==='setup' && gameState?.status==='playing'){
+        renderGame();
+        showGameStartAnimation(()=>{});
+        _prevStatus=gameState?.status;
+        return;
+      }
+      _prevStatus=gameState?.status;
       // Check if maire requested skip day
       if(isLeader && gameState?.maireSkipDay && gameState?.phase==='day'){
         doMaireSkipDay();
