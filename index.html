@@ -994,16 +994,22 @@ function checkForDeaths(players){
   });
   // Update tracking
   players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
-  // Show animation for newly dead players (queue if multiple)
+  // Show animation for newly dead players, then night transition after all finish
   if(newDead.length>0){
-    let delay=0;
+    _phaseTransBlocked=true;
+    let chain=Promise.resolve();
     newDead.forEach(p=>{
-      setTimeout(()=>{
-        showDeathAnimation(p.name, p.role);
-        // If this player is the hunter and it's MY role, show hunter shot overlay
+      chain=chain.then(()=>{
         maybeShowHunterShot(p.id, ()=>{});
-      }, delay);
-      delay+=4200;
+        return showDeathAnimation(p.name, p.role);
+      });
+    });
+    chain.then(()=>{
+      _phaseTransBlocked=false;
+      if(gameState&&gameState.phase==='night'&&_lastPhase!=='night'){
+        _lastPhase='day';
+        maybeShowPhaseTransition('night');
+      }
     });
   }
 }
@@ -3829,10 +3835,6 @@ function resolveDayAndAdvance(){
     else if(wolvesD.length===0&&aliveD.length>0) winD={winner:'village'};
     if(winD) upd[`games/${roomCode}/status`]='gameover:'+(winD.winner);
 
-    // Count how many players just got eliminated (for animation delay)
-    const elimCount=Object.values(upd).filter(v=>v===false).length;
-    const DEATH_ANIM_MS=4200;
-
     // Check if eliminated player is a hunter (who needs to shoot)
     let eliminatedId=null;
     Object.entries(upd).forEach(([path,val])=>{
@@ -3841,33 +3843,12 @@ function resolveDayAndAdvance(){
     });
     const eliminatedPlayer=eliminatedId?gs.players[eliminatedId]:null;
     const isHunter=eliminatedPlayer?.role==='hunter';
-    const hunterExtraDelay=isHunter ? 5000 : 0; // wait for hunter to shoot
 
-    const transDelay=elimCount>0 ? elimCount*DEATH_ANIM_MS + 800 + hunterExtraDelay : 400;
-    const nightTransDelay=elimCount>0 ? transDelay + DEATH_ANIM_MS : transDelay;
-
-    // If eliminated player is the local hunter, show the overlay after their death anim
-    if(isHunter && eliminatedId){
-      setTimeout(()=>{
-        maybeShowHunterShot(eliminatedId, ()=>{});
-      }, DEATH_ANIM_MS + 300);
-    }
-
-    // Block the auto phase-transition that would fire when Firebase writes phase:'night'
+    // Block phase transition — checkForDeaths will unblock and show it after death anims
     _phaseTransBlocked=true;
 
-    // Show death animation first, then night transition after it finishes
-    const deathPromise=eliminatedPlayer
-      ? showDeathAnimation(eliminatedPlayer.name, eliminatedPlayer.role)
-      : Promise.resolve();
-
-    deathPromise.then(()=>{
-      _phaseTransBlocked=false;
-      _lastPhase='day';
-      maybeShowPhaseTransition('night');
-      db.ref().update(upd,()=>{
-        if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
-      });
+    db.ref().update(upd,()=>{
+      if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     });
   } else {
     // Apply eliminations locally
@@ -3881,32 +3862,16 @@ function resolveDayAndAdvance(){
     });
     if(upd[`games/${roomCode}/elderVotedOut`]) gs.elderVotedOut=true;
     if(upd[`games/${roomCode}/wildchildModel`]!==undefined) gs.wildchildModel=upd[`games/${roomCode}/wildchildModel`];
-    const elimCountOff=Object.entries(upd).filter(([p,v])=>p.includes('/alive')&&v===false).length;
+    // Block phase transition — checkForDeaths will unblock and show it after death anims
     _phaseTransBlocked=true;
-    // Get the eliminated player for offline path
-    let elimIdOff=null;
-    Object.entries(upd).forEach(([path,val])=>{
-      const m=path.match(/players\/([^/]+)\/alive/);
-      if(m&&val===false) elimIdOff=m[1];
-    });
-    const elimPlayerOff=elimIdOff?gs.players[elimIdOff]:null;
-    // Show death animation first, then night transition after it finishes
-    const deathPromiseOff=elimPlayerOff
-      ? showDeathAnimation(elimPlayerOff.name, elimPlayerOff.role)
-      : Promise.resolve();
-    deathPromiseOff.then(()=>{
-      _phaseTransBlocked=false;
-      _lastPhase='day';
-      maybeShowPhaseTransition('night');
-      Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
-      gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
-      gs.crowAccused=null;
-      gs.dayVotes={};
-      gs.maireCandidates=null;
-      gs.maireVotes=null;
-      renderGame();
-      setTimeout(()=>advanceNightTurn(0),800);
-    });
+    Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
+    gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
+    gs.crowAccused=null;
+    gs.dayVotes={};
+    gs.maireCandidates=null;
+    gs.maireVotes=null;
+    renderGame();
+    setTimeout(()=>advanceNightTurn(0),800);
   }
 }
 
