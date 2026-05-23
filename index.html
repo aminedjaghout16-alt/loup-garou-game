@@ -2328,8 +2328,7 @@ function renderPhase(){
   const ph=gameState.phase;
   const ab=document.getElementById('actionBtns');
   ab.innerHTML='';
-
-  if(ph==='day'){
+  ab._nightGrid=null;
     document.getElementById('phaseTitle').textContent=tr('ph_day');
     // Bear Tamer dawn signal
     const bearMsg=gameState.bearSignal
@@ -2478,7 +2477,7 @@ function renderPhase(){
         renderGame();
       }
     }));
-    addBtn(ab, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>{
+    addBtn(ab, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','skip',()=>{
       const data={type:'skip',by:myId,ts:Date.now()};
       if(fbOk&&db&&roomCode){
         db.ref(`games/${roomCode}/nightActions/_bigbadAction`).set(data);
@@ -2618,7 +2617,7 @@ function renderPhase(){
   else if(stepId==='thief'){
     const extras=gameState.thiefCards||[];
     if(extras.length){
-      extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'special',()=>submitAction({type:'thief',take:r})); });
+      extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'skip',()=>submitAction({type:'thief',take:r})); });
     } else { addSkipBtn(ab); }
   }
   // ── WILDCHILD ──
@@ -2630,8 +2629,8 @@ function renderPhase(){
   }
   // ── WOLFHOUND ──
   else if(stepId==='wolfhound'){
-    addBtn(ab,lang==='ar'?'قروي':lang==='fr'?'Villageois':'Villager','protect',()=>submitAction({type:'wolfhound_choose',pick:'villager'}));
-    addBtn(ab,lang==='ar'?'ذئب':lang==='fr'?'Loup-Garou':'Werewolf','kill',()=>submitAction({type:'wolfhound_choose',pick:'werewolf'}));
+    addBtn(ab,lang==='ar'?'قروي':lang==='fr'?'Villageois':'Villager','skip',()=>submitAction({type:'wolfhound_choose',pick:'villager'}));
+    addBtn(ab,lang==='ar'?'ذئب':lang==='fr'?'Loup-Garou':'Werewolf','skip',()=>submitAction({type:'wolfhound_choose',pick:'werewolf'}));
   }
   // ── FOX ──
   else if(stepId==='fox'){
@@ -2768,7 +2767,7 @@ function renderPhase(){
         }
       });
     });
-    if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','kill',()=>submitAction({type:'pyro_ignite'}));
+    if(doused.length>0) addBtn(ab,lang==='ar'?'🔥 أشعل النار!':lang==='fr'?'🔥 Enflammer !':'🔥 Ignite!','skip',()=>submitAction({type:'pyro_ignite'}));
     addSkipBtn(ab);
   }
   // ── PUPPETEER ──
@@ -2896,7 +2895,7 @@ function renderPhase(){
     labelEl.textContent=lang==='ar'?'اختر حدثاً خاصاً':lang==='fr'?'Choisissez un événement spécial':'Choose a special event';
     ab.appendChild(labelEl);
     events.forEach(ev=>{
-      addBtn(ab,ev.label[lang]||ev.label.en,'special',()=>{
+      addBtn(ab,ev.label[lang]||ev.label.en,'skip',()=>{
         submitAction({type:'gypsy_event',event:ev.id});
         setTimeout(()=>alert('🔯 '+(lang==='ar'?'تم تفعيل الحدث!':lang==='fr'?'Événement activé !':'Event activated!')),100);
       });
@@ -2912,7 +2911,7 @@ function renderPhase(){
     ab.appendChild(labelEl);
     actorCards.forEach(r=>{
       const rd=ROLES_DEF[r]||{};
-      addBtn(ab,(rd.e||'')+'  '+tr(r),'special',()=>{
+      addBtn(ab,(rd.e||'')+' '+tr(r),'skip',()=>{
         submitAction({type:'actor_switch',take:r});
         setTimeout(()=>alert('🎪 '+(lang==='ar'?'أصبحت: ':lang==='fr'?'Vous êtes maintenant : ':'You are now: ')+tr(r)),100);
       });
@@ -2921,16 +2920,45 @@ function renderPhase(){
   }
 }
 
-function addBtn(container, label, type, onclick){
-  const btn=document.createElement('button');
-  btn.className='btn'+(type==='protect'?' btn-secondary':'');
-  btn.style.cssText='font-size:.82rem;padding:.45rem .9rem;margin:.2rem;'+(type==='save'?'background:var(--green);':type==='seer'?'background:var(--purple);border:1px solid var(--moon);':'');
-  btn.textContent=label;
-  btn.onclick=onclick;
-  container.appendChild(btn);
+function addBtn(container, label, type, onclick, isPlayerCard){
+  // For player-targeting night actions, use vote-card style
+  if(isPlayerCard || (type==='kill'||type==='seer'||type==='protect'||type==='save'||type==='special')){
+    // Check if container already has a vote-grid, if not create one
+    let grid=container._nightGrid;
+    if(!grid){
+      grid=document.createElement('div');
+      grid.className='vote-grid';
+      container.appendChild(grid);
+      container._nightGrid=grid;
+    }
+    const card=document.createElement('div');
+    card.className='vote-card night-target-card';
+    // Icon based on action type
+    const icon=type==='kill'?'🎯':type==='seer'?'🔮':type==='save'?'💊':type==='protect'?'🛡':type==='special'?'✨':'👉';
+    // Color indicator
+    const colorMap={kill:'var(--blood-glow)',seer:'var(--moon)',save:'var(--green)',protect:'#60a5fa',special:'#a78bfa'};
+    const borderColor=colorMap[type]||'rgba(255,255,255,.2)';
+    card.style.cssText=`border-color:${borderColor};cursor:pointer;`;
+    card.innerHTML=`<div class="vc-dot" style="background:${borderColor}"></div><span class="vc-name">${label}</span><div class="vc-count" style="color:${borderColor};font-size:.7rem">${icon}</div>`;
+    card.onclick=onclick;
+    // Hover effect
+    card.addEventListener('mouseenter',()=>{card.style.transform='translateY(-2px)';card.style.boxShadow=`0 4px 20px ${borderColor}55`;});
+    card.addEventListener('mouseleave',()=>{card.style.transform='';card.style.boxShadow='';});
+    grid.appendChild(card);
+  } else {
+    // Non-player action (skip, wolfhound choice, etc.) — keep as regular button
+    const btn=document.createElement('button');
+    btn.className='btn'+(type==='protect'?' btn-secondary':'');
+    btn.style.cssText='font-size:.82rem;padding:.45rem .9rem;margin:.2rem;'+(type==='save'?'background:var(--green);':type==='seer'?'background:var(--purple);border:1px solid var(--moon);':'');
+    btn.textContent=label;
+    btn.onclick=onclick;
+    container.appendChild(btn);
+  }
 }
 function addSkipBtn(container){
-  addBtn(container, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','protect',()=>submitAction({type:'skip'}));
+  // Skip is a regular button, not a player card - clear grid reference so it goes outside
+  container._nightGrid=null;
+  addBtn(container, lang==='ar'?'تخطى':lang==='fr'?'Passer':'Skip','skip',()=>submitAction({type:'skip'}));
 }
 
 // Write action to Firebase or local without marking "done"
