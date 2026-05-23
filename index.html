@@ -170,7 +170,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   border-radius:50%;width:18px;height:18px;font-size:.62rem;display:flex;align-items:center;
   justify-content:center;font-family:'Creepster',cursive;border:1px solid var(--abyss);z-index:4}
 .pc-mayor-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.9rem;z-index:4}
-.pc-mayor-x2-badge{position:absolute;bottom:-2px;right:-4px;background:var(--moon);color:var(--void);font-size:.5rem;font-weight:700;padding:1px 4px;border-radius:4px;z-index:4;letter-spacing:.02em;box-shadow:0 0 6px rgba(212,160,23,.5)}
+.pc-mayor-x2-badge{font-size:.55rem;color:var(--moon);font-weight:700;letter-spacing:.04em;margin-top:.1rem}
 .pi{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;background:var(--purple);border:1px solid var(--moon);border-radius:4px;margin-bottom:.35rem;font-size:.88rem}
 .pstatus{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .pstatus.alive{background:var(--green)}
@@ -2250,10 +2250,14 @@ function renderPlayerList(players){
       html+=`<div class="pc-coop-role ${_allyClass}"><div class="pc-coop-role-emoji">${_rdBadge?.e||'❓'}</div><div class="pc-coop-role-name">${tr(_theirRole||'villager')}</div></div>`;
     }
 
-    // Seer vision overlay — show what the seer has already seen (only for the seer/apprentice seer)
+    // Seer vision overlay — show ALL visions the seer has seen across nights (persisted in seerVisions)
     if(!isMe && !_showRoleBadge && (myRole==='seer'||myRole==='apprenticeseer')){
-      const _seerAct = gameState?.nightActions?.[myId];
-      if(_seerAct && _seerAct.type==='seer' && _seerAct.target===p.id){
+      const _seerVisions = gameState?.seerVisions?.[myId]||{};
+      const _seerVis = _seerVisions[p.id];
+      // Also fall back to current night nightActions if seerVisions not yet written
+      const _seerAct = !_seerVis && gameState?.nightActions?.[myId];
+      const _seerResult = _seerVis?.result || (_seerAct?.type==='seer'&&_seerAct?.target===p.id ? _seerAct.result : null);
+      if(_seerResult && _seerResult!=='clouded'){
         const _seerIsWolf = isWolfRole(p.role, gameState);
         const _seerClass = _seerIsWolf ? 'is-wolf' : 'is-innocent';
         const _seerEmoji = _seerIsWolf ? '🐺' : '✓';
@@ -2268,15 +2272,15 @@ function renderPlayerList(players){
     }
     html+=`<div class="pc-status-dot ${p.alive?'alive':'dead'}"></div>`;
     if(voteCount>0) html+=`<div class="pc-vote-count">${voteCount}</div>`;
-    // Show ×2 badge if the mayor has voted on this player (matching crow +2 style)
-    const mayorVotedOnThis = !mayorPending && !!maireId && Object.values(dayVotes).some(a=>a?.type==='vote'&&a.target===p.id&&a.by===maireId&&(a.voteWeight||1)>=2);
-    if(mayorVotedOnThis) html+=`<div class="pc-mayor-x2-badge">&#x1F451;&#xD7;2</div>`;
     if(isMayor) html+=`<div class="pc-mayor-crown">&#x1F451;</div>`;
     html+=`</div>`;
     html+=`<div class="pc-name-box">`;
     html+=`<div class="pc-name">${p.name}${isCrowAccused?' &#x1F426;&#x200D;&#x2B1B;':''}</div>`;
     if(isMe) html+=`<div class="pc-you-tag">${tr('you')}</div>`;
     if(mayorVoteCount>0&&mayorPending) html+=`<div style="font-size:.55rem;color:var(--moon);font-weight:700">${mayorVoteCount}&#x2696;&#xFE0F;</div>`;
+    // Show ×2 badge under the name (like crow), when mayor has voted on this player
+    const mayorVotedOnThis = !mayorPending && !!maireId && Object.values(dayVotes).some(a=>a?.type==='vote'&&a.target===p.id&&a.by===maireId&&(a.voteWeight||1)>=2);
+    if(mayorVotedOnThis) html+=`<div class="pc-mayor-x2-badge">&#x1F451; &#xD7;2</div>`;
     // Show voter names below the name box
     const votersOnThis=(Object.entries(dayVotes||{})||[]).filter(([,a])=>a?.type==='vote'&&a.target===p.id);
     if(votersOnThis.length>0){
@@ -2564,7 +2568,11 @@ function renderPhase(){
   ab.innerHTML='';
 
   // Hide the action-buttons panel during night (actions are done via circle node popups)
-  ab.style.display = ph==='night' ? 'none' : 'flex';
+  // Exception: some night roles need the panel (thief picks a card, wolfhound/wildchild/cupid choose)
+  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor'];
+  const _curStepId=(gameState?.nightTurn?.stepId)||'';
+  const _needsPanel=ph==='night' && _panelSteps.includes(_curStepId);
+  ab.style.display = (ph==='night' && !_needsPanel) ? 'none' : 'flex';
 
   if(ph==='day'){
     document.getElementById('phaseTitle').textContent=tr('ph_day');
@@ -3190,6 +3198,7 @@ function submitAction(action){
     const upd={};
     upd[`games/${roomCode}/nightActions/${myId}`]=data;
     if(action.type==='kill') upd[`games/${roomCode}/nightActions/_wolfVictim`]=action.target;
+    if(action.type==='seer'&&action.target) upd[`games/${roomCode}/seerVisions/${myId}/${action.target}`]={result:action.result,target:action.target,ts:Date.now()};
     if(action.type==='bigbad_kill') upd[`games/${roomCode}/nightActions/_bigbadVictim`]=action.target;
     if(action.type==='protect')    upd[`games/${roomCode}/nightActions/_bodyguardProtected`]=action.target;
     if(action.type==='savior_save') upd[`games/${roomCode}/nightActions/_saviorProtected`]=action.target;
@@ -3205,6 +3214,7 @@ function submitAction(action){
     if(action.type==='protect') gameState.nightActions._bodyguardProtected=action.target;
     if(action.type==='savior_save') gameState.nightActions._saviorProtected=action.target;
     if(action.type==='wildchild_model') gameState.wildchildModel=action.target;
+    if(action.type==='seer'&&action.target){ if(!gameState.seerVisions) gameState.seerVisions={}; if(!gameState.seerVisions[myId]) gameState.seerVisions[myId]={}; gameState.seerVisions[myId][action.target]={result:action.result,target:action.target,ts:Date.now()}; }
     if(action.type==='sect_recruit'){ if(!gameState.sectRecruits) gameState.sectRecruits={}; gameState.sectRecruits[action.target]=true; }
     if(action.type==='trickster_swap') gameState.tricksterUsed=true;
     checkTurnComplete();
