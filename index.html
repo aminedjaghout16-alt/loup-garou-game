@@ -2224,21 +2224,23 @@ function renderPlayerList(players){
     const _theirRole  = p.role;
     let _showRoleBadge = false;
 
-    if(_myCoopRole && _theirRole && !isMe){
-      // Wolves see each other
+    if(_myCoopRole && _theirRole){
+      // Wolves see each other (including yourself)
       const _iAmWolf   = isWolfRole(_myCoopRole, gameState);
       const _theyWolf  = isWolfRole(_theirRole,  gameState);
       if(_iAmWolf && _theyWolf) _showRoleBadge = true;
 
-      // Two sisters see each other
-      if(_myCoopRole === 'twosisters' && _theirRole === 'twosisters') _showRoleBadge = true;
+      if(!isMe){
+        // Two sisters see each other
+        if(_myCoopRole === 'twosisters' && _theirRole === 'twosisters') _showRoleBadge = true;
 
-      // Three brothers see each other
-      if(_myCoopRole === 'threebrothers' && _theirRole === 'threebrothers') _showRoleBadge = true;
+        // Three brothers see each other
+        if(_myCoopRole === 'threebrothers' && _theirRole === 'threebrothers') _showRoleBadge = true;
 
-      // Lovers (cupid pair) see each other
-      const _loversIds = gameState?.loversIds || gameState?.nightActions?._loversIds || [];
-      if(_loversIds.length === 2 && _loversIds.includes(myId) && _loversIds.includes(p.id)) _showRoleBadge = true;
+        // Lovers (cupid pair) see each other
+        const _loversIds = gameState?.loversIds || gameState?.nightActions?._loversIds || [];
+        if(_loversIds.length === 2 && _loversIds.includes(myId) && _loversIds.includes(p.id)) _showRoleBadge = true;
+      }
     }
 
     if(_showRoleBadge){
