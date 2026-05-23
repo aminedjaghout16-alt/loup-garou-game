@@ -119,6 +119,8 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .pc-node.is-me .pc-name-box{border-color:var(--moon-pale);background:rgba(212,160,23,.15)}
 .pc-node.is-me .pc-name{color:var(--moon-pale);font-weight:700}
 .pc-you-tag{font-size:.55rem;color:var(--moon);font-weight:700;letter-spacing:.05em}
+.pc-voters-list{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:.2rem;max-width:90px}
+.pc-voter-name{font-size:.5rem;color:var(--blood-glow);font-family:'Creepster',cursive;background:rgba(185,28,28,.18);border:1px solid rgba(185,28,28,.35);border-radius:3px;padding:0 3px;white-space:nowrap;letter-spacing:.02em}
 
 /* ── VOTE POPUP ON CIRCLE NODE ── */
 .pc-vote-popup{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
@@ -2098,6 +2100,16 @@ function renderPlayerList(players){
     html+=`<div class="pc-name">${p.name}${isCrowAccused?' &#x1F426;&#x200D;&#x2B1B;':''}</div>`;
     if(isMe) html+=`<div class="pc-you-tag">${tr('you')}</div>`;
     if(mayorVoteCount>0&&mayorPending) html+=`<div style="font-size:.55rem;color:var(--moon);font-weight:700">${mayorVoteCount}&#x2696;&#xFE0F;</div>`;
+    // Show voter names below the name box
+    const votersOnThis=(Object.entries(dayVotes||{})||[]).filter(([,a])=>a?.type==='vote'&&a.target===p.id);
+    if(votersOnThis.length>0){
+      html+=`<div class="pc-voters-list">`;
+      votersOnThis.forEach(([vid])=>{
+        const vname=gameState?.players?.[vid]?.name||'?';
+        html+=`<span class="pc-voter-name">${vname}</span>`;
+      });
+      html+=`</div>`;
+    }
     html+=`</div>`;
     html+=`</div>`;
   });
@@ -3504,42 +3516,12 @@ function renderDayVoting(){
   }
 
   if(voted){
-    // nothing extra — name shown in label above
+    // Vote confirmed — voter names now shown directly on the circle nodes
   } else {
     // Circle voting — prompt player to tap a player in the circle
     html+=`<div style="text-align:center;padding:.5rem .8rem;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;margin:.3rem 0;font-size:.85rem;color:var(--moon-pale)">
       &#x1F5F3; ${lang==='ar'?'&#x627;&#x646;&#x642;&#x631; &#x639;&#x644;&#x649; &#x644;&#x627;&#x639;&#x628; &#x641;&#x64A; &#x627;&#x644;&#x62F;&#x627;&#x626;&#x631;&#x629; &#x644;&#x644;&#x62A;&#x635;&#x648;&#x64A;&#x62A;':lang==='fr'?'Cliquez sur un joueur dans le cercle pour voter':'Tap a player in the circle to vote'}
     </div>`;
-    // Show read-only tally if any votes cast
-    if(Object.keys(tally).length){
-      html+=`<div class="vote-grid" style="pointer-events:none;margin-top:.4rem;opacity:.85">`;
-      aliveOthers.forEach(p=>{
-        const v=tally[p.id]||0;
-        if(v===0) return;
-        const isCrowAccused=crowAccused&&crowAccused===p.id;
-        const regularVoters=(voterMap[p.id]||[]).filter(vt=>!vt.isCrow);
-        const dots=regularVoters.map(vt=>`<span class="vote-dot" style="background:${vt.color}" title="${vt.name}"></span>`).join('');
-        const crowBadge=isCrowAccused?`<span style="color:#f59e0b;font-size:.85rem;font-weight:700;display:block;margin-top:.15rem">&#x1F426;&#x200D;&#x2B1B; +2</span>`:'';
-        html+=`<div class="vote-card has-votes" style="cursor:default;${isCrowAccused?'border:2px solid #f59e0b;box-shadow:0 0 10px rgba(245,158,11,.3);':''}">
-          <div class="vc-dot" style="background:${getPlayerColor(p.id)}"></div>
-          <span class="vc-name">${p.name}</span>
-          <div class="vc-count">${v} vote${v>1?'s':''}</div>
-          ${crowBadge}
-          <div class="vc-dots">${dots}</div>
-        </div>`;
-      });
-      html+=`</div>`;
-    }
-  }
-
-  // Voter legend
-  const votedPlayers=alive.filter(p=>!!dayVotes[p.id]);
-  if(votedPlayers.length>0){
-    html+=`<div class="voter-legend" style="margin-top:.6rem">`;
-    votedPlayers.forEach(p=>{
-      html+=`<span><span class="vote-dot" style="background:${getPlayerColor(p.id)}"></span>${p.name}</span>`;
-    });
-    html+=`</div>`;
   }
 
   ab.innerHTML=html;
