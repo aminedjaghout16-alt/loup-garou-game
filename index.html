@@ -885,9 +885,9 @@ function showDeathAnimation(playerName, playerRole){
     lang==='ar'?'تم إقصاؤه':lang==='fr'?'Éliminé':'Eliminated';
   overlay.classList.add('active');
   showKillFlash();
-  setTimeout(()=>{
-    overlay.classList.remove('active');
-  }, 4000);
+  return new Promise(resolve=>{
+    setTimeout(()=>{ overlay.classList.remove('active'); resolve(); }, 4000);
+  });
 }
 
 // ════════════════════════════════════════════
@@ -3854,23 +3854,21 @@ function resolveDayAndAdvance(){
     }
 
     // Block the auto phase-transition that would fire when Firebase writes phase:'night'
-    // We'll show it manually after all death animations finish
     _phaseTransBlocked=true;
 
-    // Write to Firebase immediately (triggers death animation via checkForDeaths)
-    setTimeout(()=>{
+    // Show death animation first, then night transition after it finishes
+    const deathPromise=eliminatedPlayer
+      ? showDeathAnimation(eliminatedPlayer.name, eliminatedPlayer.role)
+      : Promise.resolve();
+
+    deathPromise.then(()=>{
+      _phaseTransBlocked=false;
+      _lastPhase='day';
+      maybeShowPhaseTransition('night');
       db.ref().update(upd,()=>{
-        // After write, kick off first night turn (only if no win)
         if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
       });
-    }, 0);
-
-    // Show night overlay only after death animation has fully completed
-    setTimeout(()=>{
-      _phaseTransBlocked=false;
-      _lastPhase='day'; // reset so the transition fires
-      maybeShowPhaseTransition('night');
-    }, nightTransDelay);
+    });
   } else {
     // Apply eliminations locally
     Object.entries(upd).forEach(([path,val])=>{
@@ -3884,12 +3882,22 @@ function resolveDayAndAdvance(){
     if(upd[`games/${roomCode}/elderVotedOut`]) gs.elderVotedOut=true;
     if(upd[`games/${roomCode}/wildchildModel`]!==undefined) gs.wildchildModel=upd[`games/${roomCode}/wildchildModel`];
     const elimCountOff=Object.entries(upd).filter(([p,v])=>p.includes('/alive')&&v===false).length;
-    const DEATH_ANIM_MS=4200;
-    const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 : 400;
-    const nightTransDelayOff=elimCountOff>0 ? transDelayOff + DEATH_ANIM_MS : transDelayOff;
     _phaseTransBlocked=true;
-    // Apply state and trigger death animations immediately
-    setTimeout(()=>{
+    // Get the eliminated player for offline path
+    let elimIdOff=null;
+    Object.entries(upd).forEach(([path,val])=>{
+      const m=path.match(/players\/([^/]+)\/alive/);
+      if(m&&val===false) elimIdOff=m[1];
+    });
+    const elimPlayerOff=elimIdOff?gs.players[elimIdOff]:null;
+    // Show death animation first, then night transition after it finishes
+    const deathPromiseOff=elimPlayerOff
+      ? showDeathAnimation(elimPlayerOff.name, elimPlayerOff.role)
+      : Promise.resolve();
+    deathPromiseOff.then(()=>{
+      _phaseTransBlocked=false;
+      _lastPhase='day';
+      maybeShowPhaseTransition('night');
       Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
       gs.nightActions={_saviorLast:actions._saviorLast||null,_bodyguardLast:actions._bodyguardLast||null,_fluteEnchanted:actions._fluteEnchanted||[],_pyroDoused:actions._pyroDoused||[]};
       gs.crowAccused=null;
@@ -3898,13 +3906,7 @@ function resolveDayAndAdvance(){
       gs.maireVotes=null;
       renderGame();
       setTimeout(()=>advanceNightTurn(0),800);
-    }, transDelayOff);
-    // Show night overlay only after death animation has fully completed
-    setTimeout(()=>{
-      _phaseTransBlocked=false;
-      _lastPhase='day';
-      maybeShowPhaseTransition('night');
-    }, nightTransDelayOff);
+    });
   }
 }
 
