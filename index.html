@@ -1904,7 +1904,7 @@ function _doStartWithPlayers(players){
     upd[`games/${roomCode}/dayVotes`]=null;
     // Thief: pick 2 unused role cards from non-assigned pool
     if(roles.includes('thief')){
-      const allPool=['seer','witch','hunter','bodyguard','villager','villager','werewolf','fox','crow','savior'];
+      const allPool=['seer','witch','hunter','bodyguard','villager','werewolf','fox','crow','savior'];
       const unusedPool=allPool.filter(r=>!roles.includes(r));
       const shuffled=unusedPool.sort(()=>Math.random()-.5);
       upd[`games/${roomCode}/thiefCards`]=[shuffled[0]||'villager', shuffled[1]||'villager'];
@@ -1953,7 +1953,7 @@ function _doStartWithPlayers(players){
     });
     // Thief cards
     if(roles.includes('thief')){
-      const allPool=['seer','witch','hunter','bodyguard','villager','villager','werewolf','fox','crow','savior'];
+      const allPool=['seer','witch','hunter','bodyguard','villager','werewolf','fox','crow','savior'];
       const unusedPool=allPool.filter(r=>!roles.includes(r));
       const shuffled=unusedPool.sort(()=>Math.random()-.5);
       gameState.thiefCards=[shuffled[0]||'villager', shuffled[1]||'villager'];
@@ -2797,7 +2797,7 @@ function renderPhase(){
           if(cur.length===0){
             // First pick — write intermediate state only
             if(fbOk&&db&&roomCode){
-              db.ref(`games/${roomCode}/nightActions/_cupid_chosen`).set([p.id]);
+              db.ref(`games/${roomCode}/nightActions/_cupid_chosen`).set([p.id],()=>renderGame());
             } else if(gameState){
               if(!gameState.nightActions) gameState.nightActions={};
               gameState.nightActions['_cupid_chosen']=[p.id];
@@ -2838,6 +2838,7 @@ function renderPhase(){
     const extras=gameState.thiefCards||[];
     if(extras.length){
       extras.forEach(r=>{ const rd=ROLES_DEF[r]||{}; addBtn(ab,(rd.e||'')+''+tr(r),'special',()=>submitAction({type:'thief',take:r})); });
+      addSkipBtn(ab); // Thief can skip (e.g. if both cards are wolves and they refuse)
     } else { addSkipBtn(ab); }
   }
   // ── WILDCHILD ──
@@ -3256,7 +3257,15 @@ function checkTurnComplete(){
   // BigBadWolf step uses _bigbadAction key since the player already has an action from wolves step
   const allDone = stepId==='bigbadwolf'
     ? (actingPlayers.length===0 || !!actions._bigbadAction)
-    : (actingPlayers.length===0 || actingPlayers.every(p=>!!actions[p.id]));
+    : (actingPlayers.length===0 || actingPlayers.every(p=>{
+        if(!!actions[p.id]) return true;
+        // Witch with no potions left has nothing to do — treat as done
+        if(stepId==='witch'){
+          const potions=gameState.witchPotions?.[p.id]||{life:true,death:true};
+          if(!potions.life && !potions.death) return true;
+        }
+        return false;
+      }));
 
   if(allDone && stepId!==_lastStepId){
     _lastStepId=stepId;
@@ -3610,7 +3619,7 @@ function resolveNightAndAdvance(){
 
   // Assassin night check: all targets dead
   if(!_winResult){
-    const _assassinTargets=gs.assassinTargets||[];
+    const _assassinTargets=Array.isArray(gs.assassinTargets)?gs.assassinTargets:Object.values(gs.assassinTargets||{});
     if(_assassinTargets.length>0){
       const _assassinPlayer=Object.values(players).find(p=>p.role==='assassin'&&p.alive);
       if(_assassinPlayer){
@@ -3804,7 +3813,7 @@ function renderDayVoting(){
 
   // ── Assassin: show target list privately ──
   if(myRole==='assassin' && !iAmDead){
-    const assassinTargets=gameState.assassinTargets||[];
+    const assassinTargets=Array.isArray(gameState.assassinTargets)?gameState.assassinTargets:Object.values(gameState.assassinTargets||{});
     if(assassinTargets.length>0){
       const targetNames=assassinTargets.map(tid=>{
         const tp=gameState.players?.[tid];
@@ -4023,7 +4032,7 @@ function resolveDayAndAdvance(){
   }
 
   // Assassin: check if all targets are eliminated
-  const assassinTargets=gs.assassinTargets||[];
+  const assassinTargets=Array.isArray(gs.assassinTargets)?gs.assassinTargets:Object.values(gs.assassinTargets||{});
   if(assassinTargets.length>0){
     const assassinPlayer=players.find(p=>p.role==='assassin'&&p.alive);
     if(assassinPlayer){
@@ -4191,7 +4200,15 @@ function autoSkipTurn(){
     }
     return;
   }
-  const pending=actingPlayers.filter(p=>!actions[p.id]);
+  const pending=actingPlayers.filter(p=>{
+    if(actions[p.id]) return false;
+    // Witch with no potions left has nothing to do — not truly pending
+    if(turn.stepId==='witch'){
+      const potions=gameState.witchPotions?.[p.id]||{life:true,death:true};
+      if(!potions.life && !potions.death) return false;
+    }
+    return true;
+  });
   if(pending.length===0){ advanceNightTurnFromCurrent(); return; }
   if(fbOk&&db&&roomCode){
     const upd={};
