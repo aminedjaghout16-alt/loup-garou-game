@@ -1940,21 +1940,6 @@ function _doStartWithPlayers(players){
   }
   isLeader = true;
   const roles = assignRoles(n);
-  
-  // For offline mode, just start immediately
-  if(offlineGameMode){
-    players.forEach((p,i)=>{ p.role=roles[i]; });
-    gameState.phase='night';
-    gameState.phaseStart=Date.now();
-    gameState.dayNum=1;
-    gameState.nightTurn={stepId:null,stepIndex:-1,turnStart:Date.now()};
-    gameState.nightActions={};
-    gameState.status='playing';
-    renderGame();
-    setTimeout(()=>advanceNightTurn(0),800);
-    return;
-  }
-  
   if(fbOk && db && roomCode){
     const upd={};
     players.forEach((p,i)=>{ upd[`games/${roomCode}/players/${p.id}/role`]=roles[i]; });
@@ -4654,7 +4639,7 @@ function sendChat(){
 }
 
 // ════════════════════════════════════════════
-// OFFLINE BOT MODE
+// OFFLINE BOT MODE - SIMPLIFIED
 // ════════════════════════════════════════════
 let offlineGameMode=false;
 let botDifficulty='medium';
@@ -4683,119 +4668,137 @@ function doCreateOfflineGame(){
   offlineGameMode=true;
   botDifficulty=document.getElementById('difficultySelect').value;
   myName=playerName;
-  myId='player0';
+  myId='p0';
   isLeader=true;
   fbOk=false;
   db=null;
   roomCode=null;
   
-  // Proper role distribution
-  const roles=['seer','werewolf','villager','witch','hunter','bodyguard','doctor','villager'];
-  
   gameState={
     players:{},
-    phase:'setup',
-    roles:roles,
-    chat:[],
-    teamChat:{},
+    phase:'night',
+    phaseStart:Date.now(),
+    dayNum:1,
+    nightNum:1,
+    nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},
     nightActions:{},
     dayVotes:{},
-    maireCandidates:{},
+    status:'playing',
+    chat:[],
+    teamChat:{},
     isOffline:true,
-    difficulty:botDifficulty,
-    dayNum:0,
-    nightNum:1,
-    status:'setup',
-    leader:myId
+    difficulty:botDifficulty
   };
   
-  // Add player
+  cfg={roleCounts:{werewolf:1},roles:['seer','witch','hunter'],daySeconds:60,nightSeconds:45};
+  
+  const roles=['werewolf','seer','witch','hunter','villager','villager','villager','villager'];
+  for(let i=roles.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [roles[i],roles[j]]=[roles[j],roles[i]];
+  }
+  
   gameState.players[myId]={
     id:myId,
     name:myName,
-    role:'seer',
+    role:roles[0],
     alive:true,
-    team:ROLES_DEF['seer'].team,
+    team:ROLES_DEF[roles[0]]?.team||'village',
     isBot:false
   };
   
-  // Add 7 bots
   for(let i=0;i<7;i++){
     const role=roles[i+1];
-    gameState.players['bot'+i]={
-      id:'bot'+i,
+    gameState.players['b'+i]={
+      id:'b'+i,
       name:BOT_NAMES[i],
       role:role,
       alive:true,
-      team:ROLES_DEF[role].team,
+      team:ROLES_DEF[role]?.team||'village',
       isBot:true
     };
   }
   
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
-  
-  setTimeout(()=>{
-    renderGame();
-    setTimeout(()=>doStartGame(),400);
-  },300);
+  renderGame();
+  offlineLoop();
 }
 
-function getBotAction(botId){
-  const bot=gameState.players[botId];
-  if(!bot.alive||!bot.isBot) return;
+function offlineLoop(){
+  if(!offlineGameMode||!gameState) return;
   
   const alive=Object.values(gameState.players).filter(p=>p.alive);
-  const wolves=alive.filter(p=>p.team==='wolf');
+  const wolves=alive.filter(p=>p.role==='werewolf');
   const villagers=alive.filter(p=>p.team==='village');
   
-  if(gameState.phase==='night'){
-    if(bot.role==='werewolf'){
-      const targets=alive.filter(p=>p.team==='village');
-      if(targets.length>0){
-        let target=targets[Math.floor(Math.random()*targets.length)];
-        if(botDifficulty==='hard'){
-          const seer=targets.find(p=>p.role==='seer');
-          if(seer) target=seer;
-        }
-        return target.id;
-      }
-    } else if(bot.role==='seer'){
-      const targets=alive.filter(p=>p.id!==botId);
-      if(targets.length>0){
-        let target=targets[Math.floor(Math.random()*targets.length)];
-        if(botDifficulty==='hard'){
-          target=targets.find(p=>p.team==='wolf')||target;
-        }
-        return target.id;
-      }
-    }
-  } else if(gameState.phase==='day'){
-    const targets=alive.filter(p=>p.id!==botId);
-    if(targets.length>0){
-      let target=targets[Math.floor(Math.random()*targets.length)];
-      if(botDifficulty==='hard'&&bot.team==='village'){
-        target=targets.find(p=>p.team==='wolf')||target;
-      }
-      return target.id;
-    }
+  if(wolves.length===0||wolves.length>=villagers.length){
+    endOfflineGame(wolves.length===0?'village':'werewolf');
+    return;
   }
-}
-
-function processBotActions(){
-  if(!offlineGameMode) return;
-  setTimeout(()=>{
-    Object.keys(gameState.players).forEach(pid=>{
-      const bot=gameState.players[pid];
-      if(bot.isBot&&bot.alive){
-        const action=getBotAction(pid);
-        if(action&&!gameState.nightActions[pid]){
-          gameState.nightActions[pid]={type:'action',target:action,by:pid,ts:Date.now()};
+  
+  if(gameState.phase==='night'){
+    alive.forEach(p=>{
+      if(p.isBot&&!gameState.nightActions[p.id]){
+        if(p.role==='werewolf'){
+          const targets=alive.filter(x=>x.team==='village'&&x.id!==p.id);
+          if(targets.length){
+            let t=targets[Math.floor(Math.random()*targets.length)];
+            if(botDifficulty==='hard') t=targets.find(x=>x.role==='seer')||t;
+            gameState.nightActions[p.id]=t.id;
+          }
         }
       }
     });
-    checkTurnComplete();
-  },800);
+    
+    const wk=Object.entries(gameState.nightActions).find(([i])=>gameState.players[i]?.role==='werewolf');
+    if(wk&&gameState.players[wk[1]]) gameState.players[wk[1]].alive=false;
+    
+    gameState.phase='day';
+    gameState.dayNum++;
+    gameState.nightActions={};
+  } else {
+    alive.forEach(p=>{
+      if(p.isBot&&!gameState.dayVotes[p.id]){
+        const targets=alive.filter(x=>x.id!==p.id);
+        if(targets.length){
+          let t=targets[Math.floor(Math.random()*targets.length)];
+          if(botDifficulty==='hard'&&p.team==='village') t=targets.find(x=>x.team==='wolf')||t;
+          gameState.dayVotes[p.id]=t.id;
+        }
+      }
+    });
+    
+    const votes={};
+    Object.values(gameState.dayVotes).forEach(v=>{votes[v]=(votes[v]||0)+1});
+    const max=Math.max(...Object.values(votes),0);
+    const elim=Object.keys(votes).find(k=>votes[k]===max);
+    if(elim&&gameState.players[elim]) gameState.players[elim].alive=false;
+    
+    gameState.phase='night';
+    gameState.nightNum++;
+    gameState.dayVotes={};
+  }
+  
+  renderGame();
+  setTimeout(offlineLoop,2500);
+}
+
+function endOfflineGame(winner){
+  const myTeam=gameState.players[myId]?.team;
+  const won=(winner==='village'&&myTeam==='village')||(winner==='werewolf'&&myTeam==='wolf');
+  alert((won?'🏆 YOU WIN!':'💀 YOU LOSE!')+'\n'+winner.toUpperCase()+' wins!');
+  backToLogin();
+}
+
+function backToLogin(){
+  offlineGameMode=false;
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('inName').value='';
+  document.getElementById('inCode').value='';
+  document.getElementById('inNameOffline').value='';
+  gameState=null;
 }
 
 // ════════════════════════════════════════════
