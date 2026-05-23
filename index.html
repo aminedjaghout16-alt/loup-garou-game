@@ -3843,7 +3843,8 @@ function resolveDayAndAdvance(){
     const isHunter=eliminatedPlayer?.role==='hunter';
     const hunterExtraDelay=isHunter ? 5000 : 0; // wait for hunter to shoot
 
-    const transDelay=elimCount>0 ? elimCount*DEATH_ANIM_MS + 800 + hunterExtraDelay : 400;
+    const NIGHT_TRANS_EXTRA_DELAY=3000; // extra pause between elimination and night animation
+    const transDelay=elimCount>0 ? elimCount*DEATH_ANIM_MS + 800 + hunterExtraDelay + NIGHT_TRANS_EXTRA_DELAY : 400;
 
     // If eliminated player is the local hunter, show the overlay after their death anim
     if(isHunter && eliminatedId){
@@ -3880,7 +3881,8 @@ function resolveDayAndAdvance(){
     if(upd[`games/${roomCode}/wildchildModel`]!==undefined) gs.wildchildModel=upd[`games/${roomCode}/wildchildModel`];
     const elimCountOff=Object.entries(upd).filter(([p,v])=>p.includes('/alive')&&v===false).length;
     const DEATH_ANIM_MS=4200;
-    const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 : 400;
+    const NIGHT_TRANS_EXTRA_DELAY=3000; // extra pause between elimination and night animation
+    const transDelayOff=elimCountOff>0 ? elimCountOff*DEATH_ANIM_MS + 800 + NIGHT_TRANS_EXTRA_DELAY : 400;
     _phaseTransBlocked=true;
     setTimeout(()=>{
       Object.assign(gs,{phase:'night',phaseStart:Date.now(),dayNum:nextNight,nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()}});
