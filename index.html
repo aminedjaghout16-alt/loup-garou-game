@@ -5783,14 +5783,14 @@ function showLoversToast(name1, name2){
   const toast = document.getElementById('loversToast');
   if(!toast) return;
   // Localise strings
-  const titles   = {en:'Bound by Love 💘',  fr:'Liés par l'Amour 💘',  ar:'مرتبطان بالحب 💘'};
+  const titles   = {en:'Bound by Love 💘',  fr:'Li\u00e9s par l\u2019Amour 💘',  ar:'مرتبطان بالحب 💘'};
   const descs    = {
-    en:'Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you is eliminated, the other will follow.',
-    fr:'Cupidon a lié vos âmes. Vous pouvez voir vos rôles respectifs — c'est voulu. Si l'un de vous est éliminé, l'autre le suivra.',
+    en:'Cupid has linked your souls. You can see each other\u2019s roles \u2014 this is intentional. If one of you is eliminated, the other will follow.',
+    fr:'Cupidon a li\u00e9 vos \u00e2mes. Vous pouvez voir vos r\u00f4les respectifs \u2014 c\u2019est voulu. Si l\u2019un de vous est \u00e9limin\u00e9, l\u2019autre le suivra.',
     ar:'ربط كيوبيد أرواحكما. يمكنكما رؤية أدوار بعضكما — هذا مقصود. إذا مات أحدكما، يتبعه الآخر.'
   };
   const rules    = {
-    en:'💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.',
+    en:'💡 You can see this player\u2019s role because you are Lovers. Other players do NOT know who the Lovers are.',
     fr:'💡 Vous voyez le rôle de cet·te joueur·euse car vous êtes Amoureux. Les autres joueurs ne savent PAS qui sont les Amoureux.',
     ar:'💡 يمكنك رؤية دور هذا اللاعب لأنكما عاشقان. اللاعبون الآخرون لا يعلمون من هما العاشقان.'
   };
@@ -5813,9 +5813,6 @@ function closeLoversToast(){
 // ════════════════════════════════════════════
 window.addEventListener('load',()=>{
   setLang('en');
-  // Show game entry immediately so Join/Create buttons are always clickable
-  const ge=document.getElementById('gameEntryWrap');
-  if(ge) ge.style.display='block';
   // Pre-warm Firebase in background so it's ready when user clicks Create/Join
   setTimeout(()=>initFB(), 200);
 });
