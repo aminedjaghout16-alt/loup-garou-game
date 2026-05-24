@@ -1311,38 +1311,42 @@ function showKillFlash(){
 // ════════════════════════════════════════════
 let _lastPhase=null;
 let _phaseTransBlocked=false; // when true, night/day overlay is suppressed (used during elimination)
+let _nightToDayRunning=false; // true while the night→day sequence (transition + deaths) is in progress
 
 function maybeShowPhaseTransition(newPhase, delayMs){
-  if(!newPhase || newPhase===_lastPhase || _lastPhase===null){ _lastPhase=newPhase; return; }
-  if(_phaseTransBlocked){ return; } // swallow overlapping transition — don't update _lastPhase so chain fires correctly
-  const fromPhase=_lastPhase;
+  // Returns a Promise that resolves once the overlay animation fully plays out,
+  // or resolves immediately (false) when there is nothing to show.
+  if(!newPhase || newPhase===_lastPhase || _lastPhase===null){ _lastPhase=newPhase; return Promise.resolve(false); }
+  if(_phaseTransBlocked){ return Promise.resolve(false); }
   _lastPhase=newPhase;
-  const show=()=>{
-    const ov=document.getElementById('phaseTransOverlay');
-    const icon=document.getElementById('ptransIcon');
-    const label=document.getElementById('ptransLabel');
-    const sub=document.getElementById('ptransSub');
-    ov.classList.remove('to-day','to-night','active');
-    if(newPhase==='day'){
-      icon.textContent='☀️';
-      label.textContent=lang==='ar'?'النهار':lang==='fr'?'JOUR':'DAY';
-      sub.textContent=lang==='ar'?'القرية تستيقظ…':lang==='fr'?'Le village se réveille…':'The village awakens…';
-      ov.classList.add('to-day');
-    } else {
-      icon.textContent='🌙';
-      label.textContent=lang==='ar'?'الليل':lang==='fr'?'NUIT':'NIGHT';
-      sub.textContent=lang==='ar'?'القرية تنام…':lang==='fr'?'Le village s\'endort…':'Darkness falls…';
-      ov.classList.add('to-night');
-    }
-    ov.classList.add('active');
-    setTimeout(()=>{
-      ov.classList.remove('active','to-day','to-night');
-      ov.style.display='none';
-      setTimeout(()=>{ ov.style.display=''; },50);
-    }, 2800);
-  };
-  if(delayMs && delayMs>0) setTimeout(show, delayMs);
-  else show();
+  return new Promise(resolve=>{
+    const show=()=>{
+      const ov=document.getElementById('phaseTransOverlay');
+      const icon=document.getElementById('ptransIcon');
+      const label=document.getElementById('ptransLabel');
+      const sub=document.getElementById('ptransSub');
+      ov.classList.remove('to-day','to-night','active');
+      if(newPhase==='day'){
+        icon.textContent='☀️';
+        label.textContent=lang==='ar'?'النهار':lang==='fr'?'JOUR':'DAY';
+        sub.textContent=lang==='ar'?'القرية تستيقظ…':lang==='fr'?'Le village se réveille…':'The village awakens…';
+        ov.classList.add('to-day');
+      } else {
+        icon.textContent='🌙';
+        label.textContent=lang==='ar'?'الليل':lang==='fr'?'NUIT':'NIGHT';
+        sub.textContent=lang==='ar'?'القرية تنام…':lang==='fr'?'Le village s\'endort…':'Darkness falls…';
+        ov.classList.add('to-night');
+      }
+      ov.classList.add('active');
+      setTimeout(()=>{
+        ov.classList.remove('active','to-day','to-night');
+        ov.style.display='none';
+        setTimeout(()=>{ ov.style.display=''; resolve(true); },50);
+      }, 2800);
+    };
+    if(delayMs && delayMs>0) setTimeout(show, delayMs);
+    else show();
+  });
 }
 
 function showRoleRevealAnimation(onDone){
@@ -1423,35 +1427,33 @@ function showGameStartAnimation(onDone){
   },3800);
 }
 
-// Detect newly dead players and trigger animation
+// Detect newly dead players and trigger animation.
+// Returns a Promise that resolves after all death animations complete (or immediately if none).
 function checkForDeaths(players){
-  if(!players||!gameState||gameState.status!=='playing') return;
+  if(!players||!gameState||gameState.status!=='playing') return Promise.resolve();
   const newDead=[];
   players.forEach(p=>{
     if(!p.alive && _previousAlive[p.id]===true){
       newDead.push(p);
     }
   });
-  // Update tracking
+  // Update tracking immediately so re-renders during the sequence don't re-queue the same deaths
   players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
-  // Show animation for newly dead players, then night transition after all finish
-  if(newDead.length>0){
-    _phaseTransBlocked=true;
-    let chain=Promise.resolve();
-    newDead.forEach(p=>{
-      chain=chain.then(()=>{
-        maybeShowHunterShot(p.id, ()=>{});
-        return showDeathAnimation(p.name, p.role);
-      });
+  if(newDead.length===0) return Promise.resolve();
+
+  // Chain each death animation sequentially, with a small gap between them
+  let chain=Promise.resolve();
+  newDead.forEach((p, i)=>{
+    chain=chain.then(()=>{
+      maybeShowHunterShot(p.id, ()=>{});
+      return showDeathAnimation(p.name, p.role);
     });
-    chain.then(()=>{
-      _phaseTransBlocked=false;
-      // Fire the phase transition once after all deaths complete
-      if(gameState && gameState.phase){
-        maybeShowPhaseTransition(gameState.phase);
-      }
-    });
-  }
+    // Add a short pause between consecutive deaths (not after the last one)
+    if(i < newDead.length - 1){
+      chain=chain.then(()=>new Promise(r=>setTimeout(r, 400)));
+    }
+  });
+  return chain;
 }
 
 // ════════════════════════════════════════════
@@ -1483,6 +1485,7 @@ function checkWinCondition(){
 
 function showGameOver(result){
   _gameOver=true;
+  _nightToDayRunning=false; // cancel any running sequence
   // Save stats for signed-in Google users
   savePlayerStats(result.winner);
 
@@ -1857,7 +1860,7 @@ function doRestart(){
   _previousAlive={};
   _lastStepId=null;
   _advancingStep=false;
-  _lastPhase=null; _phaseTransBlocked=false;
+  _lastPhase=null; _phaseTransBlocked=false; _nightToDayRunning=false;
   myRole=null; // SECURITY: clear stale role so no old-game role data leaks into new-game visibility checks
 
   // Restore playView DOM so renderGame() can find phaseTitle, actionBtns, playerList etc.
@@ -2580,7 +2583,7 @@ function _doStartWithPlayers(players){
       console.log('✅ Game started');
       _lastStepId=null;
       _advancingStep=false;
-      _lastPhase=null; _phaseTransBlocked=false;
+      _lastPhase=null; _phaseTransBlocked=false; _nightToDayRunning=false;
       showGameStartAnimation(()=>{
         setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },600);
       });
@@ -2629,7 +2632,7 @@ function _doStartWithPlayers(players){
     }
     _lastStepId=null;
     _advancingStep=false;
-    _lastPhase=null; _phaseTransBlocked=false;
+    _lastPhase=null; _phaseTransBlocked=false; _nightToDayRunning=false;
     renderGame();
     showGameStartAnimation(()=>{
       setTimeout(()=>advanceNightTurn(0),600);
@@ -2745,16 +2748,59 @@ function renderGame(){
     document.getElementById('hPhase2').textContent=gameState.phase==='night'?tr('ph_night'):tr('ph_day');
     document.getElementById('hPlayers2').textContent=players.length;
 
-    // Phase transition animation
-    maybeShowPhaseTransition(gameState.phase);
+    // ── NIGHT → DAY SEQUENTIAL FLOW ──────────────────────────────────────────
+    // On a night→day transition: (1) play day animation, (2) show deaths one by
+    // one, (3) only then render the discussion/vote UI and start the day timer.
+    // A _nightToDayRunning guard prevents re-renders from restarting the sequence.
 
-    // Initialize alive tracking on first render
+    // Initialize alive tracking on first render (no animations yet)
     if(Object.keys(_previousAlive).length===0){
       players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
     }
 
-    // Check for newly dead players and show death animation
-    checkForDeaths(players);
+    // Detect deaths without consuming them (checkForDeaths will consume when called)
+    const _hasPendingDeaths = players.some(p=>!p.alive && _previousAlive[p.id]===true);
+    const _isNightToDay = gameState.phase==='day' && _lastPhase==='night';
+    const _needsSequence = (_isNightToDay || _hasPendingDeaths) && !_nightToDayRunning;
+
+    if(_needsSequence){
+      _nightToDayRunning=true;
+      // Render player list immediately (so the board is visible behind overlays)
+      const _meSnap=gameState.players?.[myId];
+      if(_meSnap?.role){
+        myRole=_meSnap.role;
+        const _rd=ROLES_DEF[myRole];
+        document.getElementById('rEmoji').textContent=_rd?.e||'❓';
+        document.getElementById('rName').textContent=tr(myRole);
+        document.getElementById('rDesc').textContent=tr('d_'+myRole);
+      }
+      renderPlayerList(players);
+      renderStats(players);
+      // Keep day UI hidden until the sequence finishes
+      document.getElementById('actionBtns').style.display='none';
+
+      (async ()=>{
+        // Step 1: Day transition animation (awaited)
+        await maybeShowPhaseTransition(gameState.phase);
+        // Step 2: Death animations, one by one (awaited, already sequential inside)
+        await checkForDeaths(players);
+        // Step 3: Sequence done — reveal discussion/vote UI
+        _nightToDayRunning=false;
+        document.getElementById('actionBtns').style.display='';
+        renderPhase();
+        applyGhostMode();
+        startTimerIfNeeded();
+        if(isLeader){
+          if(gameState.phase==='night') checkTurnComplete();
+          else if(gameState.phase==='day') checkDayVoteComplete();
+        }
+      })();
+      return; // Skip the synchronous render path below — sequence handles it
+    }
+
+    // ── Normal / non-transitioning render path ─────────────────────────────
+    // Phase transition for night phase (or no-op if unchanged)
+    maybeShowPhaseTransition(gameState.phase);
 
     // Win condition is now handled via status:'gameover:...' written by leader
     // (checkWinCondition block moved to the gameover handler at top of renderGame)
