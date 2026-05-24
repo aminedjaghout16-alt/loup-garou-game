@@ -2877,145 +2877,13 @@ function circleNodeClick(event, targetId){
     const alive=players.filter(p=>p.alive&&p.id!==myId);
     const aliveAll=players.filter(p=>p.alive);
 
-    // Helper to add a night action button to the circular menu
-    const circleActions=[];
+    // Helper to add a night action button to the popup
     const addNightBtn=(label,cls,fn)=>{
-      circleActions.push({label,cls,fn});
-    };
-    
-    // Function to render circular menu with actions arranged in a circle
-    const renderCircleMenu=()=>{
-      const container=document.createElement('div');
-      container.style.cssText=`
-        position:absolute;
-        width:300px;
-        height:300px;
-        border-radius:50%;
-        background:radial-gradient(circle,rgba(26,10,46,0.95),rgba(10,10,26,0.98));
-        border:2px solid rgba(212,160,23,0.4);
-        box-shadow:0 0 40px rgba(212,160,23,0.3), inset 0 0 40px rgba(212,160,23,0.1);
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        z-index:10;
-      `;
-      
-      // Center display
-      const center=document.createElement('div');
-      center.style.cssText=`
-        position:absolute;
-        width:100px;
-        height:100px;
-        border-radius:50%;
-        background:rgba(13,13,36,0.9);
-        border:2px solid rgba(212,160,23,0.6);
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        z-index:5;
-        text-align:center;
-        font-size:1.2rem;
-      `;
-      center.innerHTML=`<div style="font-size:2rem;margin-bottom:0.3rem">${tp?.role?ROLES_DEF[tp.role]?.e||'?':'?'}</div><div style="font-size:0.7rem;color:var(--moon-pale)">${tname}</div>`;
-      container.appendChild(center);
-      
-      // Arrange buttons in circle
-      const actionCount=circleActions.length;
-      const radius=120;
-      
-      circleActions.forEach((action,idx)=>{
-        const angle=(idx/actionCount)*Math.PI*2-Math.PI/2;
-        const x=150+radius*Math.cos(angle);
-        const y=150+radius*Math.sin(angle);
-        
-        const btn=document.createElement('button');
-        btn.className='circle-action-btn '+action.cls;
-        btn.innerHTML=action.label;
-        btn.style.cssText=`
-          position:absolute;
-          left:${x}px;
-          top:${y}px;
-          width:70px;
-          height:70px;
-          border-radius:50%;
-          border:2px solid rgba(212,160,23,0.5);
-          background:radial-gradient(circle,rgba(139,0,0,0.6),rgba(26,10,46,0.8));
-          color:var(--ghost);
-          font-family:'Creepster',cursive;
-          font-size:0.75rem;
-          cursor:pointer;
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          justify-content:center;
-          padding:0.3rem;
-          text-align:center;
-          transition:all 0.3s;
-          transform:translate(-50%,-50%);
-          box-shadow:0 0 20px rgba(212,160,23,0.2);
-        `;
-        
-        btn.onmouseover=()=>{
-          btn.style.transform='translate(-50%,-50%) scale(1.15)';
-          btn.style.boxShadow='0 0 30px rgba(212,160,23,0.6)';
-          btn.style.background='radial-gradient(circle,rgba(185,28,28,0.9),rgba(26,10,46,0.9))';
-        };
-        btn.onmouseout=()=>{
-          btn.style.transform='translate(-50%,-50%)';
-          btn.style.boxShadow='0 0 20px rgba(212,160,23,0.2)';
-          btn.style.background='radial-gradient(circle,rgba(139,0,0,0.6),rgba(26,10,46,0.8))';
-        };
-        
-        btn.onclick=(e)=>{
-          e.stopPropagation();
-          closeCirclePopup();
-          action.fn();
-        };
-        
-        container.appendChild(btn);
-      });
-      
-      // Cancel button at bottom
-      const cancelBtn=document.createElement('button');
-      cancelBtn.className='circle-action-btn discard';
-      cancelBtn.innerHTML=`<div style="font-size:1.2rem">✕</div><div style="font-size:0.6rem">${lang==='ar'?'إلغاء':lang==='fr'?'Annuler':'Cancel'}</div>`;
-      cancelBtn.style.cssText=`
-        position:absolute;
-        bottom:10px;
-        left:50%;
-        transform:translateX(-50%);
-        width:70px;
-        height:70px;
-        border-radius:50%;
-        border:2px solid rgba(232,232,232,0.3);
-        background:radial-gradient(circle,rgba(80,80,100,0.6),rgba(26,10,46,0.8));
-        color:var(--ghost);
-        font-family:'Creepster',cursive;
-        cursor:pointer;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        transition:all 0.3s;
-        box-shadow:0 0 15px rgba(232,232,232,0.1);
-      `;
-      
-      cancelBtn.onmouseover=()=>{
-        cancelBtn.style.transform='translateX(-50%) scale(1.15)';
-        cancelBtn.style.boxShadow='0 0 25px rgba(232,232,232,0.3)';
-        cancelBtn.style.background='radial-gradient(circle,rgba(120,120,140,0.9),rgba(26,10,46,0.9))';
-      };
-      cancelBtn.onmouseout=()=>{
-        cancelBtn.style.transform='translateX(-50%)';
-        cancelBtn.style.boxShadow='0 0 15px rgba(232,232,232,0.1)';
-        cancelBtn.style.background='radial-gradient(circle,rgba(80,80,100,0.6),rgba(26,10,46,0.8))';
-      };
-      
-      cancelBtn.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); };
-      container.appendChild(cancelBtn);
-      
-      return container;
+      const b=document.createElement('button');
+      b.className='pc-vote-btn '+cls;
+      b.textContent=label;
+      b.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); fn(); };
+      popup.appendChild(b);
     };
 
     if(stepId==='wolves'){
@@ -3133,12 +3001,11 @@ function circleNodeClick(event, targetId){
     }
 
     // Cancel button
-    addNightBtn('✕ '+(lang==='ar'?'إلغاء':lang==='fr'?'Annuler':'Cancel'),'discard',()=>{});
-
-    // Render circular menu instead of linear buttons
-    if(circleActions.length>0){
-      popup.appendChild(renderCircleMenu());
-    }
+    const cb=document.createElement('button');
+    cb.className='pc-vote-btn discard';
+    cb.innerHTML=`&#x2716; ${lang==='ar'?'إلغاء':lang==='fr'?'Annuler':'Cancel'}`;
+    cb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); };
+    popup.appendChild(cb);
 
   } else {
     // ── DAY: voting popup ──
@@ -3152,117 +3019,27 @@ function circleNodeClick(event, targetId){
     const isCandidate=!!maireCandidates[targetId];
     const iAmCandidate=!!maireCandidates[myId];
 
-    const circleActions=[];
-    const addVoteBtn=(label,cls,fn)=>{
-      circleActions.push({label,cls,fn});
-    };
-    
     if(mayorPending && isCandidate && !alreadyVotedMayor && !iAmCandidate){
-      addVoteBtn('&#x1F451; '+(lang==='ar'?'عمدة':lang==='fr'?'Maire':'Mayor'),'mayor',()=>doMaireVote(targetId));
+      const mb=document.createElement('button');
+      mb.className='pc-vote-btn mayor';
+      mb.innerHTML=`&#x1F451; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x639;&#x645;&#x62F;&#x629;':lang==='fr'?'Voter Maire':'Vote Mayor'}`;
+      mb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); doMaireVote(targetId); };
+      popup.appendChild(mb);
     }
 
     if(!mayorPending && !alreadyVotedElim){
-      addVoteBtn('&#x1F5F3; '+(lang==='ar'?'أقصِ':lang==='fr'?'Éliminer':'Vote Out'),'vote',()=>doVote(targetId));
+      const vb=document.createElement('button');
+      vb.className='pc-vote-btn vote';
+      vb.innerHTML=`&#x1F5F3; ${lang==='ar'?'&#x635;&#x648;&#x651;&#x62A; &#x625;&#x642;&#x635;&#x627;&#x621;':lang==='fr'?'&#xC9;liminer':'Vote Out'}`;
+      vb.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); doVote(targetId); };
+      popup.appendChild(vb);
     }
 
-    addVoteBtn('✕ '+(lang==='ar'?'إلغاء':lang==='fr'?'Annuler':'Cancel'),'discard',()=>{});
-
-    // Render circle for day voting too
-    if(circleActions.length>1){ // More than just cancel
-      const renderVoteCircle=()=>{
-        const container=document.createElement('div');
-        container.style.cssText=`
-          position:absolute;
-          width:300px;
-          height:300px;
-          border-radius:50%;
-          background:radial-gradient(circle,rgba(26,10,46,0.95),rgba(10,10,26,0.98));
-          border:2px solid rgba(16,185,129,0.4);
-          box-shadow:0 0 40px rgba(16,185,129,0.3), inset 0 0 40px rgba(16,185,129,0.1);
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          z-index:10;
-        `;
-        
-        const center=document.createElement('div');
-        center.style.cssText=`
-          position:absolute;
-          width:100px;
-          height:100px;
-          border-radius:50%;
-          background:rgba(13,13,36,0.9);
-          border:2px solid rgba(16,185,129,0.6);
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          justify-content:center;
-          z-index:5;
-          text-align:center;
-          font-size:1.2rem;
-        `;
-        center.innerHTML=`<div style="font-size:2rem;margin-bottom:0.3rem">${tp?.role?ROLES_DEF[tp.role]?.e||'?':'?'}</div><div style="font-size:0.7rem;color:var(--moon-pale)">${tname}</div>`;
-        container.appendChild(center);
-        
-        const actionCount=circleActions.length;
-        const radius=120;
-        
-        circleActions.forEach((action,idx)=>{
-          const angle=(idx/actionCount)*Math.PI*2-Math.PI/2;
-          const x=150+radius*Math.cos(angle);
-          const y=150+radius*Math.sin(angle);
-          
-          const btn=document.createElement('button');
-          btn.className='circle-vote-btn '+action.cls;
-          btn.innerHTML=action.label;
-          btn.style.cssText=`
-            position:absolute;
-            left:${x}px;
-            top:${y}px;
-            width:70px;
-            height:70px;
-            border-radius:50%;
-            border:2px solid rgba(16,185,129,0.5);
-            background:radial-gradient(circle,rgba(16,185,129,0.4),rgba(26,10,46,0.8));
-            color:var(--ghost);
-            font-family:'Creepster',cursive;
-            font-size:0.75rem;
-            cursor:pointer;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            justify-content:center;
-            padding:0.3rem;
-            text-align:center;
-            transition:all 0.3s;
-            transform:translate(-50%,-50%);
-            box-shadow:0 0 20px rgba(16,185,129,0.2);
-          `;
-          
-          btn.onmouseover=()=>{
-            btn.style.transform='translate(-50%,-50%) scale(1.15)';
-            btn.style.boxShadow='0 0 30px rgba(16,185,129,0.6)';
-            btn.style.background='radial-gradient(circle,rgba(16,185,129,0.7),rgba(26,10,46,0.9))';
-          };
-          btn.onmouseout=()=>{
-            btn.style.transform='translate(-50%,-50%)';
-            btn.style.boxShadow='0 0 20px rgba(16,185,129,0.2)';
-            btn.style.background='radial-gradient(circle,rgba(16,185,129,0.4),rgba(26,10,46,0.8))';
-          };
-          
-          btn.onclick=(e)=>{
-            e.stopPropagation();
-            closeCirclePopup();
-            action.fn();
-          };
-          
-          container.appendChild(btn);
-        });
-        
-        return container;
-      };
-      popup.appendChild(renderVoteCircle());
-    }
+    const db2=document.createElement('button');
+    db2.className='pc-vote-btn discard';
+    db2.innerHTML=`&#x2716; ${lang==='ar'?'&#x625;&#x644;&#x63A;&#x627;&#x621;':lang==='fr'?'Annuler':'Discard'}`;
+    db2.onclick=(e)=>{ e.stopPropagation(); closeCirclePopup(); };
+    popup.appendChild(db2);
   }
 
   if(popup.children.length===0){ closeCirclePopup(); return; }
@@ -3338,7 +3115,7 @@ function renderPhase(){
 
   // Hide the action-buttons panel during night (actions are done via circle node popups)
   // Exception: some night roles need the panel (thief picks a card, wolfhound/wildchild/cupid choose)
-  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor','witch'];
+  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor'];
   const _curStepId=(gameState?.nightTurn?.stepId)||'';
   const _needsPanel=ph==='night' && _panelSteps.includes(_curStepId);
   ab.style.display = (ph==='night' && !_needsPanel) ? 'none' : 'flex';
@@ -3541,41 +3318,10 @@ function renderPhase(){
   }
   // ── WITCH ──
   else if(stepId==='witch'){
-    const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
-    const wolfVictimId=gameState.nightActions?._wolfVictim;
-    const bigbadVictimId=gameState.nightActions?._bigbadVictim;
-    const infectionHappened=Object.values(gameState.nightActions||{}).some(a=>a?.type==='wolffather_infect');
-    let hasBtns=false;
-    // Show potion status
-    const lifeIcon=potions.life?'🟢':'⚫';
-    const deathIcon=potions.death?'🔴':'⚫';
-    const potionLabel=document.createElement('div');
-    potionLabel.style.cssText='font-size:.82rem;color:var(--moon-pale);margin-bottom:.5rem';
-    potionLabel.innerHTML=`${lifeIcon} ${lang==='ar'?'جرعة الحياة':lang==='fr'?'Potion de vie':'Life Potion'}: ${potions.life?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')} &nbsp;|&nbsp; ${deathIcon} ${lang==='ar'?'جرعة الموت':lang==='fr'?'Potion de mort':'Death Potion'}: ${potions.death?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')}`;
-    ab.appendChild(potionLabel);
-    // Show infection info to witch
-    if(infectionHappened){
-      const infectInfo=document.createElement('div');
-      infectInfo.style.cssText='font-size:.82rem;color:#f59e0b;margin-bottom:.5rem;padding:.4rem .6rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:4px';
-      infectInfo.innerHTML=`🦠 ${lang==='ar'?'حدثت عدوى الليلة!':lang==='fr'?'Une infection a eu lieu cette nuit !':'An infection occurred tonight!'}`;
-      ab.appendChild(infectInfo);
-    }
-    // Show save options for BOTH wolf victim and big bad wolf victim
-    if(potions.life){
-      if(wolfVictimId){
-        const v=players.find(p=>p.id===wolfVictimId);
-        if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name+' 🐺','save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
-      }
-      if(bigbadVictimId && bigbadVictimId!==wolfVictimId){
-        const bv=players.find(p=>p.id===bigbadVictimId);
-        if(bv){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+bv.name+' 🐺🐺','save',()=>submitWitch('save',bigbadVictimId)); hasBtns=true; }
-      }
-    }
-    if(potions.death){
-      alive.forEach(p=>{ addBtn(ab,(lang==='ar'?'سمّ ':lang==='fr'?'Empoisonner ':'Poison ')+p.name,'kill',()=>submitWitch('poison',p.id)); hasBtns=true; });
-    }
-    if(!hasBtns) ab.innerHTML+=`<div style="opacity:.5;font-size:.85rem">${lang==='ar'?'لا جرعات':lang==='fr'?'Plus de potions':'No potions left'}</div>`;
-    addSkipBtn(ab);
+    // Witch actions now only happen on circle - no buttons in action panel
+    ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.85rem;margin-top:.5rem;text-align:center">
+      ${lang==='ar'?'اختر لاعباً من الدائرة للتصرف':lang==='fr'?'Cliquez sur un joueur pour agir':'Click a player to act'}
+    </div>`;
   }
   // ── CUPID ──
   else if(stepId==='cupid'){
