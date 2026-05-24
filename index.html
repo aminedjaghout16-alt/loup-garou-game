@@ -5813,6 +5813,9 @@ function closeLoversToast(){
 // ════════════════════════════════════════════
 window.addEventListener('load',()=>{
   setLang('en');
+  // Show game entry immediately so Join/Create buttons are always clickable
+  const ge=document.getElementById('gameEntryWrap');
+  if(ge) ge.style.display='block';
   // Pre-warm Firebase in background so it's ready when user clicks Create/Join
   setTimeout(()=>initFB(), 200);
 });
