@@ -2052,6 +2052,44 @@ function _emailErrMsg(code){
   return map[code] || (lang==='fr'?'Erreur: ':lang==='ar'?'خطأ: ':'Error: ')+code;
 }
 
+// ════════════════════════════════════════════
+// ROLE VISIBILITY SECURITY
+// ════════════════════════════════════════════
+// Returns the role information that the current player is ALLOWED to see for a given player
+function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
+  const target = gameState?.players?.[targetPlayerId];
+  if(!target) return null;
+  
+  // Own role is always visible
+  if(targetPlayerId === myPlayerId) return target.role;
+  
+  // Dead players' roles are always visible (public knowledge)
+  if(!target.alive) return target.role;
+  
+  // Co-op teammates see each other
+  const myCoopRole = gameState?.players?.[myPlayerId]?.role;
+  if(myCoopRole && target.role){
+    // Wolves see each other
+    if(isWolfRole(myCoopRole, gameState) && isWolfRole(target.role, gameState)) return target.role;
+    // Sisters see each other
+    if(myCoopRole === 'twosisters' && target.role === 'twosisters') return target.role;
+    // Brothers see each other
+    if(myCoopRole === 'threebrothers' && target.role === 'threebrothers') return target.role;
+    // Lovers see each other
+    const loversIds = gameState?.loversIds || gameState?.nightActions?._loversIds || [];
+    if(loversIds.length === 2 && loversIds.includes(myPlayerId) && loversIds.includes(targetPlayerId)) return target.role;
+  }
+  
+  // Seer's recorded visions - use STORED vision data, NOT the actual role
+  if((myRole === 'seer' || myRole === 'apprenticeseer') && gameState?.seerVisions?.[myPlayerId]?.[targetPlayerId]){
+    // Return null here - don't expose the actual role, seer sees the vision overlay instead
+    return null;
+  }
+  
+  // All other cases: role is HIDDEN
+  return null;
+}
+
 // ── GUEST PLAY ──
 function doGuestPlay(){
   // Hide login options, show game entry — no account, no stats
@@ -2769,7 +2807,7 @@ function renderPlayerList(players){
     } else {
     // Co-op role reveal: show role badge if this player shares a co-op group with me
     const _myCoopRole = gameState?.players?.[myId]?.role;
-    const _theirRole  = p.role;
+    const _theirRole  = getVisibleRole(p.id, myId, myRole, gameState);
     let _showRoleBadge = false;
 
     if(_myCoopRole && _theirRole){
