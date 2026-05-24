@@ -1641,6 +1641,7 @@ function doRestart(){
     upd[`games/${roomCode}/phase`]='night';
     upd[`games/${roomCode}/phaseStart`]=Date.now();
     upd[`games/${roomCode}/dayNum`]=1;
+    upd[`games/${roomCode}/startedAt`]=Date.now(); // anti-farm: game duration check
     upd[`games/${roomCode}/nightTurn`]={stepId:'__init__',stepIndex:-1,turnStart:Date.now()};
     upd[`games/${roomCode}/nightActions`]=null;
     upd[`games/${roomCode}/dayVotes`]=null;
@@ -5172,7 +5173,7 @@ async function savePlayerStats(winner){
     console.log('⛔ Stats not saved: less than 3 players');
     return;
   }
-  const elapsed = Date.now() - (gameState?.startedAt || Date.now());
+  const elapsed = Date.now() - (gameState?.startedAt || gameState?.phaseStart || Date.now());
   if(elapsed < 45000){
     console.log('⛔ Stats not saved: game too short ('+Math.round(elapsed/1000)+'s)');
     return;
