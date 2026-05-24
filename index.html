@@ -68,6 +68,29 @@
 body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);line-height:1.6;min-height:100vh;letter-spacing:.03em}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
 
+/* ── PROFILE MODAL ── */
+#profileModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem}
+#profileModal.hidden{display:none}
+.profile-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.8rem;width:100%;max-width:420px;box-shadow:0 0 40px rgba(212,160,23,.2);position:relative}
+.profile-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:1.2rem}
+.profile-avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--moon);margin:0 auto .8rem;display:block;object-fit:cover}
+.profile-avatar-placeholder{width:64px;height:64px;border-radius:50%;border:2px solid var(--moon);margin:0 auto .8rem;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+.profile-name{text-align:center;color:var(--moon-pale);font-size:1rem;font-weight:700;margin-bottom:.3rem}
+.profile-email{text-align:center;color:var(--ghost);font-size:.75rem;opacity:.6;margin-bottom:1.2rem}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1.2rem}
+.stat-card{background:var(--purple);border:1px solid rgba(212,160,23,.25);border-radius:8px;padding:.8rem .6rem;text-align:center}
+.stat-card .sv{font-family:'Creepster',cursive;font-size:1.7rem;color:var(--moon);line-height:1}
+.stat-card .sl{font-size:.7rem;color:var(--ghost);opacity:.7;margin-top:.25rem}
+.fav-role{background:var(--purple);border:1px solid rgba(212,160,23,.25);border-radius:8px;padding:.8rem;text-align:center;margin-bottom:1.2rem}
+.fav-role .frl{font-size:.7rem;color:var(--ghost);opacity:.7;margin-bottom:.3rem}
+.fav-role .frv{font-size:1.1rem;color:var(--moon-pale);font-weight:700}
+.profile-close{position:absolute;top:.7rem;right:.9rem;background:transparent;border:none;color:var(--ghost);font-size:1.3rem;cursor:pointer;opacity:.6;font-family:inherit}
+.profile-close:hover{opacity:1}
+.profile-signin-note{text-align:center;color:var(--ghost);opacity:.7;font-size:.85rem;padding:.5rem}
+/* Profile button in login */
+.profile-btn{margin-top:.8rem;width:100%;padding:.6rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:5px;cursor:pointer;font-family:inherit;font-size:.85rem;transition:.2s}
+.profile-btn:hover{background:rgba(212,160,23,.1);border-color:var(--moon)}
+
 /* ── LOGIN ── */
 #loginScreen{position:fixed;inset:0;background:var(--void);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
 #loginScreen.hidden{display:none}
@@ -429,6 +452,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
         <div id="googleDisplayName" style="color:var(--moon-pale);font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
         <div id="googleEmail" style="color:var(--ghost);font-size:.72rem;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
       </div>
+      <button onclick="openProfileModal()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'" id="t_viewstats">📊 Stats</button>
       <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
     </div>
 
@@ -543,6 +567,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
       <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Creepster',cursive;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
     </div>
     <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
+    <button id="headerStatsBtn" onclick="openProfileModal()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">📊</button>
   </div>
 
   <div class="g-content">
@@ -871,7 +896,7 @@ en:{
   noCandidates:'No candidates yet', maireIs:'Mayor:', maireVotes:'(2 votes)',
   teamChat:'Team Chat', generalChat:'General',
   wolvesChat:'Wolves', sistersChat:'Sisters', brothersChat:'Brothers',
-  t_googlebtn:'Continue with Google', t_signout:'Sign out',
+  t_googlebtn:'Continue with Google', t_signout:'Sign out', t_viewstats:'📊 Stats',
 },
 fr:{
   t_title:'Loup-Garou', t_sub:'Rejoignez le jeu de la tromperie et de la survie',
@@ -950,7 +975,7 @@ fr:{
   noCandidates:'Pas encore de candidats', maireIs:'Maire :', maireVotes:'(2 votes)',
   teamChat:'Chat d\'équipe', generalChat:'Général',
   wolvesChat:'Loups', sistersChat:'Sœurs', brothersChat:'Frères',
-  t_googlebtn:'Continuer avec Google', t_signout:'Déconnexion',
+  t_googlebtn:'Continuer avec Google', t_signout:'Déconnexion', t_viewstats:'📊 Stats',
 },
 ar:{
   t_title:'ذئب البشر', t_sub:'انضم إلى لعبة الخداع والبقاء',
@@ -1029,7 +1054,7 @@ ar:{
   noCandidates:'لا مرشحين بعد', maireIs:'العمدة:', maireVotes:'(صوتان)',
   teamChat:'دردشة الفريق', generalChat:'عام',
   wolvesChat:'الذئاب', sistersChat:'الأختان', brothersChat:'الإخوة',
-  t_googlebtn:'المتابعة مع Google', t_signout:'تسجيل الخروج',
+  t_googlebtn:'المتابعة مع Google', t_signout:'تسجيل الخروج', t_viewstats:'📊 إحصائياتي',
 }};
 
 // ════════════════════════════════════════════
@@ -1230,6 +1255,8 @@ function checkWinCondition(){
 
 function showGameOver(result){
   _gameOver=true;
+  // Save stats for signed-in Google users
+  savePlayerStats(result.winner);
 
   // Find the last player(s) who just died (not yet shown as dead in _previousAlive)
   const players=Object.values(gameState?.players||{});
@@ -1714,10 +1741,12 @@ function _updateGoogleUI(user){
   const signInBtn=document.getElementById('googleSignInBtn');
   const userBar=document.getElementById('googleUserBar');
   const nameInput=document.getElementById('inName');
+  const hBtn=document.getElementById('headerStatsBtn');
   if(user){
     // Show profile bar, hide sign-in button
     if(signInBtn) signInBtn.style.display='none';
     if(userBar) userBar.style.display='flex';
+    if(hBtn) hBtn.style.display='inline-block';
     const avatar=document.getElementById('googleAvatar');
     const displayName=document.getElementById('googleDisplayName');
     const email=document.getElementById('googleEmail');
@@ -1732,6 +1761,7 @@ function _updateGoogleUI(user){
     // Show sign-in button, hide profile bar
     if(signInBtn) signInBtn.style.display='flex';
     if(userBar) userBar.style.display='none';
+    if(hBtn) hBtn.style.display='none';
   }
 }
 
@@ -5067,6 +5097,117 @@ function _irlApplyLang(){
 }
 
 // ════════════════════════════════════════════
+// PLAYER PROFILE & STATS
+// ════════════════════════════════════════════
+
+/**
+ * Called at game end. Saves stats for the current Google user to Firebase.
+ * Path: users/{uid}/stats  — atomic increment via transactions
+ */
+async function savePlayerStats(winner){
+  if(!_googleUser || !db) return; // not signed in or no DB
+  const uid=_googleUser.uid;
+  const statsRef=db.ref(`users/${uid}/stats`);
+  // Determine if this player won
+  const me=gameState?.players?.[myId];
+  if(!me) return;
+  const myTeam=ROLES_DEF[me.role]?.team||'village';
+  let won=false;
+  if(winner==='werewolf') won=(myTeam==='werewolf');
+  else if(winner==='village') won=(myTeam==='village');
+  else won=(me.role===winner); // solo role
+  try{
+    await statsRef.transaction(current=>{
+      const s=current||{gamesPlayed:0,wins:0,losses:0,roleCounts:{}};
+      s.gamesPlayed=(s.gamesPlayed||0)+1;
+      if(won) s.wins=(s.wins||0)+1;
+      else s.losses=(s.losses||0)+1;
+      // Track wins per role
+      if(won && me.role){
+        s.roleCounts=s.roleCounts||{};
+        s.roleCounts[me.role]=(s.roleCounts[me.role]||0)+1;
+      }
+      return s;
+    });
+    console.log('✅ Stats saved');
+  }catch(e){ console.warn('Stats save failed',e); }
+}
+
+// Open profile modal
+async function openProfileModal(){
+  const modal=document.getElementById('profileModal');
+  const signedIn=document.getElementById('pmSignedIn');
+  const notSignedIn=document.getElementById('pmNotSignedIn');
+  const loading=document.getElementById('pmLoading');
+  modal.classList.remove('hidden');
+  // Localise labels
+  const lblMap={
+    pmTitle:     {en:'📊 My Stats',fr:'📊 Mes Stats',ar:'📊 إحصائياتي'},
+    pmLblGames:  {en:'Games Played',fr:'Parties jouées',ar:'الألعاب'},
+    pmLblWins:   {en:'Wins',fr:'Victoires',ar:'انتصارات'},
+    pmLblLosses: {en:'Losses',fr:'Défaites',ar:'خسائر'},
+    pmLblWinRate:{en:'Win Rate',fr:'Taux victoires',ar:'نسبة الفوز'},
+    pmLblFav:    {en:'Favourite Role (most wins)',fr:'Rôle favori (+ victoires)',ar:'الدور المفضل (أكثر انتصارات)'}
+  };
+  Object.entries(lblMap).forEach(([id,v])=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=v[lang]||v.en;
+  });
+  if(!_googleUser){
+    signedIn.style.display='none';
+    notSignedIn.style.display='block';
+    notSignedIn.textContent=
+      lang==='ar'?'سجّل الدخول بـ Google لتتبّع إحصائياتك.':
+      lang==='fr'?'Connectez-vous avec Google pour suivre vos statistiques.':
+      'Sign in with Google to track your stats across all games.';
+    return;
+  }
+  signedIn.style.display='block';
+  notSignedIn.style.display='none';
+  // Avatar
+  const wrap=document.getElementById('pmAvatarWrap');
+  if(_googleUser.photoURL){
+    wrap.innerHTML=`<img class="profile-avatar" src="${_googleUser.photoURL}" alt="">`;
+  } else {
+    wrap.innerHTML=`<div class="profile-avatar-placeholder">🐺</div>`;
+  }
+  document.getElementById('pmName').textContent=_googleUser.displayName||_googleUser.email||'';
+  document.getElementById('pmEmail').textContent=_googleUser.email||'';
+  // Reset values
+  ['pmGames','pmWins','pmLosses','pmWinRate','pmFavRole'].forEach(id=>{
+    document.getElementById(id).textContent='—';
+  });
+  if(!db){ return; }
+  loading.style.display='block';
+  try{
+    const snap=await db.ref(`users/${_googleUser.uid}/stats`).get();
+    const s=snap.val()||{};
+    const games=s.gamesPlayed||0;
+    const wins=s.wins||0;
+    const losses=s.losses||0;
+    const rate=games>0?Math.round(wins/games*100)+'%':'—';
+    document.getElementById('pmGames').textContent=games;
+    document.getElementById('pmWins').textContent=wins;
+    document.getElementById('pmLosses').textContent=losses;
+    document.getElementById('pmWinRate').textContent=rate;
+    // Favourite role
+    const rc=s.roleCounts||{};
+    const fav=Object.entries(rc).sort((a,b)=>b[1]-a[1])[0];
+    if(fav){
+      const rd=ROLES_DEF[fav[0]];
+      document.getElementById('pmFavRole').textContent=`${rd?.e||''} ${tr(fav[0])} (${fav[1]} wins)`;
+    } else {
+      document.getElementById('pmFavRole').textContent='—';
+    }
+  }catch(e){ console.warn('Stats fetch failed',e); }
+  loading.style.display='none';
+}
+
+function closeProfileModal(){
+  document.getElementById('profileModal').classList.add('hidden');
+}
+
+// ════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════
 window.addEventListener('load',()=>{
@@ -5079,5 +5220,32 @@ window.addEventListener('load',()=>{
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<!-- ── PROFILE MODAL ── -->
+<div id="profileModal" class="hidden">
+  <div class="profile-box">
+    <button class="profile-close" onclick="closeProfileModal()">✕</button>
+    <h2 id="pmTitle">📊 My Stats</h2>
+    <div id="pmSignedIn">
+      <div id="pmAvatarWrap" style="text-align:center;margin-bottom:.3rem"></div>
+      <div class="profile-name" id="pmName"></div>
+      <div class="profile-email" id="pmEmail"></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="sv" id="pmGames">—</div><div class="sl" id="pmLblGames">Games Played</div></div>
+        <div class="stat-card"><div class="sv" id="pmWins">—</div><div class="sl" id="pmLblWins">Wins</div></div>
+        <div class="stat-card"><div class="sv" id="pmLosses">—</div><div class="sl" id="pmLblLosses">Losses</div></div>
+        <div class="stat-card"><div class="sv" id="pmWinRate">—</div><div class="sl" id="pmLblWinRate">Win Rate</div></div>
+      </div>
+      <div class="fav-role">
+        <div class="frl" id="pmLblFav">Favourite Role (most wins)</div>
+        <div class="frv" id="pmFavRole">—</div>
+      </div>
+      <div id="pmLoading" style="text-align:center;color:var(--ghost);opacity:.6;font-size:.85rem;padding:.4rem 0;display:none">Loading…</div>
+    </div>
+    <div id="pmNotSignedIn" class="profile-signin-note" style="display:none">
+      Sign in with Google to track your stats across all games.
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
