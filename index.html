@@ -2019,6 +2019,8 @@ function _updateGoogleUI(user){
     }
   } else {
     // Show sign-in button + email form, hide profile bar + game entry
+    // But if guest mode is active, don't override it
+    if(_guestMode) return;
     if(signInBtn) signInBtn.style.display='flex';
     if(emailWrap) emailWrap.style.display='block';
     if(userBar) userBar.style.display='none';
@@ -2053,6 +2055,7 @@ function doGoogleSignIn(){
 
 function doGoogleSignOut(){
   if(!_fbAuth) return;
+  _guestMode=false;
   _fbAuth.signOut().then(()=>{
     _googleUser=null;
     _updateGoogleUI(null);
@@ -2157,7 +2160,9 @@ function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
 }
 
 // ── GUEST PLAY ──
+let _guestMode = false;
 function doGuestPlay(){
+  _guestMode = true;
   // Hide login options, show game entry — no account, no stats
   const emailWrap = document.getElementById('emailLoginWrap');
   const googleBtn = document.getElementById('googleSignInBtn');
