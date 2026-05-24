@@ -5173,10 +5173,17 @@ async function savePlayerStats(winner){
     console.log('⛔ Stats not saved: less than 3 players');
     return;
   }
-  const elapsed = Date.now() - (gameState?.startedAt || gameState?.phaseStart || Date.now());
-  if(elapsed < 45000){
-    console.log('⛔ Stats not saved: game too short ('+Math.round(elapsed/1000)+'s)');
-    return;
+  const now = Date.now();
+  const startTs = gameState?.startedAt || gameState?.phaseStart || null;
+  console.log('🕐 Anti-farm check — startedAt:', startTs, 'now:', now, 'diff:', startTs ? now - startTs : 'N/A');
+  if(!startTs){
+    console.log('⚠️ No startedAt found, skipping duration check');
+  } else {
+    const elapsed = now - startTs;
+    if(elapsed < 45000){
+      console.log('⛔ Stats not saved: game too short ('+Math.round(elapsed/1000)+'s)');
+      return;
+    }
   }
   // ─────────────────────────
 
