@@ -6123,305 +6123,185 @@ window.addEventListener('load',()=>{
 // AUDIO ENGINE
 // ════════════════════════════════════════════
 const AUDIO = (function(){
-  // ── Volumes & mute state ──────────────────
   let _musicVol   = 0.5;
   let _sfxVol     = 0.8;
   let _musicMuted = false;
   let _sfxMuted   = false;
   let _unlocked   = false;
 
-  // ── Music tracks ──────────────────────────
-  let _nightMusic  = null;   // main night loop (HTMLAudioElement)
-  let _wolvesAmb   = null;   // wolves ambience loop
-  let _dayMusic    = null;   // day loop
-  let _activePhase = null;   // 'night' | 'day' | 'wolves' | null
-  let _fadeIntervals = [];   // track all running fade intervals
+  // ── Music tracks (plain variables, no circular refs) ──
+  let _nightTrack  = null;
+  let _dayTrack    = null;
+  let _wolvesTrack = null;
+  let _lobbyTrack  = null;
+  let _loginTrack  = null;
+  let _loginStopped = false;
 
-  // ── SFX cache ─────────────────────────────
-  const _sfxCache = {};
+  let _activePhase = null;
+  let _fadeIds = [];
 
-  // ── File map ──────────────────────────────
   const MUSIC_FILES = {
     night:  '/sounds/cyberwave-orchestra-suspense-sci-fi-underscore-music-loop-300215.mp3',
     day:    '/sounds/leberch-horror-loop-313735.mp3',
     wolves: '/sounds/howling-man_82bpm_C_major.wav',
     lobby:  '/sounds/bnayyyy-rain-ambient-sounds-121286.mp3',
   };
-  const SFX = {
-    roleReveal:   '/sounds/freesound_community-flipcard-91468.mp3',
-    death:        '/sounds/freesound_crunchpixstudio-rpg-sword-attack-combo-3-388917.mp3',
-    vote:         '/sounds/freesound_community-stamp-81635.mp3',
-    phaseDay:     '/sounds/universfield-single-church-bell-2-352062.mp3',
-    phaseNight:   '',
-    win:          '/sounds/freesound_community-medieval-fanfare-6826.mp3',
-    click:        '/sounds/audley_fergine-ui-mouse-click-366460.mp3',
+  const SFX_FILES = {
+    roleReveal: '/sounds/freesound_community-flipcard-91468.mp3',
+    death:      '/sounds/freesound_crunchpixstudio-rpg-sword-attack-combo-3-388917.mp3',
+    vote:       '/sounds/freesound_community-stamp-81635.mp3',
+    phaseDay:   '/sounds/universfield-single-church-bell-2-352062.mp3',
+    phaseNight: '',
+    win:        '/sounds/freesound_community-medieval-fanfare-6826.mp3',
+    click:      '/sounds/audley_fergine-ui-mouse-click-366460.mp3',
   };
+  const _sfxCache = {};
 
-  // ── Login / menu ambient ───────────────────
-  // Uses the night track at low volume as a subtle background on the login screen
-  let _loginAmbient = null;
-  let _loginAmbientStopped = false;
+  function _clearFades(){ _fadeIds.forEach(id=>clearInterval(id)); _fadeIds=[]; }
 
-  // ── Lobby / waiting room ambient ───────────
-  let _lobbyAmbient = null;
-
-  // ── Unlock on first user gesture ──────────
-  function _unlock(){
-    if(_unlocked) return;
-    _unlocked = true;
-    // Try to resume whichever track should be playing
-    [_nightMusic, _dayMusic, _wolvesAmb].forEach(a=>{
-      if(a && a.paused && parseFloat(a.dataset.shouldPlay||'0')) a.play().catch(()=>{});
-    });
-  }
-
-  // ── Utility: clear all fade intervals ─────
-  function _clearFades(){
-    _fadeIntervals.forEach(id=>clearInterval(id));
-    _fadeIntervals = [];
-  }
-
-  // ── Fade a track in or out ─────────────────
-  // direction: 'in' | 'out'  target: final volume
-  function _fade(audio, direction, targetVol, onDone){
-    if(!audio) { if(onDone) onDone(); return; }
-    const step = 0.04;
-    const id = setInterval(()=>{
-      if(direction === 'in'){
-        audio.volume = Math.min(targetVol, audio.volume + step);
-        if(audio.volume >= targetVol - 0.01){ audio.volume = targetVol; clearInterval(id); if(onDone) onDone(); }
-      } else {
-        audio.volume = Math.max(0, audio.volume - step);
-        if(audio.volume <= 0.01){ audio.volume = 0; audio.pause(); clearInterval(id); if(onDone) onDone(); }
-      }
-    }, 50);
-    _fadeIntervals.push(id);
-    return id;
-  }
-
-  // ── Ensure an audio element exists & is preloaded ─
-  function _getTrack(key){
-    const src = MUSIC_FILES[key];
+  function _makeTrack(src){
     if(!src) return null;
-    const map = { night: '_nightMusic', day: '_dayMusic', wolves: '_wolvesAmb' };
-    const prop = map[key];
-    if(!module[prop]){
-      const a = new Audio(src);
-      a.loop = true;
-      a.volume = 0;
-      a.dataset.shouldPlay = '0';
-      module[prop] = a;
-    }
-    return module[prop];
+    const a = new Audio(src);
+    a.loop = true;
+    a.volume = 0;
+    return a;
   }
 
-  // ── Switch to a music state ────────────────
-  // states: 'night' | 'wolves' | 'day' | null
+  function _fadeIn(a, targetVol, onDone){
+    if(!a) return;
+    if(_unlocked) a.play().catch(()=>{});
+    const id = setInterval(()=>{
+      const t = _musicMuted ? 0 : targetVol;
+      a.volume = Math.min(t, a.volume + 0.04);
+      if(a.volume >= t - 0.01){ a.volume = t; clearInterval(id); if(onDone) onDone(); }
+    }, 50);
+    _fadeIds.push(id);
+  }
+
+  function _fadeOut(a, onDone){
+    if(!a){ if(onDone) onDone(); return; }
+    const id = setInterval(()=>{
+      a.volume = Math.max(0, a.volume - 0.04);
+      if(a.volume <= 0.01){ a.volume=0; a.pause(); clearInterval(id); if(onDone) onDone(); }
+    }, 50);
+    _fadeIds.push(id);
+  }
+
+  function _allTracks(){ return [_nightTrack, _dayTrack, _wolvesTrack, _lobbyTrack, _loginTrack].filter(Boolean); }
+
   function _switchTo(state){
-    // Allow wolves to re-trigger even if already 'wolves' (for night 2, 3, etc.)
     if(_activePhase === state && state !== 'wolves') return;
-    const prev = _activePhase;
     _activePhase = state;
     _clearFades();
-
-    const targetVol = _musicMuted ? 0 : _musicVol;
+    const vol = _musicVol;
 
     if(state === 'night'){
-      // Fade out wolves ambience if playing
-      if(_wolvesAmb && !_wolvesAmb.paused){
-        _fade(_wolvesAmb, 'out', 0);
-      }
-      // Fade out day music if playing
-      if(_dayMusic && !_dayMusic.paused){
-        _fade(_dayMusic, 'out', 0);
-      }
-      // Fade in night music
-      const nm = _getTrack('night');
-      if(nm){
-        nm.dataset.shouldPlay = '1';
-        if(nm.paused && _unlocked) nm.play().catch(()=>{});
-        _fade(nm, 'in', targetVol);
-      }
+      _fadeOut(_dayTrack);
+      _fadeOut(_wolvesTrack);
+      _fadeOut(_lobbyTrack);
+      if(!_nightTrack) _nightTrack = _makeTrack(MUSIC_FILES.night);
+      _fadeIn(_nightTrack, vol);
 
     } else if(state === 'wolves'){
-      // Fade out night music
-      const nm = _getTrack('night');
-      if(nm && !nm.paused){
-        _fade(nm, 'out', 0, ()=>{ nm.dataset.shouldPlay = '0'; });
-      }
-      // Fade in wolves ambience — always reset so it replays on every wolves turn
-      const wa = _getTrack('wolves');
-      if(wa){
-        wa.dataset.shouldPlay = '1';
-        wa.currentTime = 0;  // restart from beginning every wolves turn
-        if(_unlocked){
-          wa.play().catch(()=>{});
-        }
-        _fade(wa, 'in', targetVol);
-      }
+      if(!_wolvesTrack) _wolvesTrack = _makeTrack(MUSIC_FILES.wolves);
+      _wolvesTrack.currentTime = 0;
+      _fadeOut(_nightTrack);
+      _fadeIn(_wolvesTrack, vol);
 
     } else if(state === 'day'){
-      // Fade out night & wolves
-      [_getTrack('night'), _getTrack('wolves')].forEach(a=>{
-        if(a && !a.paused) _fade(a, 'out', 0, ()=>{ a.dataset.shouldPlay='0'; });
-      });
-      // Fade in day music
-      const dm = _getTrack('day');
-      if(dm){
-        dm.dataset.shouldPlay = '1';
-        if(dm.paused && _unlocked) dm.play().catch(()=>{});
-        _fade(dm, 'in', targetVol);
-      }
+      _fadeOut(_nightTrack);
+      _fadeOut(_wolvesTrack);
+      _fadeOut(_lobbyTrack);
+      if(!_dayTrack) _dayTrack = _makeTrack(MUSIC_FILES.day);
+      _fadeIn(_dayTrack, vol);
 
     } else {
-      // null — stop everything
-      [_getTrack('night'), _getTrack('wolves'), _getTrack('day')].forEach(a=>{
-        if(a && !a.paused) _fade(a, 'out', 0);
-      });
+      _allTracks().forEach(a=>_fadeOut(a));
     }
   }
 
-  // ── Play a one-shot SFX ────────────────────
   function _playSfx(key){
     if(!_unlocked) return;
-    const src = SFX[key];
+    const src = SFX_FILES[key];
     if(!src) return;
     const vol = _sfxMuted ? 0 : _sfxVol;
-    if(vol === 0) return;
+    if(!vol) return;
     if(!_sfxCache[key]) _sfxCache[key] = new Audio(src);
     const a = _sfxCache[key].cloneNode();
     a.volume = vol;
     a.play().catch(()=>{});
   }
 
-  // Module ref trick so _getTrack can self-reference
-  const module = {
-    _nightMusic: null,
-    _dayMusic:   null,
-    _wolvesAmb:  null,
+  return {
+    unlock(){
+      if(_unlocked) return;
+      _unlocked = true;
+      _allTracks().forEach(a=>{ if(a && a.paused) a.play().catch(()=>{}); });
+      if(_loginTrack && _loginTrack.paused) _loginTrack.play().catch(()=>{});
+      if(_lobbyTrack && _lobbyTrack.paused) _lobbyTrack.play().catch(()=>{});
+    },
 
-    unlock(){ _unlock(); },
-
-    // Music vol
     setMusicVol(v){
       _musicVol = parseFloat(v);
-      if(!_musicMuted){
-        [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient, _lobbyAmbient].forEach(a=>{
-          if(a && !a.paused) a.volume = _musicVol;
-        });
-      }
+      if(!_musicMuted) _allTracks().forEach(a=>{ if(a && !a.paused) a.volume = _musicVol; });
     },
     muteMusic(on){
       _musicMuted = on;
       const v = on ? 0 : _musicVol;
-      [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient, _lobbyAmbient].forEach(a=>{
-        if(a) a.volume = v;
-      });
+      _allTracks().forEach(a=>{ if(a) a.volume = v; });
+      if(_loginTrack) _loginTrack.volume = v;
+      if(_lobbyTrack) _lobbyTrack.volume = v;
     },
     isMusicMuted(){ return _musicMuted; },
 
-    // SFX vol
     setSfxVol(v){ _sfxVol = parseFloat(v); },
     muteSfx(on){ _sfxMuted = on; },
     isSfxMuted(){ return _sfxMuted; },
 
-    // Lobby waiting room music
-    startLobbyAmbient(){
-      if(_lobbyAmbient) return;
-      const src = MUSIC_FILES.lobby;
-      if(!src) return;
-      const a = new Audio(src);
-      a.loop = true;
-      a.volume = 0;
-      _lobbyAmbient = a;
-      if(_unlocked) a.play().catch(()=>{});
-      const target = _musicMuted ? 0 : _musicVol;
-      const id = setInterval(()=>{
-        if(!_lobbyAmbient){ clearInterval(id); return; }
-        a.volume = Math.min(target, a.volume + 0.02);
-        if(a.volume >= target - 0.01){ a.volume = target; clearInterval(id); }
-      }, 60);
-    },
-    stopLobbyAmbient(){
-      if(!_lobbyAmbient) return;
-      const a = _lobbyAmbient;
-      _lobbyAmbient = null;
-      const id = setInterval(()=>{
-        a.volume = Math.max(0, a.volume - 0.05);
-        if(a.volume <= 0.01){ a.pause(); a.src=''; clearInterval(id); }
-      }, 40);
-    },
-
-    // Phase control
     setPhase(phase){
-      if(phase === 'night') _switchTo('night');
-      else if(phase === 'day') _switchTo('day');
-      else _switchTo(null);
+      if(phase === 'night')      _switchTo('night');
+      else if(phase === 'day')   _switchTo('day');
+      else                       _switchTo(null);
     },
 
-    // Wolves ambience on/off (call during wolves night turn)
     startWolvesAmbience(){ _switchTo('wolves'); },
     stopWolvesAmbience(){
-      // Return to night music if still in night phase
       if(_activePhase === 'wolves') _switchTo('night');
     },
 
     stopMusic(){
       _clearFades();
-      _switchTo(null);
+      _allTracks().forEach(a=>{ if(a){ a.pause(); a.currentTime=0; } });
+      _activePhase = null;
     },
 
-    // Login screen ambient — quiet version of night track
     startLoginAmbient(){
-      if(_loginAmbientStopped) return;
-      if(_loginAmbient) return; // already started
-      const src = MUSIC_FILES.night;
-      if(!src) return;
-      const a = new Audio(src);
-      a.loop = true;
-      a.volume = 0;
-      _loginAmbient = a;
-      a.play().catch(()=>{});
-      // Fade in to a low volume (30% of music vol)
-      const target = _musicMuted ? 0 : Math.min(0.3, _musicVol * 0.6);
-      const id = setInterval(()=>{
-        if(!_loginAmbient){ clearInterval(id); return; }
-        a.volume = Math.min(target, a.volume + 0.02);
-        if(a.volume >= target - 0.01){ a.volume = target; clearInterval(id); }
-      }, 60);
+      if(_loginStopped || _loginTrack) return;
+      _loginTrack = _makeTrack(MUSIC_FILES.night);
+      _fadeIn(_loginTrack, Math.min(0.3, _musicVol * 0.6));
     },
     stopLoginAmbient(){
-      if(!_loginAmbient) return;
-      _loginAmbientStopped = true;
-      const a = _loginAmbient;
-      _loginAmbient = null;
-      // Also reset the night music track so it can restart fresh for the game
-      if(module._nightMusic) {
-        module._nightMusic.pause();
-        module._nightMusic.currentTime = 0;
-        module._nightMusic = null;
-      }
-      const id = setInterval(()=>{
-        a.volume = Math.max(0, a.volume - 0.06);
-        if(a.volume <= 0.01){ a.pause(); a.src=''; clearInterval(id); }
-      }, 40);
+      if(!_loginTrack) return;
+      _loginStopped = true;
+      const a = _loginTrack;
+      _loginTrack = null;
+      _fadeOut(a, ()=>{ a.src=''; });
+    },
+
+    startLobbyAmbient(){
+      if(_lobbyTrack) return;
+      _lobbyTrack = _makeTrack(MUSIC_FILES.lobby);
+      _fadeIn(_lobbyTrack, _musicVol);
+    },
+    stopLobbyAmbient(){
+      if(!_lobbyTrack) return;
+      const a = _lobbyTrack;
+      _lobbyTrack = null;
+      _fadeOut(a, ()=>{ a.src=''; });
     },
 
     sfx: _playSfx,
   };
-
-  // Wire internal references
-  Object.defineProperty(module, '_nightMusic', {
-    get(){ return _nightMusic; }, set(v){ _nightMusic=v; }
-  });
-  Object.defineProperty(module, '_dayMusic', {
-    get(){ return _dayMusic; }, set(v){ _dayMusic=v; }
-  });
-  Object.defineProperty(module, '_wolvesAmb', {
-    get(){ return _wolvesAmb; }, set(v){ _wolvesAmb=v; }
-  });
-
-  return module;
 })();
 
 // ── Panel UI helpers ──────────────────────────────────────────────────────
