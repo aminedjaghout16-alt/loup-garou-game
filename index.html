@@ -350,6 +350,10 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .vote-card.has-votes{border-color:rgba(185,28,28,.4)}
 .voted-confirm{text-align:center;padding:.6rem;background:rgba(16,185,129,.1);border:1px solid var(--green);border-radius:8px;color:var(--green);font-family:'Creepster',cursive;font-size:1rem;letter-spacing:.05em}
 
+/* ── IRL MODE ── */
+@keyframes irlRippleAnim{0%{opacity:.9;transform:scale(0)}100%{opacity:0;transform:scale(2.2)}}
+#irlFingerprintPad:active{transform:scale(.95)}
+#irlOverlay{scrollbar-width:thin;scrollbar-color:var(--moon) var(--void)}
 </style>
 </head>
 <body>
@@ -361,50 +365,100 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
     <button class="lb" data-l="fr" onclick="setLang('fr')">FR</button>
     <button class="lb" data-l="ar" onclick="setLang('ar')">AR</button>
   </div>
-  <div style="position:absolute;top:4.5rem;left:1rem;display:flex;gap:0.5rem;z-index:201">
-    <button class="lb active" id="onlineModeBtn" onclick="switchGameMode('online')" style="background:var(--blood-glow)">🌐 Online</button>
-    <button class="lb" id="offlineModeBtn" onclick="switchGameMode('offline')">🤖 Offline</button>
-  </div>
   <div class="login-box">
     <h1 id="t_title">Loup-Garou</h1>
     <p  id="t_sub">Join the game of deception and survival</p>
-    
-    <!-- ONLINE MODE -->
-    <div id="onlineModePanel">
-      <div class="fg">
-        <label id="t_name">Your Name</label>
-        <input id="inName" type="text" autocomplete="off">
+    <div class="fg">
+      <label id="t_name">Your Name</label>
+      <input id="inName" type="text" autocomplete="off">
+    </div>
+    <div class="fg" id="joinCodeGroup">
+      <label id="t_code">Room Code</label>
+      <input id="inCode" type="text" maxlength="6" style="text-transform:uppercase;letter-spacing:.15em" autocomplete="off">
+    </div>
+    <button class="btn" style="width:100%" onclick="doJoin()" id="t_join">Join Game</button>
+    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
+    <button class="btn btn-secondary" style="width:100%" onclick="doCreate()" id="t_create">Create Room</button>
+    <div class="room-code-display" id="createdCodeBox">
+      <small id="t_shareCode">Share this code with friends:</small>
+      <div class="code" id="createdCodeVal">——</div>
+    </div>
+    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
+    <button class="btn" style="width:100%;background:linear-gradient(135deg,#1a0a2e,#3b0764);border:1px solid var(--moon-pale)" onclick="openIrlMode()" id="t_irl">🌙 IRL Mode — Pass the Phone</button>
+  </div>
+</div>
+
+<!-- ══ IRL MODE OVERLAY ══ -->
+<div id="irlOverlay" style="display:none;position:fixed;inset:0;z-index:200;background:var(--void);overflow-y:auto;flex-direction:column;align-items:center;justify-content:flex-start;padding:1.5rem 1rem 2rem">
+
+  <!-- Step 1: Player count -->
+  <div id="irlStep1" style="width:100%;max-width:420px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:.3rem">🌙</div>
+    <h2 style="font-family:'Creepster',cursive;color:var(--moon);font-size:2rem;margin-bottom:.3rem" id="irl_title1">IRL Mode</h2>
+    <p style="opacity:.75;margin-bottom:1.6rem;font-size:.92rem" id="irl_sub1">One phone, everyone plays. Pass it around to reveal roles secretly.</p>
+    <div class="fg">
+      <label id="irl_lcount">Number of Players</label>
+      <div style="display:flex;align-items:center;gap:.7rem;margin-top:.3rem">
+        <button class="btn btn-secondary" style="font-size:1.4rem;padding:.45rem .9rem;line-height:1" onclick="irlAdjust(-1)">−</button>
+        <span id="irlCountDisplay" style="font-family:'Creepster',cursive;font-size:2.4rem;color:var(--moon-pale);flex:1;text-align:center">6</span>
+        <button class="btn btn-secondary" style="font-size:1.4rem;padding:.45rem .9rem;line-height:1" onclick="irlAdjust(+1)">+</button>
       </div>
-      <div class="fg" id="joinCodeGroup">
-        <label id="t_code">Room Code</label>
-        <input id="inCode" type="text" maxlength="6" style="text-transform:uppercase;letter-spacing:.15em" autocomplete="off">
+      <div style="font-size:.78rem;opacity:.5;margin-top:.4rem" id="irl_range">4 – 20 players</div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:1rem" onclick="irlStep1Next()" id="irl_next1">Choose Roles →</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:.6rem" onclick="closeIrlMode()" id="irl_back0">← Back</button>
+  </div>
+
+  <!-- Step 2: Role selection -->
+  <div id="irlStep2" style="width:100%;max-width:500px;display:none;text-align:center">
+    <h2 style="font-family:'Creepster',cursive;color:var(--moon);font-size:1.7rem;margin-bottom:.3rem" id="irl_title2">Select Roles</h2>
+    <p id="irl_roleCount" style="opacity:.75;font-size:.88rem;margin-bottom:.8rem"></p>
+    <div id="irlRolesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.45rem;max-height:52vh;overflow-y:auto;margin-bottom:.9rem;padding:.2rem"></div>
+    <div id="irl_roleWarn" style="color:var(--red);font-size:.82rem;min-height:1.2em;margin-bottom:.4rem"></div>
+    <button class="btn" style="width:100%" onclick="irlStep2Next()" id="irl_next2">Start Distribution →</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:.6rem" onclick="irlGoStep(1)" id="irl_back1">← Back</button>
+  </div>
+
+  <!-- Step 3: Fingerprint / reveal screen -->
+  <div id="irlStep3" style="width:100%;max-width:420px;display:none;text-align:center">
+    <div id="irlRevealPhase">
+      <!-- "Pass to player N" screen -->
+      <div id="irlPassScreen">
+        <p style="font-size:.85rem;opacity:.6;margin-bottom:.4rem" id="irl_playerNum"></p>
+        <h2 style="font-family:'Creepster',cursive;color:var(--moon);font-size:1.6rem;margin-bottom:.5rem" id="irl_passTitle">Pass the phone!</h2>
+        <p style="opacity:.72;font-size:.9rem;margin-bottom:2rem" id="irl_passInstr">Place your finger on the pad to reveal your secret role. Don't show anyone!</p>
+        <!-- Fingerprint pad -->
+        <div id="irlFingerprintPad" onclick="irlRevealRole()"
+          style="width:170px;height:170px;margin:0 auto 1.6rem;border-radius:50%;background:radial-gradient(circle at 35% 38%,#2a1a4e,#0d0d24);border:3px solid var(--moon);box-shadow:0 0 40px rgba(212,160,23,.22),inset 0 0 30px rgba(0,0,0,.5);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .18s;position:relative;overflow:hidden;user-select:none">
+          <div style="font-size:3.5rem;margin-bottom:.1rem;pointer-events:none" id="irlFpIcon">☽</div>
+          <div style="font-size:.7rem;color:var(--moon-pale);letter-spacing:.1em;pointer-events:none;opacity:.8" id="irlFpHint">TOUCH TO REVEAL</div>
+          <div id="irlFpRipple" style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(212,160,23,.35),transparent 70%);opacity:0;pointer-events:none"></div>
+        </div>
       </div>
-      <button class="btn" style="width:100%" onclick="doJoin()" id="t_join">Join Game</button>
-      <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
-      <button class="btn btn-secondary" style="width:100%" onclick="doCreate()" id="t_create">Create Room</button>
-      <div class="room-code-display" id="createdCodeBox">
-        <small id="t_shareCode">Share this code with friends:</small>
-        <div class="code" id="createdCodeVal">——</div>
+
+      <!-- Role reveal screen (shown after touch) -->
+      <div id="irlRoleScreen" style="display:none">
+        <p style="font-size:.82rem;opacity:.55;margin-bottom:.4rem" id="irl_secretLabel">Your secret role — memorise it!</p>
+        <div id="irlRoleCard" style="background:var(--abyss);border:2px solid var(--moon);border-radius:14px;padding:1.6rem 1rem;margin:0 auto 1.4rem;max-width:300px;box-shadow:0 0 40px rgba(212,160,23,.2)">
+          <div id="irlRoleEmoji" style="font-size:4.5rem;margin-bottom:.5rem"></div>
+          <div id="irlRoleName" style="font-family:'Creepster',cursive;font-size:1.9rem;color:var(--moon-pale);margin-bottom:.5rem"></div>
+          <div id="irlRoleTeam" style="font-size:.78rem;letter-spacing:.12em;margin-bottom:.7rem;font-weight:700"></div>
+          <div id="irlRoleDesc" style="font-size:.82rem;opacity:.75;line-height:1.5"></div>
+        </div>
+        <button class="btn" style="width:100%;max-width:300px" onclick="irlNextPlayer()" id="irl_nextPlayer">Done — Pass to next player →</button>
       </div>
     </div>
-    
-    <!-- OFFLINE MODE -->
-    <div id="offlineModePanel" style="display:none">
-      <div class="fg">
-        <label id="t_name_offline">Your Name</label>
-        <input id="inNameOffline" type="text" autocomplete="off">
-      </div>
-      <div class="fg">
-        <label id="t_difficulty">Difficulty</label>
-        <select id="difficultySelect" style="width:100%;padding:.75rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem">
-          <option value="easy">Easy - Simple Bot Decisions</option>
-          <option value="medium" selected>Medium - Balanced Play</option>
-          <option value="hard">Hard - Aggressive Bots</option>
-        </select>
-      </div>
-      <button class="btn" style="width:100%" onclick="startOfflineSetup()" id="t_start_offline">Setup Offline Game</button>
+
+    <!-- All done screen -->
+    <div id="irlDoneScreen" style="display:none">
+      <div style="font-size:4rem;margin-bottom:.6rem">🐺</div>
+      <h2 style="font-family:'Creepster',cursive;color:var(--moon);font-size:2rem;margin-bottom:.5rem" id="irl_doneTitle">All roles assigned!</h2>
+      <p style="opacity:.72;font-size:.9rem;margin-bottom:1.6rem" id="irl_doneSub">Everyone knows their secret. The game begins…</p>
+      <button class="btn" style="width:100%;max-width:300px;margin-bottom:.6rem" onclick="irlRestart()" id="irl_restart">Play Again 🔄</button>
+      <button class="btn btn-secondary" style="width:100%;max-width:300px" onclick="closeIrlMode()" id="irl_exit">Back to Menu</button>
     </div>
   </div>
+
 </div>
 
 <!-- ══ GAME SCREEN ══ -->
@@ -1591,6 +1645,7 @@ function setLang(l){
   document.querySelectorAll('.lb').forEach(b=>b.classList.toggle('active',b.dataset.l===l));
   applyTranslations();
   buildRolesGrid();
+  if(typeof _irlApplyLang==='function') _irlApplyLang();
 }
 
 function applyTranslations(){
@@ -1896,12 +1951,6 @@ function cfgChanged(){
 // START
 // ════════════════════════════════════════════
 function doStartGame(){
-  // Offline mode - use custom start
-  if(offlineGameMode){
-    doStartOfflineGame();
-    return;
-  }
-  
   // Robust leader check: use both local flag and Firebase data
   const amLeader = isLeader || (gameState?.leader === myId);
   if(!amLeader){ console.warn('Not leader, cannot start'); return; }
@@ -4645,228 +4694,238 @@ function sendChat(){
 }
 
 // ════════════════════════════════════════════
-// OFFLINE BOT MODE
+// IRL MODE
 // ════════════════════════════════════════════
-let offlineGameMode=false;
-let botDifficulty='medium';
-let offlinePlayerName='';
-const BOT_NAMES=['Luna','Fenrir','Sage','Hunter','Witch','Oracle','Mage','Shadow','Raven','Echo'];
+const IRL = {
+  playerCount: 6,
+  selectedRoles: {},   // role -> count
+  roleQueue: [],       // shuffled array of role strings to hand out
+  currentPlayer: 0,    // 0-based index
+};
 
-function switchGameMode(mode){
-  if(mode==='offline'){
-    document.getElementById('onlineModePanel').style.display='none';
-    document.getElementById('offlineModePanel').style.display='block';
-    document.getElementById('onlineModeBtn').style.background='transparent';
-    document.getElementById('offlineModeBtn').style.background='var(--blood-glow)';
-    document.getElementById('inNameOffline').focus();
-  } else {
-    document.getElementById('onlineModePanel').style.display='block';
-    document.getElementById('offlineModePanel').style.display='none';
-    document.getElementById('onlineModeBtn').style.background='var(--blood-glow)';
-    document.getElementById('offlineModeBtn').style.background='transparent';
-    document.getElementById('inName').focus();
+function openIrlMode(){
+  IRL.playerCount = 6;
+  IRL.selectedRoles = { werewolf: 1, villager: 1 };
+  document.getElementById('irlCountDisplay').textContent = IRL.playerCount;
+  document.getElementById('irlOverlay').style.display = 'flex';
+  irlGoStep(1);
+  _irlApplyLang();
+}
+
+function closeIrlMode(){
+  document.getElementById('irlOverlay').style.display = 'none';
+}
+
+function irlGoStep(n){
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('irlStep'+i);
+    if(el) el.style.display = (i===n) ? '' : 'none';
+  });
+  if(n===2) _irlBuildRolesGrid();
+}
+
+function irlAdjust(delta){
+  IRL.playerCount = Math.min(20, Math.max(4, IRL.playerCount + delta));
+  document.getElementById('irlCountDisplay').textContent = IRL.playerCount;
+  _irlUpdateRoleCount();
+}
+
+function irlStep1Next(){
+  irlGoStep(2);
+}
+
+/* ── Role grid for IRL ── */
+function _irlBuildRolesGrid(){
+  const grid = document.getElementById('irlRolesGrid');
+  grid.innerHTML = '';
+  Object.entries(ROLES_DEF).forEach(([key, rd]) => {
+    const count = IRL.selectedRoles[key] || 0;
+    const card = document.createElement('div');
+    card.id = 'irlrc_' + key;
+    card.style.cssText = 'background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:.5rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:.15s';
+    card.innerHTML = `
+      <span style="font-size:1.5rem">${rd.e}</span>
+      <span style="font-family:\'Creepster\',cursive;font-size:.8rem;color:var(--moon-pale);text-align:center;line-height:1.2">${tr(key)}</span>
+      <div style="display:flex;align-items:center;gap:.3rem;margin-top:.2rem">
+        <button onclick="irlRoleAdj('${key}',-1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">−</button>
+        <span id="irlcnt_${key}" style="font-family:\'Creepster\',cursive;font-size:1.1rem;color:var(--moon);min-width:16px;text-align:center">${count}</span>
+        <button onclick="irlRoleAdj('${key}',+1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">+</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+  _irlUpdateRoleCount();
+}
+
+function irlRoleAdj(key, delta){
+  const cur = IRL.selectedRoles[key] || 0;
+  const next = Math.max(0, cur + delta);
+  IRL.selectedRoles[key] = next;
+  const el = document.getElementById('irlcnt_' + key);
+  if(el) el.textContent = next;
+  _irlUpdateRoleCount();
+}
+
+function _irlTotalRoles(){
+  return Object.values(IRL.selectedRoles).reduce((a,b) => a+b, 0);
+}
+
+function _irlUpdateRoleCount(){
+  const total = _irlTotalRoles();
+  const need = IRL.playerCount;
+  const warn = document.getElementById('irl_roleWarn');
+  const info = document.getElementById('irl_roleCount');
+  const lbl = lang==='ar' ? `الأدوار المحددة: ${total} / ${need} لاعب` :
+               lang==='fr' ? `Rôles sélectionnés : ${total} / ${need} joueurs` :
+                             `Roles selected: ${total} / ${need} players`;
+  if(info) info.textContent = lbl;
+  if(warn){
+    if(total < need) warn.textContent = lang==='ar'?`⚠ أضف ${need-total} دور(أدوار) أخرى`:lang==='fr'?`⚠ Ajoutez ${need-total} rôle(s)`:` ⚠ Add ${need-total} more role(s)`;
+    else if(total > need) warn.textContent = lang==='ar'?`⚠ أزل ${total-need} دور(أدوار)`:lang==='fr'?`⚠ Retirez ${total-need} rôle(s)`:` ⚠ Remove ${total-need} role(s)`;
+    else warn.textContent = '';
   }
 }
 
-function startOfflineSetup(){
-  const playerName=document.getElementById('inNameOffline').value.trim();
-  if(!playerName) return;
-  
-  offlinePlayerName=playerName;
-  botDifficulty=document.getElementById('difficultySelect').value;
-  myName=playerName;
-  myId='offline_p0';
-  isLeader=true;
-  fbOk=false;
-  db=null;
-  roomCode=null;
-  offlineGameMode=true;
-  
-  // Initialize gameState for setup view (same as online)
-  gameState={
-    players:{},
-    phase:'setup',
-    roles:[],
-    chat:[],
-    teamChat:{},
-    status:'setup',
-    isOffline:true,
-    difficulty:botDifficulty,
-    leader:myId
-  };
-  
-  // Add player to setup
-  gameState.players[myId]={
-    id:myId,
-    name:offlinePlayerName,
-    role:'',
-    alive:true,
-    team:'',
-    isBot:false
-  };
-  
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('gameScreen').classList.remove('hidden');
-  
-  // Show setup view with role selection (same as online)
-  renderGame();
-}
-
-function doStartOfflineGame(){
-  if(!offlineGameMode) return;
-  
-  // Get configured roles from cfg
-  const selectedRoles=cfg.roles?Object.values(cfg.roles):[];
-  const numBots=7; // Always 8 players total (you + 7 bots)
-  
-  // Assign roles - player gets first, bots get rest
-  const allRoles=[...selectedRoles];
-  while(allRoles.length<numBots+1) allRoles.push('villager');
-  
-  // Shuffle
-  for(let i=allRoles.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [allRoles[i],allRoles[j]]=[allRoles[j],allRoles[i]];
-  }
-  
-  // Assign to players
-  gameState.players[myId].role=allRoles[0];
-  gameState.players[myId].team=ROLES_DEF[allRoles[0]]?.team||'village';
-  
-  // Create 7 bots with remaining roles
-  for(let i=0;i<numBots;i++){
-    const botId='offline_b'+i;
-    const role=allRoles[i+1];
-    gameState.players[botId]={
-      id:botId,
-      name:BOT_NAMES[i],
-      role:role,
-      alive:true,
-      team:ROLES_DEF[role]?.team||'village',
-      isBot:true
-    };
-  }
-  
-  // Start game
-  gameState.phase='night';
-  gameState.dayNum=1;
-  gameState.nightNum=1;
-  gameState.phaseStart=Date.now();
-  gameState.nightActions={};
-  gameState.dayVotes={};
-  gameState.status='playing';
-  gameState.nightTurn={stepId:null,stepIndex:-1,turnStart:Date.now()};
-  
-  renderGame();
-  setTimeout(()=>offlineGameLoop(),2000);
-}
-
-function offlineGameLoop(){
-  if(!offlineGameMode||!gameState) return;
-  
-  const alive=Object.values(gameState.players).filter(p=>p.alive);
-  const wolves=alive.filter(p=>p.role==='werewolf');
-  const villagers=alive.filter(p=>p.team==='village');
-  
-  // Check win condition
-  if(wolves.length===0||wolves.length>=villagers.length){
-    const winner=wolves.length===0?'village':'werewolf';
-    showGameOverOffline(winner);
+function irlStep2Next(){
+  if(_irlTotalRoles() !== IRL.playerCount){
+    _irlUpdateRoleCount();
     return;
   }
-  
-  if(gameState.phase==='night'){
-    // Bot night actions
-    alive.forEach(p=>{
-      if(p.isBot&&!gameState.nightActions[p.id]){
-        if(p.role==='werewolf'){
-          const targets=alive.filter(x=>x.team==='village'&&x.id!==p.id);
-          if(targets.length){
-            let target=targets[Math.floor(Math.random()*targets.length)];
-            if(botDifficulty==='hard'){
-              const seer=targets.find(x=>x.role==='seer');
-              if(seer) target=seer;
-            }
-            gameState.nightActions[p.id]=target.id;
-          }
-        } else if(p.role==='seer'){
-          const targets=alive.filter(x=>x.id!==p.id);
-          if(targets.length){
-            let target=targets[Math.floor(Math.random()*targets.length)];
-            if(botDifficulty==='hard'){
-              target=targets.find(x=>x.team==='wolf')||target;
-            }
-            gameState.nightActions[p.id]=target.id;
-          }
-        }
-      }
-    });
-    
-    // Execute wolf kill
-    const wolfAction=Object.entries(gameState.nightActions).find(([pid])=>gameState.players[pid]?.role==='werewolf');
-    if(wolfAction){
-      const target=gameState.players[wolfAction[1]];
-      if(target) target.alive=false;
-    }
-    
-    gameState.phase='day';
-    gameState.dayNum++;
-    gameState.nightActions={};
-  } else if(gameState.phase==='day'){
-    // Bot day votes
-    alive.forEach(p=>{
-      if(p.isBot&&!gameState.dayVotes[p.id]){
-        const targets=alive.filter(x=>x.id!==p.id);
-        if(targets.length){
-          let target=targets[Math.floor(Math.random()*targets.length)];
-          if(botDifficulty==='hard'&&p.team==='village'){
-            const wolf=targets.find(x=>x.team==='wolf');
-            if(wolf) target=wolf;
-          }
-          gameState.dayVotes[p.id]=target.id;
-        }
-      }
-    });
-    
-    // Count votes and eliminate
-    const votes={};
-    Object.values(gameState.dayVotes).forEach(vid=>{votes[vid]=(votes[vid]||0)+1});
-    const maxVotes=Math.max(...Object.values(votes),0);
-    const eliminated=Object.keys(votes).find(k=>votes[k]===maxVotes);
-    
-    if(eliminated){
-      const target=gameState.players[eliminated];
-      if(target) target.alive=false;
-    }
-    
-    gameState.phase='night';
-    gameState.nightNum++;
-    gameState.dayVotes={};
+  // Build shuffled queue
+  const pool = [];
+  Object.entries(IRL.selectedRoles).forEach(([role, cnt]) => {
+    for(let i=0;i<cnt;i++) pool.push(role);
+  });
+  // Fisher-Yates shuffle
+  for(let i=pool.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]] = [pool[j],pool[i]];
   }
-  
-  renderGame();
-  setTimeout(()=>offlineGameLoop(),2500);
+  IRL.roleQueue = pool;
+  IRL.currentPlayer = 0;
+  irlGoStep(3);
+  _irlShowPassScreen();
 }
 
-function showGameOverOffline(winner){
-  const myRole=gameState.players[myId]?.role;
-  const myTeam=gameState.players[myId]?.team;
-  const didWin=(winner==='village'&&myTeam==='village')||(winner==='werewolf'&&myTeam==='wolf');
-  
-  gameState.status='gameover:'+winner;
-  
-  const msg=`${didWin?'🏆 YOU WIN!':'💀 YOU LOSE!'}\n\n${winner.toUpperCase()} team wins!\n\nYour role: ${myRole||'?'}`;
-  alert(msg);
-  
-  offlineGameMode=false;
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('gameScreen').classList.add('hidden');
-  document.getElementById('inName').value='';
-  document.getElementById('inCode').value='';
-  document.getElementById('inNameOffline').value='';
-  document.getElementById('onlineModePanel').style.display='block';
-  document.getElementById('offlineModePanel').style.display='none';
-  gameState=null;
+/* ── Step 3 internals ── */
+function _irlShowPassScreen(){
+  document.getElementById('irlRevealPhase').style.display = '';
+  document.getElementById('irlDoneScreen').style.display = 'none';
+  document.getElementById('irlPassScreen').style.display = '';
+  document.getElementById('irlRoleScreen').style.display = 'none';
+  // Reset fingerprint pad
+  const pad = document.getElementById('irlFingerprintPad');
+  pad.style.borderColor = 'var(--moon)';
+  pad.style.boxShadow = '0 0 40px rgba(212,160,23,.22),inset 0 0 30px rgba(0,0,0,.5)';
+  document.getElementById('irlFpIcon').textContent = '☽';
+  document.getElementById('irlFpHint').textContent =
+    lang==='ar'?'المس للكشف':lang==='fr'?'TOUCHER POUR RÉVÉLER':'TOUCH TO REVEAL';
+  // Player counter label
+  const n = IRL.currentPlayer + 1;
+  const total = IRL.playerCount;
+  document.getElementById('irl_playerNum').textContent =
+    lang==='ar'?`اللاعب ${n} من ${total}`:lang==='fr'?`Joueur ${n} / ${total}`:`Player ${n} of ${total}`;
+  document.getElementById('irl_passTitle').textContent =
+    lang==='ar'?'مرّر الهاتف!':lang==='fr'?'Passez le téléphone !':'Pass the phone!';
+  document.getElementById('irl_passInstr').textContent =
+    lang==='ar'?'ضع إصبعك على الدائرة لمعرفة دورك السري. لا تُري أحداً!':
+    lang==='fr'?'Posez le doigt sur le cercle pour révéler votre rôle secret. Ne le montrez à personne !':
+               'Place your finger on the circle to reveal your secret role. Don\'t show anyone!';
+}
+
+function irlRevealRole(){
+  // Animate the pad
+  const pad = document.getElementById('irlFingerprintPad');
+  const ripple = document.getElementById('irlFpRipple');
+  pad.style.borderColor = 'var(--moon-pale)';
+  pad.style.boxShadow = '0 0 60px rgba(212,160,23,.55),inset 0 0 40px rgba(0,0,0,.6)';
+  document.getElementById('irlFpIcon').textContent = '🔮';
+  // Ripple
+  ripple.style.animation = 'none';
+  ripple.offsetHeight;
+  ripple.style.animation = 'irlRippleAnim .6s ease-out forwards';
+  setTimeout(() => {
+    const role = IRL.roleQueue[IRL.currentPlayer];
+    const rd = ROLES_DEF[role];
+    // Fill role card
+    document.getElementById('irlRoleEmoji').textContent = rd?.e || '?';
+    document.getElementById('irlRoleName').textContent = tr(role);
+    const teamColors = { werewolf:'color:#ef4444', village:'color:#10b981', solo:'color:#d4a017' };
+    const teamLabels = {
+      werewolf: lang==='ar'?'ذئب 🐺':lang==='fr'?'Camp : Loup-Garou 🐺':'Team: Werewolf 🐺',
+      village:  lang==='ar'?'قرية 🏘️':lang==='fr'?'Camp : Village 🏘️':'Team: Village 🏘️',
+      solo:     lang==='ar'?'منفرد ⭐':lang==='fr'?'Camp : Solo ⭐':'Team: Solo ⭐'
+    };
+    const team = rd?.team || 'village';
+    document.getElementById('irlRoleTeam').style.cssText = (teamColors[team]||'') + ';text-transform:uppercase;letter-spacing:.12em';
+    document.getElementById('irlRoleTeam').textContent = teamLabels[team] || team;
+    document.getElementById('irlRoleDesc').textContent = tr('d_'+role) || '';
+    // Labels
+    document.getElementById('irl_secretLabel').textContent =
+      lang==='ar'?'دورك السري — احفظه جيداً!':lang==='fr'?'Votre rôle secret — mémorisez-le !':'Your secret role — memorise it!';
+    const isLast = IRL.currentPlayer >= IRL.playerCount - 1;
+    const nextBtn = document.getElementById('irl_nextPlayer');
+    nextBtn.textContent = isLast
+      ? (lang==='ar'?'تم — ابدأ اللعبة 🐺':lang==='fr'?'Terminé — Commencer la partie 🐺':'Done — Start the game! 🐺')
+      : (lang==='ar'?'تم — مرّر للتالي ←':lang==='fr'?'Terminé — Passer au suivant →':'Done — Pass to next player →');
+    // Flip to reveal
+    document.getElementById('irlPassScreen').style.display = 'none';
+    document.getElementById('irlRoleScreen').style.display = '';
+  }, 600);
+}
+
+function irlNextPlayer(){
+  IRL.currentPlayer++;
+  if(IRL.currentPlayer >= IRL.playerCount){
+    // All done!
+    document.getElementById('irlRevealPhase').style.display = 'none';
+    document.getElementById('irlDoneScreen').style.display = '';
+    document.getElementById('irl_doneTitle').textContent =
+      lang==='ar'?'تم توزيع جميع الأدوار!':lang==='fr'?'Tous les rôles ont été distribués !':'All roles assigned!';
+    document.getElementById('irl_doneSub').textContent =
+      lang==='ar'?'الجميع يعرف سره. اللعبة تبدأ الآن…':lang==='fr'?'Tout le monde connaît son secret. La partie commence…':'Everyone knows their secret. The game begins…';
+    document.getElementById('irl_restart').textContent =
+      lang==='ar'?'العب مجدداً 🔄':lang==='fr'?'Rejouer 🔄':'Play Again 🔄';
+    document.getElementById('irl_exit').textContent =
+      lang==='ar'?'← العودة للقائمة':lang==='fr'?'← Retour au menu':'Back to Menu';
+  } else {
+    _irlShowPassScreen();
+  }
+}
+
+function irlRestart(){
+  IRL.currentPlayer = 0;
+  // Reshuffle same roles
+  const pool = [...IRL.roleQueue];
+  for(let i=pool.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]] = [pool[j],pool[i]];
+  }
+  IRL.roleQueue = pool;
+  irlGoStep(3);
+  _irlShowPassScreen();
+}
+
+/* Translate IRL static labels on lang change */
+function _irlApplyLang(){
+  const map = {
+    irl_title1:    {en:'IRL Mode', fr:'Mode IRL', ar:'وضع IRL'},
+    irl_sub1:      {en:'One phone, everyone plays. Pass it around to reveal roles secretly.',
+                    fr:'Un seul téléphone pour tous. Passez-le pour révéler les rôles en secret.',
+                    ar:'هاتف واحد للجميع. مرّره لكشف الأدوار سراً.'},
+    irl_lcount:    {en:'Number of Players', fr:'Nombre de joueurs', ar:'عدد اللاعبين'},
+    irl_range:     {en:'4 – 20 players', fr:'4 – 20 joueurs', ar:'4 – 20 لاعبين'},
+    irl_next1:     {en:'Choose Roles →', fr:'Choisir les rôles →', ar:'اختر الأدوار ←'},
+    irl_back0:     {en:'← Back', fr:'← Retour', ar:'→ رجوع'},
+    irl_title2:    {en:'Select Roles', fr:'Sélectionner les rôles', ar:'اختر الأدوار'},
+    irl_next2:     {en:'Start Distribution →', fr:'Commencer la distribution →', ar:'ابدأ التوزيع ←'},
+    irl_back1:     {en:'← Back', fr:'← Retour', ar:'→ رجوع'},
+    t_irl:         {en:'🌙 IRL Mode — Pass the Phone', fr:'🌙 Mode IRL — Passez le Téléphone', ar:'🌙 وضع IRL — مرّر الهاتف'},
+  };
+  Object.entries(map).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = (v[lang] || v.en);
+  });
+  _irlUpdateRoleCount();
 }
 
 // ════════════════════════════════════════════
