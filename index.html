@@ -69,9 +69,8 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
 
 /* ── PROFILE MODAL ── */
-#profileModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:none;align-items:center;justify-content:center;padding:1rem}
+#profileModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem}
 #profileModal.hidden{display:none}
-#profileModal.open{display:flex}
 .profile-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.8rem;width:100%;max-width:420px;box-shadow:0 0 40px rgba(212,160,23,.2);position:relative}
 .profile-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:1.2rem}
 .profile-avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--moon);margin:0 auto .8rem;display:block;object-fit:cover}
@@ -2020,8 +2019,6 @@ function _updateGoogleUI(user){
     }
   } else {
     // Show sign-in button + email form, hide profile bar + game entry
-    // But if guest mode is active, don't override it
-    if(_guestMode) return;
     if(signInBtn) signInBtn.style.display='flex';
     if(emailWrap) emailWrap.style.display='block';
     if(userBar) userBar.style.display='none';
@@ -2056,7 +2053,6 @@ function doGoogleSignIn(){
 
 function doGoogleSignOut(){
   if(!_fbAuth) return;
-  _guestMode=false;
   _fbAuth.signOut().then(()=>{
     _googleUser=null;
     _updateGoogleUI(null);
@@ -2161,9 +2157,7 @@ function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
 }
 
 // ── GUEST PLAY ──
-let _guestMode = false;
 function doGuestPlay(){
-  _guestMode = true;
   // Hide login options, show game entry — no account, no stats
   const emailWrap = document.getElementById('emailLoginWrap');
   const googleBtn = document.getElementById('googleSignInBtn');
@@ -5715,7 +5709,6 @@ async function openProfileModal(){
   const notSignedIn=document.getElementById('pmNotSignedIn');
   const loading=document.getElementById('pmLoading');
   modal.classList.remove('hidden');
-  modal.classList.add('open');
   // Localise labels
   const lblMap={
     pmTitle:     {en:'📊 My Stats',fr:'📊 Mes Stats',ar:'📊 إحصائياتي'},
@@ -5781,7 +5774,6 @@ async function openProfileModal(){
 
 function closeProfileModal(){
   document.getElementById('profileModal').classList.add('hidden');
-  document.getElementById('profileModal').classList.remove('open');
 }
 
 // ════════════════════════════════════════════
