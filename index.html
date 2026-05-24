@@ -2765,7 +2765,10 @@ function renderGame(){
 
     if(_needsSequence){
       _nightToDayRunning=true;
-      // Render player list immediately (so the board is visible behind overlays)
+      // Snapshot the phase now — the async IIFE will use this even if gameState
+      // is mutated by a subsequent Firebase update during the animation.
+      const _seqPhase=gameState.phase;
+      // Render player list immediately (board visible behind overlays)
       const _meSnap=gameState.players?.[myId];
       if(_meSnap?.role){
         myRole=_meSnap.role;
@@ -2776,15 +2779,16 @@ function renderGame(){
       }
       renderPlayerList(players);
       renderStats(players);
-      // Keep day UI hidden until the sequence finishes
+      // Keep day voting UI hidden until sequence finishes
       document.getElementById('actionBtns').style.display='none';
 
       (async ()=>{
-        // Step 1: Day transition animation (awaited)
-        await maybeShowPhaseTransition(gameState.phase);
-        // Step 2: Death animations, one by one (awaited, already sequential inside)
+        // Step 1: Day transition animation — pass phase directly so _lastPhase
+        //         guard inside maybeShowPhaseTransition fires correctly.
+        await maybeShowPhaseTransition(_seqPhase);
+        // Step 2: Death animations one by one (sequential, awaited)
         await checkForDeaths(players);
-        // Step 3: Sequence done — reveal discussion/vote UI
+        // Step 3: Sequence done — show day UI and start timer
         _nightToDayRunning=false;
         document.getElementById('actionBtns').style.display='';
         renderPhase();
@@ -2795,12 +2799,12 @@ function renderGame(){
           else if(gameState.phase==='day') checkDayVoteComplete();
         }
       })();
-      return; // Skip the synchronous render path below — sequence handles it
+      return; // Async IIFE handles the rest — skip synchronous path below
     }
 
     // ── Normal / non-transitioning render path ─────────────────────────────
-    // Phase transition for night phase (or no-op if unchanged)
-    maybeShowPhaseTransition(gameState.phase);
+    // Phase transition animation — skipped if the night→day sequence owns it
+    if(!_nightToDayRunning) maybeShowPhaseTransition(gameState.phase);
 
     // Win condition is now handled via status:'gameover:...' written by leader
     // (checkWinCondition block moved to the gameover handler at top of renderGame)
