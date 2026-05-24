@@ -103,7 +103,8 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .guest-btn:hover{border-color:var(--moon);color:var(--moon)}
 
 /* ── LOGIN ── */
-#loginScreen{position:fixed;inset:0;background:var(--void);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+#loginScreen{position:fixed;inset:0;background:var(--void);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
+@media(min-height:750px){#loginScreen{align-items:center}}
 #loginScreen.hidden{display:none}
 .login-box{background:var(--abyss);border:1px solid var(--moon);border-radius:10px;padding:2rem;width:100%;max-width:400px;text-align:center;box-shadow:0 0 40px rgba(212,160,23,.18)}
 .login-box h1{font-family:'Creepster',cursive;font-size:2.2rem;color:var(--moon);margin-bottom:.5rem}
