@@ -3076,7 +3076,7 @@ function renderPhase(){
 
   // Hide the action-buttons panel during night (actions are done via circle node popups)
   // Exception: some night roles need the panel (thief picks a card, wolfhound/wildchild/cupid choose)
-  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor'];
+  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor','witch'];
   const _curStepId=(gameState?.nightTurn?.stepId)||'';
   const _needsPanel=ph==='night' && _panelSteps.includes(_curStepId);
   ab.style.display = (ph==='night' && !_needsPanel) ? 'none' : 'flex';
