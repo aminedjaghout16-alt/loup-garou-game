@@ -1238,7 +1238,7 @@ let _phaseTransBlocked=false; // when true, night/day overlay is suppressed (use
 
 function maybeShowPhaseTransition(newPhase, delayMs){
   if(!newPhase || newPhase===_lastPhase || _lastPhase===null){ _lastPhase=newPhase; return; }
-  if(_phaseTransBlocked){ _lastPhase=newPhase; return; } // swallow overlapping transition
+  if(_phaseTransBlocked){ return; } // swallow overlapping transition — don't update _lastPhase so chain fires correctly
   const fromPhase=_lastPhase;
   _lastPhase=newPhase;
   const show=()=>{
@@ -1370,9 +1370,9 @@ function checkForDeaths(players){
     });
     chain.then(()=>{
       _phaseTransBlocked=false;
-      if(gameState&&gameState.phase==='day'&&_lastPhase!=='day'){
-        _lastPhase='night';
-        maybeShowPhaseTransition('day');
+      // Fire the phase transition once after all deaths complete
+      if(gameState && gameState.phase){
+        maybeShowPhaseTransition(gameState.phase);
       }
     });
   }
