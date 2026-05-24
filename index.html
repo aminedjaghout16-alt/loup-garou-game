@@ -541,6 +541,21 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 @keyframes irlRippleAnim{0%{opacity:.9;transform:scale(0)}100%{opacity:0;transform:scale(2.2)}}
 #irlFingerprintPad:active{transform:scale(.95)}
 #irlOverlay{scrollbar-width:thin;scrollbar-color:var(--moon) var(--void)}
+
+/* ── AUDIO CONTROLS ── */
+#audioPanel{position:fixed;bottom:1rem;right:1rem;z-index:250;background:var(--abyss);border:1px solid rgba(212,160,23,.35);border-radius:10px;padding:.6rem .75rem;box-shadow:0 4px 20px rgba(0,0,0,.5);min-width:160px;transition:opacity .3s}
+#audioPanel.collapsed #audioPanelBody{display:none}
+#audioPanelToggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:.5rem;user-select:none}
+#audioPanelToggle span:first-child{font-size:.8rem;color:var(--moon-pale);font-family:'Creepster',cursive;letter-spacing:.04em}
+#audioPanelChevron{font-size:.65rem;color:var(--moon);transition:transform .2s}
+#audioPanel.collapsed #audioPanelChevron{transform:rotate(180deg)}
+#audioPanelBody{margin-top:.5rem;display:flex;flex-direction:column;gap:.45rem}
+.audio-row{display:flex;align-items:center;gap:.5rem}
+.audio-row label{font-size:.72rem;color:var(--ghost);opacity:.8;min-width:42px;font-family:'Creepster',cursive}
+.audio-slider{-webkit-appearance:none;appearance:none;height:4px;flex:1;background:var(--purple);border-radius:2px;outline:none;cursor:pointer}
+.audio-slider::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--moon);cursor:pointer;box-shadow:0 0 4px rgba(212,160,23,.5)}
+.audio-mute{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:4px;padding:0 .35rem;font-size:.75rem;cursor:pointer;height:20px;line-height:1;font-family:inherit;transition:.15s}
+.audio-mute:hover{background:rgba(212,160,23,.15)}
 </style>
 </head>
 <body>
@@ -6035,6 +6050,26 @@ window.addEventListener('load',()=>{
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<!-- ── AUDIO PANEL ── -->
+<div id="audioPanel" class="collapsed">
+  <div id="audioPanelToggle" onclick="audioTogglePanel()">
+    <span>🔊 Sound</span>
+    <span id="audioPanelChevron">▲</span>
+  </div>
+  <div id="audioPanelBody">
+    <div class="audio-row">
+      <label>🎵 Music</label>
+      <input type="range" class="audio-slider" id="sliderMusic" min="0" max="1" step="0.05" value="0.5" oninput="audioSetMusic(this.value)">
+      <button class="audio-mute" id="btnMuteMusic" onclick="audioMuteMusic()">M</button>
+    </div>
+    <div class="audio-row">
+      <label>🔔 SFX</label>
+      <input type="range" class="audio-slider" id="sliderSfx" min="0" max="1" step="0.05" value="0.8" oninput="audioSetSfx(this.value)">
+      <button class="audio-mute" id="btnMuteSfx" onclick="audioMuteSfx()">M</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── LOVERS TOAST ── -->
 <div id="loversToast">
   <div class="lovers-toast-card">
@@ -6073,6 +6108,360 @@ window.addEventListener('load',()=>{
     </div>
   </div>
 </div>
+
+<script>
+// ════════════════════════════════════════════
+// AUDIO ENGINE
+// ════════════════════════════════════════════
+const AUDIO = (function(){
+  // ── Volumes & mute state ──────────────────
+  let _musicVol   = 0.5;
+  let _sfxVol     = 0.8;
+  let _musicMuted = false;
+  let _sfxMuted   = false;
+  let _unlocked   = false;
+
+  // ── Music tracks ──────────────────────────
+  let _nightMusic  = null;   // main night loop (HTMLAudioElement)
+  let _wolvesAmb   = null;   // wolves ambience loop
+  let _dayMusic    = null;   // day loop
+  let _activePhase = null;   // 'night' | 'day' | 'wolves' | null
+  let _fadeIntervals = [];   // track all running fade intervals
+
+  // ── SFX cache ─────────────────────────────
+  const _sfxCache = {};
+
+  // ── File map ──────────────────────────────
+  const MUSIC_FILES = {
+    night:  '/sounds/cyberwave-orchestra-suspense-sci-fi-underscore-music-loop-300215.mp3',
+    day:    '/sounds/leberch-horror-loop-313735.mp3',
+    wolves: '/sounds/howling-man_82bpm_C_major.wav',
+  };
+  const SFX = {
+    roleReveal:   '/sounds/freesound_community-flipcard-91468.mp3',
+    death:        '/sounds/freesound_crunchpixstudio-rpg-sword-attack-combo-3-388917.mp3',
+    vote:         '/sounds/freesound_community-stamp-81635.mp3',
+    phaseDay:     '/sounds/universfield-single-church-bell-2-352062.mp3',
+    phaseNight:   '',
+    win:          '/sounds/freesound_community-medieval-fanfare-6826.mp3',
+    click:        '/sounds/audley_fergine-ui-mouse-click-366460.mp3',
+  };
+
+  // ── Unlock on first user gesture ──────────
+  function _unlock(){
+    if(_unlocked) return;
+    _unlocked = true;
+    // Try to resume whichever track should be playing
+    [_nightMusic, _dayMusic, _wolvesAmb].forEach(a=>{
+      if(a && a.paused && parseFloat(a.dataset.shouldPlay||'0')) a.play().catch(()=>{});
+    });
+  }
+
+  // ── Utility: clear all fade intervals ─────
+  function _clearFades(){
+    _fadeIntervals.forEach(id=>clearInterval(id));
+    _fadeIntervals = [];
+  }
+
+  // ── Fade a track in or out ─────────────────
+  // direction: 'in' | 'out'  target: final volume
+  function _fade(audio, direction, targetVol, onDone){
+    if(!audio) { if(onDone) onDone(); return; }
+    const step = 0.04;
+    const id = setInterval(()=>{
+      if(direction === 'in'){
+        audio.volume = Math.min(targetVol, audio.volume + step);
+        if(audio.volume >= targetVol - 0.01){ audio.volume = targetVol; clearInterval(id); if(onDone) onDone(); }
+      } else {
+        audio.volume = Math.max(0, audio.volume - step);
+        if(audio.volume <= 0.01){ audio.volume = 0; audio.pause(); clearInterval(id); if(onDone) onDone(); }
+      }
+    }, 50);
+    _fadeIntervals.push(id);
+    return id;
+  }
+
+  // ── Ensure an audio element exists & is preloaded ─
+  function _getTrack(key){
+    const src = MUSIC_FILES[key];
+    if(!src) return null;
+    const map = { night: '_nightMusic', day: '_dayMusic', wolves: '_wolvesAmb' };
+    const prop = map[key];
+    if(!module[prop]){
+      const a = new Audio(src);
+      a.loop = true;
+      a.volume = 0;
+      a.dataset.shouldPlay = '0';
+      module[prop] = a;
+    }
+    return module[prop];
+  }
+
+  // ── Switch to a music state ────────────────
+  // states: 'night' | 'wolves' | 'day' | null
+  function _switchTo(state){
+    if(_activePhase === state) return;
+    const prev = _activePhase;
+    _activePhase = state;
+    _clearFades();
+
+    const targetVol = _musicMuted ? 0 : _musicVol;
+
+    if(state === 'night'){
+      // Fade out wolves ambience if playing
+      if(_wolvesAmb && !_wolvesAmb.paused){
+        _fade(_wolvesAmb, 'out', 0);
+      }
+      // Fade out day music if playing
+      if(_dayMusic && !_dayMusic.paused){
+        _fade(_dayMusic, 'out', 0);
+      }
+      // Fade in night music
+      const nm = _getTrack('night');
+      if(nm){
+        nm.dataset.shouldPlay = '1';
+        if(nm.paused && _unlocked) nm.play().catch(()=>{});
+        _fade(nm, 'in', targetVol);
+      }
+
+    } else if(state === 'wolves'){
+      // Fade out night music
+      const nm = _getTrack('night');
+      if(nm && !nm.paused){
+        _fade(nm, 'out', 0, ()=>{ nm.dataset.shouldPlay = '0'; });
+      }
+      // Fade in wolves ambience
+      const wa = _getTrack('wolves');
+      if(wa){
+        wa.dataset.shouldPlay = '1';
+        if(wa.paused && _unlocked) wa.play().catch(()=>{});
+        _fade(wa, 'in', targetVol);
+      }
+
+    } else if(state === 'day'){
+      // Fade out night & wolves
+      [_getTrack('night'), _getTrack('wolves')].forEach(a=>{
+        if(a && !a.paused) _fade(a, 'out', 0, ()=>{ a.dataset.shouldPlay='0'; });
+      });
+      // Fade in day music
+      const dm = _getTrack('day');
+      if(dm){
+        dm.dataset.shouldPlay = '1';
+        if(dm.paused && _unlocked) dm.play().catch(()=>{});
+        _fade(dm, 'in', targetVol);
+      }
+
+    } else {
+      // null — stop everything
+      [_getTrack('night'), _getTrack('wolves'), _getTrack('day')].forEach(a=>{
+        if(a && !a.paused) _fade(a, 'out', 0);
+      });
+    }
+  }
+
+  // ── Play a one-shot SFX ────────────────────
+  function _playSfx(key){
+    if(!_unlocked) return;
+    const src = SFX[key];
+    if(!src) return;
+    const vol = _sfxMuted ? 0 : _sfxVol;
+    if(vol === 0) return;
+    if(!_sfxCache[key]) _sfxCache[key] = new Audio(src);
+    const a = _sfxCache[key].cloneNode();
+    a.volume = vol;
+    a.play().catch(()=>{});
+  }
+
+  // Module ref trick so _getTrack can self-reference
+  const module = {
+    _nightMusic: null,
+    _dayMusic:   null,
+    _wolvesAmb:  null,
+
+    unlock(){ _unlock(); },
+
+    // Music vol
+    setMusicVol(v){
+      _musicVol = parseFloat(v);
+      if(!_musicMuted){
+        [module._nightMusic, module._dayMusic, module._wolvesAmb].forEach(a=>{
+          if(a && !a.paused) a.volume = _musicVol;
+        });
+      }
+    },
+    muteMusic(on){
+      _musicMuted = on;
+      const v = on ? 0 : _musicVol;
+      [module._nightMusic, module._dayMusic, module._wolvesAmb].forEach(a=>{
+        if(a) a.volume = v;
+      });
+    },
+    isMusicMuted(){ return _musicMuted; },
+
+    // SFX vol
+    setSfxVol(v){ _sfxVol = parseFloat(v); },
+    muteSfx(on){ _sfxMuted = on; },
+    isSfxMuted(){ return _sfxMuted; },
+
+    // Phase control
+    setPhase(phase){
+      if(phase === 'night') _switchTo('night');
+      else if(phase === 'day') _switchTo('day');
+      else _switchTo(null);
+    },
+
+    // Wolves ambience on/off (call during wolves night turn)
+    startWolvesAmbience(){ _switchTo('wolves'); },
+    stopWolvesAmbience(){
+      // Return to night music if still in night phase
+      if(_activePhase === 'wolves') _switchTo('night');
+    },
+
+    stopMusic(){
+      _clearFades();
+      _switchTo(null);
+    },
+
+    sfx: _playSfx,
+  };
+
+  // Wire internal references
+  Object.defineProperty(module, '_nightMusic', {
+    get(){ return _nightMusic; }, set(v){ _nightMusic=v; }
+  });
+  Object.defineProperty(module, '_dayMusic', {
+    get(){ return _dayMusic; }, set(v){ _dayMusic=v; }
+  });
+  Object.defineProperty(module, '_wolvesAmb', {
+    get(){ return _wolvesAmb; }, set(v){ _wolvesAmb=v; }
+  });
+
+  return module;
+})();
+
+// ── Panel UI helpers ──────────────────────────────────────────────────────
+function audioTogglePanel(){
+  document.getElementById('audioPanel').classList.toggle('collapsed');
+}
+function audioSetMusic(v){
+  AUDIO.setMusicVol(v);
+}
+function audioSetSfx(v){
+  AUDIO.setSfxVol(v);
+}
+function audioMuteMusic(){
+  const muted = !AUDIO.isMusicMuted();
+  AUDIO.muteMusic(muted);
+  document.getElementById('btnMuteMusic').style.color = muted ? 'var(--red)' : 'var(--moon)';
+  document.getElementById('btnMuteMusic').style.borderColor = muted ? 'var(--red)' : 'rgba(212,160,23,.3)';
+}
+function audioMuteSfx(){
+  const muted = !AUDIO.isSfxMuted();
+  AUDIO.muteSfx(muted);
+  document.getElementById('btnMuteSfx').style.color = muted ? 'var(--red)' : 'var(--moon)';
+  document.getElementById('btnMuteSfx').style.borderColor = muted ? 'var(--red)' : 'rgba(212,160,23,.3)';
+}
+
+// ── Unlock audio on first interaction ────────────────────────────────────
+document.addEventListener('click', ()=>AUDIO.unlock(), { once:true, capture:true });
+document.addEventListener('keydown', ()=>AUDIO.unlock(), { once:true, capture:true });
+document.addEventListener('touchstart', ()=>AUDIO.unlock(), { once:true, capture:true });
+
+// ════════════════════════════════════════════
+// AUDIO HOOKS — wired into existing game events
+// ════════════════════════════════════════════
+
+// ── Phase music: patch maybeShowPhaseTransition ───────────────────────────
+const _origMaybeShowPhaseTransition = maybeShowPhaseTransition;
+window.maybeShowPhaseTransition = function(newPhase, delayMs){
+  const result = _origMaybeShowPhaseTransition(newPhase, delayMs);
+  // Play the matching phase music & SFX when the phase actually changes
+  if(newPhase && newPhase !== window._audioLastPhase){
+    window._audioLastPhase = newPhase;
+    AUDIO.setPhase(newPhase);
+    if(newPhase === 'day')   AUDIO.sfx('phaseDay');
+    if(newPhase === 'night') AUDIO.sfx('phaseNight');
+  }
+  return result;
+};
+window._audioLastPhase = null;
+
+// ── Role reveal SFX ──────────────────────────────────────────────────────
+const _origShowRoleRevealAnimation = showRoleRevealAnimation;
+window.showRoleRevealAnimation = function(onDone){
+  AUDIO.sfx('roleReveal');
+  return _origShowRoleRevealAnimation(onDone);
+};
+
+// ── Death SFX ────────────────────────────────────────────────────────────
+const _origShowDeathAnimation = showDeathAnimation;
+window.showDeathAnimation = function(name, role){
+  AUDIO.sfx('death');
+  return _origShowDeathAnimation(name, role);
+};
+
+// ── Vote SFX ─────────────────────────────────────────────────────────────
+const _origDoVote = doVote;
+window.doVote = function(targetId){
+  AUDIO.sfx('vote');
+  return _origDoVote(targetId);
+};
+
+// ── Win / game-over SFX + stop music ─────────────────────────────────────
+const _origShowGameOver = showGameOver;
+window.showGameOver = function(result){
+  AUDIO.stopMusic();
+  // Short delay so death anim SFX finishes first
+  setTimeout(()=>AUDIO.sfx('win'), 800);
+  return _origShowGameOver(result);
+};
+
+// ── Button click SFX on buttons that launch key UI actions ───────────────
+(function(){
+  // Patch specific action functions that need a click sound
+  const _clickSfx = ()=>AUDIO.sfx('click');
+  const clickFns = ['doCreate','doJoin','doStartGame','sendChat','runForMaire','voteMaire','judgeForceVote','maireSkipDay','hunterShoot','irlRevealRole','irlNextPlayer'];
+  clickFns.forEach(name=>{
+    const orig = window[name];
+    if(typeof orig === 'function'){
+      window[name] = function(...args){ _clickSfx(); return orig.apply(this, args); };
+    }
+  });
+})();
+
+// ── Start/stop music with game state ─────────────────────────────────────
+// Patch renderGame to track phase music and wolves turn
+const _origRenderGame = renderGame;
+window.renderGame = function(){
+  _origRenderGame();
+  if(!gameState || gameState.status !== 'playing') return;
+
+  const ph = gameState.phase;
+  const stepId = gameState.nightTurn?.stepId;
+
+  if(ph === 'night'){
+    const isWolvesTurn = (stepId === 'wolves' || stepId === 'bigbadwolf' || stepId === 'whitewerewolf');
+    if(isWolvesTurn){
+      // Switch to wolves ambience if not already
+      if(window._audioLastPhase !== 'wolves'){
+        window._audioLastPhase = 'wolves';
+        AUDIO.startWolvesAmbience();
+      }
+    } else {
+      // Normal night music — restore if we were on wolves
+      if(window._audioLastPhase !== 'night'){
+        window._audioLastPhase = 'night';
+        AUDIO.stopWolvesAmbience(); // fades wolves out, night back in
+      }
+    }
+  } else if(ph === 'day'){
+    if(window._audioLastPhase !== 'day'){
+      window._audioLastPhase = 'day';
+      AUDIO.setPhase('day');
+    }
+  }
+};
+</script>
 
 </body>
 </html>
