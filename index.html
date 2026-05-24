@@ -2994,10 +2994,79 @@ function circleNodeClick(event, targetId){
           renderGame();
         }
       });
+    } else if(stepId==='cupid'){
+      // Cupid needs to select 2 lovers
+      const chosen=(gameState.nightActions?.['_cupid_chosen']||[]);
+      if(chosen.includes(targetId)){ closeCirclePopup(); return; } // Can't select same player twice
+      
+      if(chosen.length===0){
+        // First lover selection
+        addNightBtn('💘 '+(lang==='ar'?'اختر الحبيب الأول':lang==='fr'?'1er amoureux':'Choose 1st lover')+' '+tname,'special',()=>{
+          if(fbOk&&db&&roomCode){
+            db.ref(`games/${roomCode}/nightActions/_cupid_chosen`).set([targetId]);
+          } else if(gameState){
+            if(!gameState.nightActions) gameState.nightActions={};
+            gameState.nightActions['_cupid_chosen']=[targetId];
+            renderGame();
+          }
+          closeCirclePopup();
+        });
+      } else if(chosen.length===1){
+        // Second lover selection
+        const firstLover=aliveAll.find(p=>p.id===chosen[0]);
+        addNightBtn('💘 '+(lang==='ar'?'اختر الحبيب الثاني':lang==='fr'?'2e amoureux':'Choose 2nd lover')+' '+tname,'special',()=>{
+          const pair=[chosen[0],targetId];
+          const data={type:'cupid',target:targetId,partner:chosen[0],by:myId,ts:Date.now()};
+          if(fbOk&&db&&roomCode){
+            const upd={};
+            upd[`games/${roomCode}/nightActions/_cupid_chosen`]=pair;
+            upd[`games/${roomCode}/nightActions/_loversIds`]=pair;
+            upd[`games/${roomCode}/loversIds`]=pair;
+            upd[`games/${roomCode}/nightActions/${myId}`]=data;
+            db.ref().update(upd);
+          } else if(gameState){
+            if(!gameState.nightActions) gameState.nightActions={};
+            gameState.nightActions['_cupid_chosen']=pair;
+            gameState.nightActions['_loversIds']=pair;
+            gameState.loversIds=pair;
+            gameState.nightActions[myId]=data;
+            checkTurnComplete();
+            renderGame();
+          }
+          const p2Name=gameState.players[targetId]?.name||'?';
+          setTimeout(()=>alert('💘 '+(lang==='ar'?`تم ربط ${firstLover?.name||'?'} و ${p2Name}`:lang==='fr'?`${firstLover?.name||'?'} et ${p2Name} sont amoureux`:`${firstLover?.name||'?'} & ${p2Name} are lovers!`)),100);
+          closeCirclePopup();
+        });
+      }
     } else {
       // Generic: target any alive non-self player
       if(!alive.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
       addNightBtn('🌙 '+(lang==='ar'?'اختر':lang==='fr'?'Choisir':'Choose')+' '+tname,'special',()=>submitAction({type:stepId,target:targetId}));
+    }
+
+    // Add Skip button for optional roles
+    const optionalRoles=['witch','savior','bodyguard','cupid','bigbadwolf','whitewerewolf','crow'];
+    if(optionalRoles.includes(stepId)){
+      const skipBtn=document.createElement('button');
+      skipBtn.className='pc-vote-btn discard';
+      skipBtn.innerHTML=`⏭️ ${lang==='ar'?'تخطي':lang==='fr'?'Passer':'Skip'}`;
+      skipBtn.onclick=(e)=>{ 
+        e.stopPropagation();
+        closeCirclePopup();
+        // Submit skip action
+        const data={type:'skip',by:myId,ts:Date.now()};
+        if(fbOk&&db&&roomCode){
+          const upd={};
+          upd[`games/${roomCode}/nightActions/${myId}`]=data;
+          db.ref().update(upd);
+        } else if(gameState){
+          if(!gameState.nightActions) gameState.nightActions={};
+          gameState.nightActions[myId]=data;
+          checkTurnComplete();
+          renderGame();
+        }
+      };
+      popup.appendChild(skipBtn);
     }
 
     // Cancel button
@@ -3115,7 +3184,7 @@ function renderPhase(){
 
   // Hide the action-buttons panel during night (actions are done via circle node popups)
   // Exception: some night roles need the panel (thief picks a card, wolfhound/wildchild/cupid choose)
-  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor','witch'];
+  const _panelSteps=['thief','wolfhound','wildchild','actor'];
   const _curStepId=(gameState?.nightTurn?.stepId)||'';
   const _needsPanel=ph==='night' && _panelSteps.includes(_curStepId);
   ab.style.display = (ph==='night' && !_needsPanel) ? 'none' : 'flex';
