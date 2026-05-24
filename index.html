@@ -699,6 +699,21 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 
 <!-- ══ KILL FLASH OVERLAY ══ -->
 <div id="killOverlay"><div class="kill-shards" id="killShards"></div></div>
+<!-- FingerprintJS for anti-win-farm device detection -->
+<script>
+(function(){
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js';
+  s.onload=function(){
+    FingerprintJS.load().then(function(fp){ return fp.get(); }).then(function(result){
+      window._deviceFp = result.visitorId;
+      console.log('🔑 Device fingerprint ready');
+    }).catch(function(e){ console.warn('FingerprintJS failed',e); window._deviceFp=null; });
+  };
+  s.onerror=function(){ console.warn('FingerprintJS CDN failed'); window._deviceFp=null; };
+  document.head.appendChild(s);
+})();
+</script>
 <script>
 // Load Firebase with fallback CDNs
 (function(){
@@ -1676,13 +1691,14 @@ function doRestart(){
       delete gameState.players[p.id].idiotRevealed;
     });
     Object.assign(gameState,{
-      status:'playing', phase:'night', phaseStart:Date.now(), dayNum:1,
+      status:'playing', phase:'night', phaseStart:Date.now(), dayNum:1, startedAt:Date.now(),
       nightTurn:{stepId:'__init__',stepIndex:-1,turnStart:Date.now()},
       nightActions:null, dayVotes:null, witchPotions:null,
       maire:null, maireCandidates:null, maireVotes:null, maireSkipDay:null,
       readyPlayers:null, teamChat:null
     });
     renderGame();
+    registerFingerprint(); // 🔑 register device fp for anti-farm
     setTimeout(()=>advanceNightTurn(0),800);
   }
 }
@@ -2225,10 +2241,11 @@ function _doStartWithPlayers(players){
       if(roles[i]==='witch') gameState.witchPotions[p.id]={life:true,death:true};
     });
     Object.assign(gameState,{
-      status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1,
+      status:'playing',phase:'night',phaseStart:Date.now(),dayNum:1,startedAt:Date.now(),
       nightTurn:{stepId:'__init__',stepIndex:-1,turnStart:Date.now()},
       nightActions:null,dayVotes:null
     });
+    registerFingerprint(); // 🔑 register device fp for anti-farm
     // Thief cards
     if(roles.includes('thief')){
       const allPool=['seer','witch','hunter','bodyguard','villager','werewolf','fox','crow','savior'];
@@ -5106,8 +5123,70 @@ function _irlApplyLang(){
  * Called at game end. Saves stats for the current Google user to Firebase.
  * Path: users/{uid}/stats  — atomic increment via transactions
  */
+// ════════════════════════════════════════════
+// FINGERPRINT ANTI-FARM
+// ════════════════════════════════════════════
+
+/**
+ * Called when game starts. Writes this player's device fingerprint
+ * to Firebase under games/{roomCode}/fingerprints/{myId}
+ * so we can detect if multiple players share the same device.
+ */
+async function registerFingerprint(){
+  if(!db || !roomCode || !myId) return;
+  const fp = window._deviceFp;
+  if(!fp){ console.warn('No fingerprint available, skipping registration'); return; }
+  try{
+    await db.ref(`games/${roomCode}/fingerprints/${myId}`).set({fp, uid: _googleUser?.uid||null, ts: Date.now()});
+    console.log('🔑 Fingerprint registered');
+  }catch(e){ console.warn('Fingerprint registration failed',e); }
+}
+
+/**
+ * Checks Firebase fingerprints for this game.
+ * Returns true if any OTHER player shares the same device fingerprint as me.
+ */
+async function hasDuplicateFingerprint(){
+  if(!db || !roomCode) return false;
+  const fp = window._deviceFp;
+  if(!fp){ console.warn('No fingerprint, skipping duplicate check'); return false; }
+  try{
+    const snap = await db.ref(`games/${roomCode}/fingerprints`).get();
+    if(!snap.exists()) return false;
+    const entries = snap.val();
+    const duplicates = Object.entries(entries).filter(([pid, data]) => pid !== myId && data.fp === fp);
+    if(duplicates.length > 0){
+      console.log('⛔ Duplicate fingerprint detected with players:', duplicates.map(([pid])=>pid));
+      return true;
+    }
+    return false;
+  }catch(e){ console.warn('Fingerprint check failed',e); return false; }
+}
+
 async function savePlayerStats(winner){
   if(!_googleUser || !db) return; // not signed in or no DB
+
+  // ── Anti-win-farm guards ──
+  const allPlayers = Object.values(gameState?.players || {});
+  if(allPlayers.length < 3){
+    console.log('⛔ Stats not saved: less than 3 players');
+    return;
+  }
+  const elapsed = Date.now() - (gameState?.startedAt || Date.now());
+  if(elapsed < 45000){
+    console.log('⛔ Stats not saved: game too short ('+Math.round(elapsed/1000)+'s)');
+    return;
+  }
+  // ─────────────────────────
+
+  // ── Fingerprint duplicate check ──
+  const isDuplicate = await hasDuplicateFingerprint();
+  if(isDuplicate){
+    console.log('⛔ Stats not saved: duplicate device fingerprint detected (win farming)');
+    return;
+  }
+  // ─────────────────────────────────
+
   const uid=_googleUser.uid;
   const statsRef=db.ref(`users/${uid}/stats`);
   // Determine if this player won
