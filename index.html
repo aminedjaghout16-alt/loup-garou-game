@@ -6147,6 +6147,11 @@ const AUDIO = (function(){
     click:        '/sounds/audley_fergine-ui-mouse-click-366460.mp3',
   };
 
+  // ── Login / menu ambient ───────────────────
+  // Uses the night track at low volume as a subtle background on the login screen
+  let _loginAmbient = null;
+  let _loginAmbientStopped = false;
+
   // ── Unlock on first user gesture ──────────
   function _unlock(){
     if(_unlocked) return;
@@ -6322,6 +6327,36 @@ const AUDIO = (function(){
       _switchTo(null);
     },
 
+    // Login screen ambient — quiet version of night track
+    startLoginAmbient(){
+      if(_loginAmbientStopped) return;
+      if(_loginAmbient) return; // already started
+      const src = MUSIC_FILES.night;
+      if(!src) return;
+      const a = new Audio(src);
+      a.loop = true;
+      a.volume = 0;
+      _loginAmbient = a;
+      a.play().catch(()=>{});
+      // Fade in to a low volume (30% of music vol)
+      const target = _musicMuted ? 0 : Math.min(0.3, _musicVol * 0.6);
+      const id = setInterval(()=>{
+        if(!_loginAmbient){ clearInterval(id); return; }
+        a.volume = Math.min(target, a.volume + 0.02);
+        if(a.volume >= target - 0.01){ a.volume = target; clearInterval(id); }
+      }, 60);
+    },
+    stopLoginAmbient(){
+      if(!_loginAmbient) return;
+      _loginAmbientStopped = true;
+      const a = _loginAmbient;
+      _loginAmbient = null;
+      const id = setInterval(()=>{
+        a.volume = Math.max(0, a.volume - 0.04);
+        if(a.volume <= 0.01){ a.pause(); clearInterval(id); }
+      }, 50);
+    },
+
     sfx: _playSfx,
   };
 
@@ -6362,22 +6397,41 @@ function audioMuteSfx(){
   document.getElementById('btnMuteSfx').style.borderColor = muted ? 'var(--red)' : 'rgba(212,160,23,.3)';
 }
 
-// ── Unlock audio on first interaction ────────────────────────────────────
-document.addEventListener('click', ()=>AUDIO.unlock(), { once:true, capture:true });
-document.addEventListener('keydown', ()=>AUDIO.unlock(), { once:true, capture:true });
-document.addEventListener('touchstart', ()=>AUDIO.unlock(), { once:true, capture:true });
-
 // ════════════════════════════════════════════
 // AUDIO HOOKS — wired into existing game events
 // ════════════════════════════════════════════
+
+// ── Unlock audio + start login ambient on first interaction ───────────────
+window._audioUnlocked = false;
+function _audioFirstUnlock(){
+  if(window._audioUnlocked) return;
+  window._audioUnlocked = true;
+  AUDIO.unlock();
+  // Start quiet ambient on login/main screen
+  AUDIO.startLoginAmbient();
+}
+document.addEventListener('click',      _audioFirstUnlock, { capture:true });
+document.addEventListener('touchstart', _audioFirstUnlock, { capture:true });
+document.addEventListener('keydown',    _audioFirstUnlock, { capture:true });
+
+// ── Global click SFX on every button/tap ─────────────────────────────────
+document.addEventListener('click', function(e){
+  const target = e.target.closest('button, .rc, .email-tab, .lb, .chat-tab, .hunter-target-btn, .pc-vote-btn, .pc-node, [onclick]');
+  if(target) AUDIO.sfx('click');
+}, { capture: true });
+document.addEventListener('touchstart', function(e){
+  const target = e.target.closest('button, .rc, .email-tab, .lb, .chat-tab, .hunter-target-btn, .pc-vote-btn, .pc-node, [onclick]');
+  if(target) AUDIO.sfx('click');
+}, { capture: true, passive: true });
 
 // ── Phase music: patch maybeShowPhaseTransition ───────────────────────────
 const _origMaybeShowPhaseTransition = maybeShowPhaseTransition;
 window.maybeShowPhaseTransition = function(newPhase, delayMs){
   const result = _origMaybeShowPhaseTransition(newPhase, delayMs);
-  // Play the matching phase music & SFX when the phase actually changes
   if(newPhase && newPhase !== window._audioLastPhase){
     window._audioLastPhase = newPhase;
+    // Stop login ambient when game starts
+    AUDIO.stopLoginAmbient();
     AUDIO.setPhase(newPhase);
     if(newPhase === 'day')   AUDIO.sfx('phaseDay');
     if(newPhase === 'night') AUDIO.sfx('phaseNight');
@@ -6411,23 +6465,16 @@ window.doVote = function(targetId){
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
   AUDIO.stopMusic();
-  // Short delay so death anim SFX finishes first
   setTimeout(()=>AUDIO.sfx('win'), 800);
   return _origShowGameOver(result);
 };
 
-// ── Button click SFX on buttons that launch key UI actions ───────────────
-(function(){
-  // Patch specific action functions that need a click sound
-  const _clickSfx = ()=>AUDIO.sfx('click');
-  const clickFns = ['doCreate','doJoin','doStartGame','sendChat','runForMaire','voteMaire','judgeForceVote','maireSkipDay','hunterShoot','irlRevealRole','irlNextPlayer'];
-  clickFns.forEach(name=>{
-    const orig = window[name];
-    if(typeof orig === 'function'){
-      window[name] = function(...args){ _clickSfx(); return orig.apply(this, args); };
-    }
-  });
-})();
+// ── Stop login ambient when entering game room ────────────────────────────
+const _origShowGame = showGame;
+window.showGame = function(){
+  AUDIO.stopLoginAmbient();
+  return _origShowGame();
+};
 
 // ── Start/stop music with game state ─────────────────────────────────────
 // Patch renderGame to track phase music and wolves turn
