@@ -420,7 +420,18 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   </div>
   <div class="login-box">
     <h1 id="t_title">Loup-Garou</h1>
-    <p  id="t_sub">Join the game of deception and survival</p>
+    <p id="t_sub">Join the game of deception and survival</p>
+
+    <!-- Google account bar (shown when signed in) -->
+    <div id="googleUserBar" style="display:none;align-items:center;gap:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem">
+      <img id="googleAvatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--moon);object-fit:cover">
+      <div style="flex:1;text-align:left;min-width:0">
+        <div id="googleDisplayName" style="color:var(--moon-pale);font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="googleEmail" style="color:var(--ghost);font-size:.72rem;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      </div>
+      <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
+    </div>
+
     <div class="fg">
       <label id="t_name">Your Name</label>
       <input id="inName" type="text" autocomplete="off">
@@ -436,6 +447,12 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
       <small id="t_shareCode">Share this code with friends:</small>
       <div class="code" id="createdCodeVal">——</div>
     </div>
+    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
+    <!-- Google Sign In button (shown when NOT signed in) -->
+    <button id="googleSignInBtn" onclick="doGoogleSignIn()" style="width:100%;padding:.75rem;background:#fff;color:#3c3c3c;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-size:.92rem;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:.2s" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      <span id="t_googlebtn">Continue with Google</span>
+    </button>
     <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
     <button class="btn" style="width:100%;background:linear-gradient(135deg,#1a0a2e,#3b0764);border:1px solid var(--moon-pale)" onclick="openIrlMode()" id="t_irl">🌙 IRL Mode — Pass the Phone</button>
   </div>
@@ -663,11 +680,18 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
     s.src=src; s.onload=onload; s.onerror=onerror;
     document.head.appendChild(s);
   }
-  var CDN1_APP='https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js';
-  var CDN2_APP='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-app-compat.min.js';
-  var CDN1_DB ='https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js';
-  var CDN2_DB ='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-database-compat.min.js';
+  var CDN1_APP ='https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js';
+  var CDN2_APP ='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-app-compat.min.js';
+  var CDN1_DB  ='https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js';
+  var CDN2_DB  ='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-database-compat.min.js';
+  var CDN1_AUTH='https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js';
+  var CDN2_AUTH='https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-auth-compat.min.js';
 
+  function loadAuth(onload){
+    loadScript(CDN1_AUTH, onload, function(){
+      loadScript(CDN2_AUTH, onload, function(){ console.error('Auth CDN failed'); onload(); });
+    });
+  }
   function loadDB(onload){
     loadScript(CDN1_DB, onload, function(){
       console.log('gstatic DB unavailable, using jsDelivr fallback');
@@ -675,11 +699,11 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
     });
   }
   loadScript(CDN1_APP,
-    function(){ loadDB(function(){ window._fbReady=true; }); },
+    function(){ loadAuth(function(){ loadDB(function(){ window._fbReady=true; }); }); },
     function(){
       console.log('gstatic APP unavailable, using jsDelivr fallback');
       loadScript(CDN2_APP,
-        function(){ loadDB(function(){ window._fbReady=true; }); },
+        function(){ loadAuth(function(){ loadDB(function(){ window._fbReady=true; }); }); },
         function(){ console.error('All Firebase APP CDNs failed'); window._fbLoadFailed=true; }
       );
     }
@@ -847,6 +871,7 @@ en:{
   noCandidates:'No candidates yet', maireIs:'Mayor:', maireVotes:'(2 votes)',
   teamChat:'Team Chat', generalChat:'General',
   wolvesChat:'Wolves', sistersChat:'Sisters', brothersChat:'Brothers',
+  t_googlebtn:'Continue with Google', t_signout:'Sign out',
 },
 fr:{
   t_title:'Loup-Garou', t_sub:'Rejoignez le jeu de la tromperie et de la survie',
@@ -925,6 +950,7 @@ fr:{
   noCandidates:'Pas encore de candidats', maireIs:'Maire :', maireVotes:'(2 votes)',
   teamChat:'Chat d\'équipe', generalChat:'Général',
   wolvesChat:'Loups', sistersChat:'Sœurs', brothersChat:'Frères',
+  t_googlebtn:'Continuer avec Google', t_signout:'Déconnexion',
 },
 ar:{
   t_title:'ذئب البشر', t_sub:'انضم إلى لعبة الخداع والبقاء',
@@ -1003,6 +1029,7 @@ ar:{
   noCandidates:'لا مرشحين بعد', maireIs:'العمدة:', maireVotes:'(صوتان)',
   teamChat:'دردشة الفريق', generalChat:'عام',
   wolvesChat:'الذئاب', sistersChat:'الأختان', brothersChat:'الإخوة',
+  t_googlebtn:'المتابعة مع Google', t_signout:'تسجيل الخروج',
 }};
 
 // ════════════════════════════════════════════
@@ -1657,10 +1684,88 @@ function initFB(){
     db=firebase.database();
     fbOk=true;
     console.log('✅ Firebase ready');
+    // Init Google Auth
+    _initGoogleAuth();
   }catch(ex){
     console.warn('Firebase init failed',ex);
     fbOk=false; db=null;
   }
+}
+
+// ════════════════════════════════════════════
+// GOOGLE AUTH
+// ════════════════════════════════════════════
+let _fbAuth=null;
+let _googleUser=null;
+
+function _initGoogleAuth(){
+  try{
+    _fbAuth=firebase.auth();
+    _fbAuth.onAuthStateChanged(user=>{
+      _googleUser=user;
+      _updateGoogleUI(user);
+    });
+  }catch(ex){
+    console.warn('Auth init failed',ex);
+  }
+}
+
+function _updateGoogleUI(user){
+  const signInBtn=document.getElementById('googleSignInBtn');
+  const userBar=document.getElementById('googleUserBar');
+  const nameInput=document.getElementById('inName');
+  if(user){
+    // Show profile bar, hide sign-in button
+    if(signInBtn) signInBtn.style.display='none';
+    if(userBar) userBar.style.display='flex';
+    const avatar=document.getElementById('googleAvatar');
+    const displayName=document.getElementById('googleDisplayName');
+    const email=document.getElementById('googleEmail');
+    if(avatar) avatar.src=user.photoURL||'';
+    if(displayName) displayName.textContent=user.displayName||user.email||'';
+    if(email) email.textContent=user.email||'';
+    // Auto-fill name input with Google display name
+    if(nameInput && !nameInput.value && user.displayName){
+      nameInput.value=user.displayName.split(' ')[0]; // first name only
+    }
+  } else {
+    // Show sign-in button, hide profile bar
+    if(signInBtn) signInBtn.style.display='flex';
+    if(userBar) userBar.style.display='none';
+  }
+}
+
+function doGoogleSignIn(){
+  if(!_fbAuth){
+    // Firebase not ready yet — try init first
+    initFBWithRetry(()=>{
+      if(_fbAuth) doGoogleSignIn();
+      else alert('Could not connect to Google. Please try again.');
+    });
+    return;
+  }
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  _fbAuth.signInWithPopup(provider)
+    .then(result=>{
+      _googleUser=result.user;
+      _updateGoogleUI(_googleUser);
+    })
+    .catch(err=>{
+      if(err.code!=='auth/popup-closed-by-user'){
+        console.error('Google sign-in error',err);
+        alert('Sign-in failed: '+err.message);
+      }
+    });
+}
+
+function doGoogleSignOut(){
+  if(!_fbAuth) return;
+  _fbAuth.signOut().then(()=>{
+    _googleUser=null;
+    _updateGoogleUI(null);
+    document.getElementById('inName').value='';
+  });
 }
 
 // Try to init Firebase once scripts have loaded
@@ -1831,9 +1936,9 @@ function pushCfg(){
 // LOGIN ACTIONS
 // ════════════════════════════════════════════
 function doCreate(){
-  const name=document.getElementById('inName').value.trim();
+  const name=(document.getElementById('inName').value.trim()) || (_googleUser?.displayName?.split(' ')[0]||'');
   if(!name){alert(tr('t_name')+' ?');return;}
-  myId='p_'+Date.now(); myName=name;
+  myId=(_googleUser?.uid)||('p_'+Date.now()); myName=name;
   roomCode=genCode(); isLeader=true;
   // Show code immediately so user can share it
   const box=document.getElementById('createdCodeBox');
@@ -1843,10 +1948,10 @@ function doCreate(){
 }
 
 function doJoin(){
-  const name=document.getElementById('inName').value.trim();
+  const name=(document.getElementById('inName').value.trim()) || (_googleUser?.displayName?.split(' ')[0]||'');
   const code=document.getElementById('inCode').value.trim().toUpperCase();
   if(!name||!code){alert(tr('t_name')+' / '+tr('t_code'));return;}
-  myId='p_'+Date.now(); myName=name; roomCode=code; isLeader=false;
+  myId=(_googleUser?.uid)||('p_'+Date.now()); myName=name; roomCode=code; isLeader=false;
   initFBWithRetry(()=>enterRoom());
 }
 
