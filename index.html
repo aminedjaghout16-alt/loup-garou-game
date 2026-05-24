@@ -1203,37 +1203,7 @@ function showDeathAnimation(playerName, playerRole){
   overlay.classList.add('active');
   showKillFlash();
   return new Promise(resolve=>{
-    setTimeout(()=>{
-      overlay.classList.remove('active');
-      // Show day/night phase transition after death, then resolve
-      const nextPhase = (gameState && gameState.phase) ? gameState.phase : null;
-      if(nextPhase){
-        const ov2=document.getElementById('phaseTransOverlay');
-        const icon=document.getElementById('ptransIcon');
-        const label=document.getElementById('ptransLabel');
-        const sub=document.getElementById('ptransSub');
-        ov2.classList.remove('to-day','to-night','active');
-        if(nextPhase==='day'){
-          icon.textContent='☀️';
-          label.textContent=lang==='ar'?'النهار':lang==='fr'?'JOUR':'DAY';
-          sub.textContent=lang==='ar'?'القرية تستيقظ…':lang==='fr'?'Le village se réveille…':'The village awakens…';
-          ov2.classList.add('to-day');
-        } else {
-          icon.textContent='🌙';
-          label.textContent=lang==='ar'?'الليل':lang==='fr'?'NUIT':'NIGHT';
-          sub.textContent=lang==='ar'?'القرية تنام…':lang==='fr'?'Le village s\'endort…':'Darkness falls…';
-          ov2.classList.add('to-night');
-        }
-        ov2.classList.add('active');
-        setTimeout(()=>{
-          ov2.classList.remove('active','to-day','to-night');
-          ov2.style.display='none';
-          setTimeout(()=>{ ov2.style.display=''; resolve(); },50);
-        }, 2800);
-      } else {
-        resolve();
-      }
-    }, 4000);
+    setTimeout(()=>{ overlay.classList.remove('active'); resolve(); }, 4000);
   });
 }
 
@@ -1400,7 +1370,10 @@ function checkForDeaths(players){
     });
     chain.then(()=>{
       _phaseTransBlocked=false;
-      // Phase transition is now shown inside each showDeathAnimation — no need to re-fire here
+      if(gameState&&gameState.phase==='day'&&_lastPhase!=='day'){
+        _lastPhase='night';
+        maybeShowPhaseTransition('day');
+      }
     });
   }
 }
