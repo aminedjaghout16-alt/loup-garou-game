@@ -1203,8 +1203,56 @@ function showDeathAnimation(playerName, playerRole){
   overlay.classList.add('active');
   showKillFlash();
   return new Promise(resolve=>{
-    setTimeout(()=>{ overlay.classList.remove('active'); resolve(); }, 4000);
+    setTimeout(()=>{
+      overlay.classList.remove('active');
+      showEliminatedRoleReveal(playerName, playerRole, resolve);
+    }, 4000);
   });
+}
+
+function showEliminatedRoleReveal(playerName, playerRole, onDone){
+  const rd = ROLES_DEF[playerRole] || {};
+  const team = rd.team || 'village';
+  const emoji = rd.e || '❓';
+  const name = tr(playerRole) || playerRole;
+  const desc = tr('d_'+playerRole) || '';
+  const teamLabels = {
+    village: {en:'Village Team', fr:'Équipe Village', ar:'فريق القرية'},
+    werewolf:{en:'Werewolf Team', fr:'Équipe Loups', ar:'فريق الذئاب'},
+    solo:    {en:'Solo', fr:'Solo', ar:'منفرد'}
+  };
+  const wasLabel = {en:'was', fr:'était', ar:'كان'};
+  const tapLabel = {en:'Tap to continue', fr:'Appuyez pour continuer', ar:'اضغط للمتابعة'};
+  document.getElementById('rrLabel').textContent = playerName + ' ' + (wasLabel[lang]||wasLabel.en);
+  document.getElementById('rrEmoji').textContent = emoji;
+  document.getElementById('rrName').textContent  = name;
+  document.getElementById('rrDesc').textContent  = desc;
+  document.getElementById('rrTeamBadge').textContent = teamLabels[team]?.[lang]||teamLabels[team]?.en||team;
+  document.getElementById('rrTap').textContent   = tapLabel[lang]||tapLabel.en;
+  ['rrFront','rrName','rrDivider','rrTeamBadge'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('team-village','team-werewolf','team-solo');
+    el.classList.add('team-'+team);
+  });
+  // Reset card flip animation by cloning node
+  const oldCard=document.getElementById('rrCard');
+  const newCard=oldCard.cloneNode(true);
+  oldCard.parentNode.replaceChild(newCard,oldCard);
+  const ov=document.getElementById('roleRevealOverlay');
+  ov.classList.add('active');
+  function dismiss(){
+    ov.removeEventListener('click',dismiss);
+    ov.style.transition='opacity .5s';
+    ov.style.opacity='0';
+    setTimeout(()=>{
+      ov.classList.remove('active');
+      ov.style.transition='';
+      ov.style.opacity='';
+      if(onDone) onDone();
+    },500);
+  }
+  const autoTimer=setTimeout(dismiss, 4500);
+  setTimeout(()=>{ ov.addEventListener('click',()=>{ clearTimeout(autoTimer); dismiss(); }); },1500);
 }
 
 // ════════════════════════════════════════════
