@@ -537,6 +537,12 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .vote-card.has-votes{border-color:rgba(185,28,28,.4)}
 .voted-confirm{text-align:center;padding:.6rem;background:rgba(16,185,129,.1);border:1px solid var(--green);border-radius:8px;color:var(--green);font-family:'Creepster',cursive;font-size:1rem;letter-spacing:.05em}
 
+/* ── TAP TO START AUDIO HINT ── */
+#audioTapHint{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);background:rgba(212,160,23,.15);border:1px solid rgba(212,160,23,.4);border-radius:20px;padding:.4rem 1rem;font-family:'Creepster',cursive;font-size:.82rem;color:var(--moon-pale);letter-spacing:.06em;pointer-events:none;z-index:50;opacity:0;transition:opacity .5s}
+#audioTapHint.visible{opacity:1}
+@keyframes audioPulse{0%,100%{opacity:.6}50%{opacity:1}}
+#audioTapHint.visible{animation:audioPulse 2s ease-in-out infinite}
+
 /* ── IRL MODE ── */
 @keyframes irlRippleAnim{0%{opacity:.9;transform:scale(0)}100%{opacity:0;transform:scale(2.2)}}
 #irlFingerprintPad:active{transform:scale(.95)}
@@ -6050,6 +6056,9 @@ window.addEventListener('load',()=>{
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<!-- ── AUDIO TAP HINT ── -->
+<div id="audioTapHint">🔊 Tap anywhere to enable sound</div>
+
 <!-- ── AUDIO PANEL ── -->
 <div id="audioPanel" class="collapsed">
   <div id="audioPanelToggle" onclick="audioTogglePanel()">
@@ -6289,7 +6298,7 @@ const AUDIO = (function(){
     setMusicVol(v){
       _musicVol = parseFloat(v);
       if(!_musicMuted){
-        [module._nightMusic, module._dayMusic, module._wolvesAmb].forEach(a=>{
+        [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient].forEach(a=>{
           if(a && !a.paused) a.volume = _musicVol;
         });
       }
@@ -6297,7 +6306,7 @@ const AUDIO = (function(){
     muteMusic(on){
       _musicMuted = on;
       const v = on ? 0 : _musicVol;
-      [module._nightMusic, module._dayMusic, module._wolvesAmb].forEach(a=>{
+      [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient].forEach(a=>{
         if(a) a.volume = v;
       });
     },
@@ -6351,10 +6360,16 @@ const AUDIO = (function(){
       _loginAmbientStopped = true;
       const a = _loginAmbient;
       _loginAmbient = null;
+      // Also reset the night music track so it can restart fresh for the game
+      if(module._nightMusic) {
+        module._nightMusic.pause();
+        module._nightMusic.currentTime = 0;
+        module._nightMusic = null;
+      }
       const id = setInterval(()=>{
-        a.volume = Math.max(0, a.volume - 0.04);
-        if(a.volume <= 0.01){ a.pause(); clearInterval(id); }
-      }, 50);
+        a.volume = Math.max(0, a.volume - 0.06);
+        if(a.volume <= 0.01){ a.pause(); a.src=''; clearInterval(id); }
+      }, 40);
     },
 
     sfx: _playSfx,
@@ -6403,9 +6418,18 @@ function audioMuteSfx(){
 
 // ── Unlock audio + start login ambient on first interaction ───────────────
 window._audioUnlocked = false;
+// Show tap hint after 1 second on page load
+setTimeout(()=>{
+  const hint = document.getElementById('audioTapHint');
+  if(hint && !window._audioUnlocked) hint.classList.add('visible');
+}, 1000);
+
 function _audioFirstUnlock(){
   if(window._audioUnlocked) return;
   window._audioUnlocked = true;
+  // Hide the tap hint
+  const hint = document.getElementById('audioTapHint');
+  if(hint){ hint.classList.remove('visible'); hint.style.display='none'; }
   AUDIO.unlock();
   // Start quiet ambient on login/main screen
   AUDIO.startLoginAmbient();
