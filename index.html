@@ -2760,8 +2760,8 @@ function renderGame(){
 
     // Detect deaths without consuming them (checkForDeaths will consume when called)
     const _hasPendingDeaths = players.some(p=>!p.alive && _previousAlive[p.id]===true);
-    const _isNightToDay = gameState.phase==='day' && _lastPhase==='night';
-    const _needsSequence = (_isNightToDay || _hasPendingDeaths) && !_nightToDayRunning;
+    const _isPhaseChange = gameState.phase !== _lastPhase && _lastPhase !== null;
+    const _needsSequence = (_isPhaseChange || _hasPendingDeaths) && !_nightToDayRunning;
 
     if(_needsSequence){
       _nightToDayRunning=true;
@@ -2779,16 +2779,15 @@ function renderGame(){
       }
       renderPlayerList(players);
       renderStats(players);
-      // Keep day voting UI hidden until sequence finishes
+      // Hide action panel until sequence finishes
       document.getElementById('actionBtns').style.display='none';
 
       (async ()=>{
-        // Step 1: Day transition animation — pass phase directly so _lastPhase
-        //         guard inside maybeShowPhaseTransition fires correctly.
-        await maybeShowPhaseTransition(_seqPhase);
-        // Step 2: Death animations one by one (sequential, awaited)
+        // Step 1: Death animations first, one by one (sequential, awaited)
         await checkForDeaths(players);
-        // Step 3: Sequence done — show day UI and start timer
+        // Step 2: Phase transition animation after deaths resolve
+        await maybeShowPhaseTransition(_seqPhase);
+        // Step 3: Sequence done — show UI and start timer
         _nightToDayRunning=false;
         document.getElementById('actionBtns').style.display='';
         renderPhase();
