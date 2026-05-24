@@ -402,7 +402,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
           <option value="hard">Hard - Aggressive Bots</option>
         </select>
       </div>
-      <button class="btn" style="width:100%" onclick="doCreateOfflineGame()" id="t_start_offline">Start Game with Bots</button>
+      <button class="btn" style="width:100%" onclick="startOfflineSetup()" id="t_start_offline">Setup Offline Game</button>
     </div>
   </div>
 </div>
@@ -1896,6 +1896,12 @@ function cfgChanged(){
 // START
 // ════════════════════════════════════════════
 function doStartGame(){
+  // Offline mode - use custom start
+  if(offlineGameMode){
+    doStartOfflineGame();
+    return;
+  }
+  
   // Robust leader check: use both local flag and Firebase data
   const amLeader = isLeader || (gameState?.leader === myId);
   if(!amLeader){ console.warn('Not leader, cannot start'); return; }
@@ -4639,11 +4645,12 @@ function sendChat(){
 }
 
 // ════════════════════════════════════════════
-// OFFLINE BOT MODE - SIMPLIFIED
+// OFFLINE BOT MODE
 // ════════════════════════════════════════════
 let offlineGameMode=false;
 let botDifficulty='medium';
-const BOT_NAMES=['Luna','Fenrir','Sage','Hunter','Witch','Oracle','Mage','Shadow'];
+let offlinePlayerName='';
+const BOT_NAMES=['Luna','Fenrir','Sage','Hunter','Witch','Oracle','Mage','Shadow','Raven','Echo'];
 
 function switchGameMode(mode){
   if(mode==='offline'){
@@ -4661,56 +4668,77 @@ function switchGameMode(mode){
   }
 }
 
-function doCreateOfflineGame(){
+function startOfflineSetup(){
   const playerName=document.getElementById('inNameOffline').value.trim();
   if(!playerName) return;
   
-  offlineGameMode=true;
+  offlinePlayerName=playerName;
   botDifficulty=document.getElementById('difficultySelect').value;
   myName=playerName;
-  myId='p0';
+  myId='offline_p0';
   isLeader=true;
   fbOk=false;
   db=null;
   roomCode=null;
+  offlineGameMode=true;
   
+  // Initialize gameState for setup view (same as online)
   gameState={
     players:{},
-    phase:'night',
-    phaseStart:Date.now(),
-    dayNum:1,
-    nightNum:1,
-    nightTurn:{stepId:null,stepIndex:-1,turnStart:Date.now()},
-    nightActions:{},
-    dayVotes:{},
-    status:'playing',
+    phase:'setup',
+    roles:[],
     chat:[],
     teamChat:{},
+    status:'setup',
     isOffline:true,
-    difficulty:botDifficulty
+    difficulty:botDifficulty,
+    leader:myId
   };
   
-  cfg={roleCounts:{werewolf:1},roles:['seer','witch','hunter'],daySeconds:60,nightSeconds:45};
-  
-  const roles=['werewolf','seer','witch','hunter','villager','villager','villager','villager'];
-  for(let i=roles.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [roles[i],roles[j]]=[roles[j],roles[i]];
-  }
-  
+  // Add player to setup
   gameState.players[myId]={
     id:myId,
-    name:myName,
-    role:roles[0],
+    name:offlinePlayerName,
+    role:'',
     alive:true,
-    team:ROLES_DEF[roles[0]]?.team||'village',
+    team:'',
     isBot:false
   };
   
-  for(let i=0;i<7;i++){
-    const role=roles[i+1];
-    gameState.players['b'+i]={
-      id:'b'+i,
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  
+  // Show setup view with role selection (same as online)
+  renderGame();
+}
+
+function doStartOfflineGame(){
+  if(!offlineGameMode) return;
+  
+  // Get configured roles from cfg
+  const selectedRoles=cfg.roles?Object.values(cfg.roles):[];
+  const numBots=7; // Always 8 players total (you + 7 bots)
+  
+  // Assign roles - player gets first, bots get rest
+  const allRoles=[...selectedRoles];
+  while(allRoles.length<numBots+1) allRoles.push('villager');
+  
+  // Shuffle
+  for(let i=allRoles.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [allRoles[i],allRoles[j]]=[allRoles[j],allRoles[i]];
+  }
+  
+  // Assign to players
+  gameState.players[myId].role=allRoles[0];
+  gameState.players[myId].team=ROLES_DEF[allRoles[0]]?.team||'village';
+  
+  // Create 7 bots with remaining roles
+  for(let i=0;i<numBots;i++){
+    const botId='offline_b'+i;
+    const role=allRoles[i+1];
+    gameState.players[botId]={
+      id:botId,
       name:BOT_NAMES[i],
       role:role,
       alive:true,
@@ -4719,61 +4747,97 @@ function doCreateOfflineGame(){
     };
   }
   
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('gameScreen').classList.remove('hidden');
+  // Start game
+  gameState.phase='night';
+  gameState.dayNum=1;
+  gameState.nightNum=1;
+  gameState.phaseStart=Date.now();
+  gameState.nightActions={};
+  gameState.dayVotes={};
+  gameState.status='playing';
+  gameState.nightTurn={stepId:null,stepIndex:-1,turnStart:Date.now()};
+  
   renderGame();
-  offlineLoop();
+  setTimeout(()=>offlineGameLoop(),2000);
 }
 
-function offlineLoop(){
+function offlineGameLoop(){
   if(!offlineGameMode||!gameState) return;
   
   const alive=Object.values(gameState.players).filter(p=>p.alive);
   const wolves=alive.filter(p=>p.role==='werewolf');
   const villagers=alive.filter(p=>p.team==='village');
   
+  // Check win condition
   if(wolves.length===0||wolves.length>=villagers.length){
-    endOfflineGame(wolves.length===0?'village':'werewolf');
+    const winner=wolves.length===0?'village':'werewolf';
+    showGameOverOffline(winner);
     return;
   }
   
   if(gameState.phase==='night'){
+    // Bot night actions
     alive.forEach(p=>{
       if(p.isBot&&!gameState.nightActions[p.id]){
         if(p.role==='werewolf'){
           const targets=alive.filter(x=>x.team==='village'&&x.id!==p.id);
           if(targets.length){
-            let t=targets[Math.floor(Math.random()*targets.length)];
-            if(botDifficulty==='hard') t=targets.find(x=>x.role==='seer')||t;
-            gameState.nightActions[p.id]=t.id;
+            let target=targets[Math.floor(Math.random()*targets.length)];
+            if(botDifficulty==='hard'){
+              const seer=targets.find(x=>x.role==='seer');
+              if(seer) target=seer;
+            }
+            gameState.nightActions[p.id]=target.id;
+          }
+        } else if(p.role==='seer'){
+          const targets=alive.filter(x=>x.id!==p.id);
+          if(targets.length){
+            let target=targets[Math.floor(Math.random()*targets.length)];
+            if(botDifficulty==='hard'){
+              target=targets.find(x=>x.team==='wolf')||target;
+            }
+            gameState.nightActions[p.id]=target.id;
           }
         }
       }
     });
     
-    const wk=Object.entries(gameState.nightActions).find(([i])=>gameState.players[i]?.role==='werewolf');
-    if(wk&&gameState.players[wk[1]]) gameState.players[wk[1]].alive=false;
+    // Execute wolf kill
+    const wolfAction=Object.entries(gameState.nightActions).find(([pid])=>gameState.players[pid]?.role==='werewolf');
+    if(wolfAction){
+      const target=gameState.players[wolfAction[1]];
+      if(target) target.alive=false;
+    }
     
     gameState.phase='day';
     gameState.dayNum++;
     gameState.nightActions={};
-  } else {
+  } else if(gameState.phase==='day'){
+    // Bot day votes
     alive.forEach(p=>{
       if(p.isBot&&!gameState.dayVotes[p.id]){
         const targets=alive.filter(x=>x.id!==p.id);
         if(targets.length){
-          let t=targets[Math.floor(Math.random()*targets.length)];
-          if(botDifficulty==='hard'&&p.team==='village') t=targets.find(x=>x.team==='wolf')||t;
-          gameState.dayVotes[p.id]=t.id;
+          let target=targets[Math.floor(Math.random()*targets.length)];
+          if(botDifficulty==='hard'&&p.team==='village'){
+            const wolf=targets.find(x=>x.team==='wolf');
+            if(wolf) target=wolf;
+          }
+          gameState.dayVotes[p.id]=target.id;
         }
       }
     });
     
+    // Count votes and eliminate
     const votes={};
-    Object.values(gameState.dayVotes).forEach(v=>{votes[v]=(votes[v]||0)+1});
-    const max=Math.max(...Object.values(votes),0);
-    const elim=Object.keys(votes).find(k=>votes[k]===max);
-    if(elim&&gameState.players[elim]) gameState.players[elim].alive=false;
+    Object.values(gameState.dayVotes).forEach(vid=>{votes[vid]=(votes[vid]||0)+1});
+    const maxVotes=Math.max(...Object.values(votes),0);
+    const eliminated=Object.keys(votes).find(k=>votes[k]===maxVotes);
+    
+    if(eliminated){
+      const target=gameState.players[eliminated];
+      if(target) target.alive=false;
+    }
     
     gameState.phase='night';
     gameState.nightNum++;
@@ -4781,23 +4845,27 @@ function offlineLoop(){
   }
   
   renderGame();
-  setTimeout(offlineLoop,2500);
+  setTimeout(()=>offlineGameLoop(),2500);
 }
 
-function endOfflineGame(winner){
+function showGameOverOffline(winner){
+  const myRole=gameState.players[myId]?.role;
   const myTeam=gameState.players[myId]?.team;
-  const won=(winner==='village'&&myTeam==='village')||(winner==='werewolf'&&myTeam==='wolf');
-  alert((won?'🏆 YOU WIN!':'💀 YOU LOSE!')+'\n'+winner.toUpperCase()+' wins!');
-  backToLogin();
-}
-
-function backToLogin(){
+  const didWin=(winner==='village'&&myTeam==='village')||(winner==='werewolf'&&myTeam==='wolf');
+  
+  gameState.status='gameover:'+winner;
+  
+  const msg=`${didWin?'🏆 YOU WIN!':'💀 YOU LOSE!'}\n\n${winner.toUpperCase()} team wins!\n\nYour role: ${myRole||'?'}`;
+  alert(msg);
+  
   offlineGameMode=false;
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('inName').value='';
   document.getElementById('inCode').value='';
   document.getElementById('inNameOffline').value='';
+  document.getElementById('onlineModePanel').style.display='block';
+  document.getElementById('offlineModePanel').style.display='none';
   gameState=null;
 }
 
