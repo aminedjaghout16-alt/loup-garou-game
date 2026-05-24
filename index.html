@@ -438,6 +438,14 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 
 
 #hunterOverlay{position:fixed;inset:0;z-index:9997;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.92);pointer-events:none}
+#hunterWaitOverlay{position:fixed;inset:0;z-index:9996;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.88);flex-direction:column;gap:1.2rem}
+#hunterWaitOverlay.active{display:flex}
+.hw-icon{font-size:4rem;animation:gsWolfPulse 1.5s ease-in-out infinite}
+.hw-title{font-family:'Cinzel Decorative',cursive;font-size:1.3rem;color:var(--blood-glow);letter-spacing:.08em;text-align:center}
+.hw-sub{font-size:.9rem;color:var(--ghost);text-align:center;font-family:'Cormorant Garamond',serif;font-style:italic}
+.hw-dots{display:flex;gap:.4rem}.hw-dot{width:8px;height:8px;border-radius:50%;background:var(--blood-glow);animation:hwDotPulse 1.2s ease-in-out infinite}
+.hw-dot:nth-child(2){animation-delay:.2s}.hw-dot:nth-child(3){animation-delay:.4s}
+@keyframes hwDotPulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
 #hunterOverlay.active{display:flex;pointer-events:all}
 .hunter-card{text-align:center;padding:2rem;max-width:420px;width:90%;background:var(--abyss);border:2px solid var(--blood-glow);border-radius:12px;box-shadow:0 0 60px rgba(139,0,0,.5);transform:scale(0);animation:hunterCardIn .6s .1s cubic-bezier(.17,.67,.1,1.4) forwards}
 @keyframes hunterCardIn{to{transform:scale(1)}}
@@ -782,6 +790,14 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
     <div class="hunter-targets" id="hunterTargets"></div>
     <button class="hunter-skip-btn" onclick="hunterSkip()">— Pass —</button>
   </div>
+</div>
+
+<!-- ══ HUNTER WAIT OVERLAY (shown to all other players) ══ -->
+<div id="hunterWaitOverlay">
+  <div class="hw-icon">🏹</div>
+  <div class="hw-title" id="hwTitle">The Hunter is choosing…</div>
+  <div class="hw-sub" id="hwSub">The eliminated hunter takes one last shot</div>
+  <div class="hw-dots"><div class="hw-dot"></div><div class="hw-dot"></div><div class="hw-dot"></div></div>
 </div>
 
 <!-- ══ KILL FLASH OVERLAY ══ -->
@@ -1569,8 +1585,26 @@ function _clearHunterTimer(){
 function maybeShowHunterShot(deadPlayerId, callback){
   const p=gameState?.players?.[deadPlayerId];
   if(!p || p.role!=='hunter') { callback(); return; }
-  // Only the hunter themselves sees and acts on this
-  if(myId!==deadPlayerId){ callback(); return; }
+  // Non-hunters see a waiting screen
+  if(myId!==deadPlayerId){
+    const wo=document.getElementById('hunterWaitOverlay');
+    const wt=document.getElementById('hwTitle');
+    const ws=document.getElementById('hwSub');
+    if(wt) wt.textContent=lang==='ar'?'الصياد يختار…':lang==='fr'?'Le Chasseur choisit…':'The Hunter is choosing…';
+    if(ws) ws.textContent=lang==='ar'?'الصياد المقصى يطلق رصاصته الأخيرة':lang==='fr'?'Le chasseur éliminé tire son dernier coup':'The eliminated hunter takes one last shot';
+    if(wo) wo.classList.add('active');
+    // Poll until hunter shot is recorded in Firebase, then hide and continue
+    const poll=setInterval(()=>{
+      if(gameState?.nightActions?._hunterShot || gameState?.players?.[deadPlayerId]?.hunterSkipped){
+        clearInterval(poll);
+        if(wo) wo.classList.remove('active');
+        callback();
+      }
+    },500);
+    // Safety timeout after 20s
+    setTimeout(()=>{ clearInterval(poll); if(wo) wo.classList.remove('active'); callback(); },20000);
+    return;
+  }
   _hunterPending=true;
   const ov=document.getElementById('hunterOverlay');
   const targets=document.getElementById('hunterTargets');
@@ -1608,6 +1642,7 @@ function hunterShoot(targetId, callback){
   _clearHunterTimer();
   const ov=document.getElementById('hunterOverlay');
   ov.classList.remove('active');
+  document.getElementById('hunterWaitOverlay')?.classList.remove('active');
   _hunterPending=false;
   // Kill the target
   const targetName=gameState?.players?.[targetId]?.name||'?';
@@ -1635,7 +1670,11 @@ function hunterSkip(callback){
   _clearHunterTimer();
   const ov=document.getElementById('hunterOverlay');
   ov.classList.remove('active');
+  document.getElementById('hunterWaitOverlay')?.classList.remove('active');
   _hunterPending=false;
+  // Mark skip so polling non-hunters can exit
+  if(fbOk&&db&&roomCode) db.ref(`games/${roomCode}/players/${myId}/hunterSkipped`).set(true);
+  else if(gameState?.players?.[myId]) gameState.players[myId].hunterSkipped=true;
   if(typeof callback==='function') callback();
 }
 
@@ -3330,7 +3369,8 @@ function renderPhase(){
           if(cur.length===0){
             // First pick — write intermediate state only
             if(fbOk&&db&&roomCode){
-              db.ref(`games/${roomCode}/nightActions/_cupid_chosen`).set([p.id],()=>renderGame());
+              db.ref(`games/${roomCode}/nightActions/_cupid_chosen`).set([p.id]);
+              setTimeout(()=>renderGame(), 300);
             } else if(gameState){
               if(!gameState.nightActions) gameState.nightActions={};
               gameState.nightActions['_cupid_chosen']=[p.id];
