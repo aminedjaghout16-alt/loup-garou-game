@@ -3115,7 +3115,7 @@ function renderPhase(){
 
   // Hide the action-buttons panel during night (actions are done via circle node popups)
   // Exception: some night roles need the panel (thief picks a card, wolfhound/wildchild/cupid choose)
-  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor'];
+  const _panelSteps=['thief','wolfhound','wildchild','cupid','actor','witch'];
   const _curStepId=(gameState?.nightTurn?.stepId)||'';
   const _needsPanel=ph==='night' && _panelSteps.includes(_curStepId);
   ab.style.display = (ph==='night' && !_needsPanel) ? 'none' : 'flex';
@@ -3220,9 +3220,14 @@ function renderPhase(){
     return;
   }
 
-  const players=Object.values(gameState.players||{});
-  const alive=players.filter(p=>p.alive&&p.id!==myId);
-  const aliveAll=players.filter(p=>p.alive);
+  // ALL actions now happen on circle - no buttons in panel
+  ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.85rem;margin-top:.5rem;text-align:center">
+    ${lang==='ar'?'اختر لاعباً من الدائرة للتصرف':lang==='fr'?'Cliquez sur un joueur pour agir':'Click a player to act'}
+  </div>`;
+  return; // EXIT - don't render any buttons below
+
+  // DEAD CODE - all buttons disabled, use circle instead
+  if(false){
 
   // ── WOLVES ──
   if(stepId==='wolves'){
@@ -3318,10 +3323,41 @@ function renderPhase(){
   }
   // ── WITCH ──
   else if(stepId==='witch'){
-    // Witch actions now only happen on circle - no buttons in action panel
-    ab.innerHTML=`<div style="color:var(--moon-pale);font-size:.85rem;margin-top:.5rem;text-align:center">
-      ${lang==='ar'?'اختر لاعباً من الدائرة للتصرف':lang==='fr'?'Cliquez sur un joueur pour agir':'Click a player to act'}
-    </div>`;
+    const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
+    const wolfVictimId=gameState.nightActions?._wolfVictim;
+    const bigbadVictimId=gameState.nightActions?._bigbadVictim;
+    const infectionHappened=Object.values(gameState.nightActions||{}).some(a=>a?.type==='wolffather_infect');
+    let hasBtns=false;
+    // Show potion status
+    const lifeIcon=potions.life?'🟢':'⚫';
+    const deathIcon=potions.death?'🔴':'⚫';
+    const potionLabel=document.createElement('div');
+    potionLabel.style.cssText='font-size:.82rem;color:var(--moon-pale);margin-bottom:.5rem';
+    potionLabel.innerHTML=`${lifeIcon} ${lang==='ar'?'جرعة الحياة':lang==='fr'?'Potion de vie':'Life Potion'}: ${potions.life?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')} &nbsp;|&nbsp; ${deathIcon} ${lang==='ar'?'جرعة الموت':lang==='fr'?'Potion de mort':'Death Potion'}: ${potions.death?(lang==='ar'?'متاحة':lang==='fr'?'disponible':'available'):(lang==='ar'?'مستخدمة':lang==='fr'?'utilisée':'used')}`;
+    ab.appendChild(potionLabel);
+    // Show infection info to witch
+    if(infectionHappened){
+      const infectInfo=document.createElement('div');
+      infectInfo.style.cssText='font-size:.82rem;color:#f59e0b;margin-bottom:.5rem;padding:.4rem .6rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:4px';
+      infectInfo.innerHTML=`🦠 ${lang==='ar'?'حدثت عدوى الليلة!':lang==='fr'?'Une infection a eu lieu cette nuit !':'An infection occurred tonight!'}`;
+      ab.appendChild(infectInfo);
+    }
+    // Show save options for BOTH wolf victim and big bad wolf victim
+    if(potions.life){
+      if(wolfVictimId){
+        const v=players.find(p=>p.id===wolfVictimId);
+        if(v){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+v.name+' 🐺','save',()=>submitWitch('save',wolfVictimId)); hasBtns=true; }
+      }
+      if(bigbadVictimId && bigbadVictimId!==wolfVictimId){
+        const bv=players.find(p=>p.id===bigbadVictimId);
+        if(bv){ addBtn(ab,(lang==='ar'?'أنقذ ':lang==='fr'?'Sauver ':'Save ')+bv.name+' 🐺🐺','save',()=>submitWitch('save',bigbadVictimId)); hasBtns=true; }
+      }
+    }
+    if(potions.death){
+      alive.forEach(p=>{ addBtn(ab,(lang==='ar'?'سمّ ':lang==='fr'?'Empoisonner ':'Poison ')+p.name,'kill',()=>submitWitch('poison',p.id)); hasBtns=true; });
+    }
+    if(!hasBtns) ab.innerHTML+=`<div style="opacity:.5;font-size:.85rem">${lang==='ar'?'لا جرعات':lang==='fr'?'Plus de potions':'No potions left'}</div>`;
+    addSkipBtn(ab);
   }
   // ── CUPID ──
   else if(stepId==='cupid'){
@@ -3681,7 +3717,7 @@ function renderPhase(){
     });
     addSkipBtn(ab);
   }
-}
+  } // END DEAD CODE - all night buttons disabled
 
 function addBtn(container, label, type, onclick){
   const btn=document.createElement('button');
