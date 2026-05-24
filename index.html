@@ -786,7 +786,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   <div class="hunter-card">
     <div class="hunter-title">🏹 Hunter's Last Shot</div>
     <div class="hunter-sub" id="hunterSub">You have been eliminated. Choose your final target.</div>
-    <div class="hunter-timer" id="hunterTimer">⏳ 10</div>
+    <div class="hunter-timer" id="hunterTimer">⏳ 20</div>
     <div class="hunter-targets" id="hunterTargets"></div>
     <button class="hunter-skip-btn" onclick="hunterSkip()">— Pass —</button>
   </div>
@@ -1621,15 +1621,15 @@ function maybeShowHunterShot(deadPlayerId, callback){
     targets.appendChild(btn);
   });
   ov.classList.add('active');
-  // 10-second countdown — auto-skip if hunter doesn't shoot
-  let timeLeft=10;
+  // 20-second countdown — auto-skip if hunter doesn't shoot
+  let timeLeft=20;
   if(timerEl){ timerEl.textContent='\u23f3 '+timeLeft; timerEl.classList.remove('urgent'); }
   _clearHunterTimer();
   _hunterTimerInterval=setInterval(()=>{
     timeLeft--;
     if(timerEl){
       timerEl.textContent='\u23f3 '+timeLeft;
-      if(timeLeft<=3) timerEl.classList.add('urgent');
+      if(timeLeft<=5) timerEl.classList.add('urgent');
     }
     if(timeLeft<=0){
       _clearHunterTimer();
