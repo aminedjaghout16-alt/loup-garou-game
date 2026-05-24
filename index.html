@@ -1259,6 +1259,7 @@ const DEATH_TIMEOUT_MS       = 60000; // mark dead after 1 min offline
 // per-player timeout handles managed by the leader
 const _disconnectDeathTimers = {};    // playerId → setTimeout handle
 const _nightSkipTimers       = {};    // playerId → setTimeout handle
+const _disconnectTimerStarted = new Set(); // players for whom we've already started a death timer
 
 // ════════════════════════════════════════════
 // PLAYER COLORS — unique color per player
@@ -2561,7 +2562,10 @@ function runDisconnectWatcher(){
     }
 
     // ── Start 1-minute death timer when newly disconnected ────────────────
-    if(isDisc && !_disconnectDeathTimers[p.id]){
+    // Guard with _disconnectTimerStarted so re-runs of the watcher don't
+    // create a second timer after the first one fires and clears the handle.
+    if(isDisc && !_disconnectTimerStarted.has(p.id)){
+      _disconnectTimerStarted.add(p.id);
       const discAt = p.disconnectedAt || now;
       const elapsed = now - discAt;
       const remaining = Math.max(0, DEATH_TIMEOUT_MS - elapsed);
@@ -2594,9 +2598,10 @@ function runDisconnectWatcher(){
     }
 
     // ── Cancel death timer if player reconnected ──────────────────────────
-    if(!isDisc && _disconnectDeathTimers[p.id]){
-      clearTimeout(_disconnectDeathTimers[p.id]);
+    if(!isDisc && (_disconnectDeathTimers[p.id] || _disconnectTimerStarted.has(p.id))){
+      if(_disconnectDeathTimers[p.id]) clearTimeout(_disconnectDeathTimers[p.id]);
       delete _disconnectDeathTimers[p.id];
+      _disconnectTimerStarted.delete(p.id);
       console.log(`✅ Player ${p.id} (${p.name}) reconnected — death timer cancelled`);
     }
 
