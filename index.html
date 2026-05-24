@@ -283,9 +283,11 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .slots-info{font-size:.72rem;opacity:.6;margin-top:.2rem}
 
 @media(max-width:820px){
-  .g-content{flex-direction:column}
+  .g-content{flex-direction:column;overflow:visible}
   .left-panel,.right-panel{flex:none}
   .roles-grid{max-height:260px}
+  #gameScreen{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .center-panel{overflow:visible}
 }
 
 /* ── DEATH ANIMATION OVERLAY ── */
