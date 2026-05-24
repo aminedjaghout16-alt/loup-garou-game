@@ -6145,6 +6145,7 @@ const AUDIO = (function(){
     night:  '/sounds/cyberwave-orchestra-suspense-sci-fi-underscore-music-loop-300215.mp3',
     day:    '/sounds/leberch-horror-loop-313735.mp3',
     wolves: '/sounds/howling-man_82bpm_C_major.wav',
+    lobby:  '/sounds/bnayyyy-rain-ambient-sounds-121286.mp3',
   };
   const SFX = {
     roleReveal:   '/sounds/freesound_community-flipcard-91468.mp3',
@@ -6160,6 +6161,9 @@ const AUDIO = (function(){
   // Uses the night track at low volume as a subtle background on the login screen
   let _loginAmbient = null;
   let _loginAmbientStopped = false;
+
+  // ── Lobby / waiting room ambient ───────────
+  let _lobbyAmbient = null;
 
   // ── Unlock on first user gesture ──────────
   function _unlock(){
@@ -6302,7 +6306,7 @@ const AUDIO = (function(){
     setMusicVol(v){
       _musicVol = parseFloat(v);
       if(!_musicMuted){
-        [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient].forEach(a=>{
+        [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient, _lobbyAmbient].forEach(a=>{
           if(a && !a.paused) a.volume = _musicVol;
         });
       }
@@ -6310,7 +6314,7 @@ const AUDIO = (function(){
     muteMusic(on){
       _musicMuted = on;
       const v = on ? 0 : _musicVol;
-      [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient].forEach(a=>{
+      [module._nightMusic, module._dayMusic, module._wolvesAmb, _loginAmbient, _lobbyAmbient].forEach(a=>{
         if(a) a.volume = v;
       });
     },
@@ -6320,6 +6324,33 @@ const AUDIO = (function(){
     setSfxVol(v){ _sfxVol = parseFloat(v); },
     muteSfx(on){ _sfxMuted = on; },
     isSfxMuted(){ return _sfxMuted; },
+
+    // Lobby waiting room music
+    startLobbyAmbient(){
+      if(_lobbyAmbient) return;
+      const src = MUSIC_FILES.lobby;
+      if(!src) return;
+      const a = new Audio(src);
+      a.loop = true;
+      a.volume = 0;
+      _lobbyAmbient = a;
+      if(_unlocked) a.play().catch(()=>{});
+      const target = _musicMuted ? 0 : _musicVol;
+      const id = setInterval(()=>{
+        if(!_lobbyAmbient){ clearInterval(id); return; }
+        a.volume = Math.min(target, a.volume + 0.02);
+        if(a.volume >= target - 0.01){ a.volume = target; clearInterval(id); }
+      }, 60);
+    },
+    stopLobbyAmbient(){
+      if(!_lobbyAmbient) return;
+      const a = _lobbyAmbient;
+      _lobbyAmbient = null;
+      const id = setInterval(()=>{
+        a.volume = Math.max(0, a.volume - 0.05);
+        if(a.volume <= 0.01){ a.pause(); a.src=''; clearInterval(id); }
+      }, 40);
+    },
 
     // Phase control
     setPhase(phase){
@@ -6468,6 +6499,13 @@ window.maybeShowPhaseTransition = function(newPhase, delayMs){
 };
 window._audioLastPhase = null;
 
+// ── Stop lobby music when game starts ────────────────────────────────────
+const _origShowGameStartAnimation = showGameStartAnimation;
+window.showGameStartAnimation = function(onDone){
+  AUDIO.stopLobbyAmbient();
+  return _origShowGameStartAnimation(onDone);
+};
+
 // ── Role reveal SFX ──────────────────────────────────────────────────────
 const _origShowRoleRevealAnimation = showRoleRevealAnimation;
 window.showRoleRevealAnimation = function(onDone){
@@ -6497,10 +6535,11 @@ window.showGameOver = function(result){
   return _origShowGameOver(result);
 };
 
-// ── Stop login ambient when entering game room ────────────────────────────
+// ── Stop login ambient, start lobby music when entering game room ─────────
 const _origShowGame = showGame;
 window.showGame = function(){
   AUDIO.stopLoginAmbient();
+  AUDIO.startLobbyAmbient();
   return _origShowGame();
 };
 
