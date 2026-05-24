@@ -1798,6 +1798,7 @@ function doRestart(){
   _lastStepId=null;
   _advancingStep=false;
   _lastPhase=null; _phaseTransBlocked=false;
+  myRole=null; // SECURITY: clear stale role so no old-game role data leaks into new-game visibility checks
 
   // Restore playView DOM so renderGame() can find phaseTitle, actionBtns, playerList etc.
   _resetPlayView();
@@ -2055,7 +2056,10 @@ function _emailErrMsg(code){
 // ════════════════════════════════════════════
 // ROLE VISIBILITY SECURITY
 // ════════════════════════════════════════════
-// Returns the role information that the current player is ALLOWED to see for a given player
+// Returns the role information that the current player is ALLOWED to see for a given player.
+// SECURITY: This is the single source of truth for role visibility.
+// NEVER use p.role directly for other players without going through this function.
+// Returns null if the calling client should NOT see the role.
 function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
   const target = gameState?.players?.[targetPlayerId];
   if(!target) return null;
@@ -2063,7 +2067,9 @@ function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
   // Own role is always visible
   if(targetPlayerId === myPlayerId) return target.role;
   
-  // Dead players' roles are always visible (public knowledge)
+  // Dead players' roles are public knowledge (already eliminated, role revealed at death)
+  // NOTE: Callers rendering live co-op badges must check p.alive before calling this,
+  // since a dead player's role being visible does NOT mean a co-op badge should show.
   if(!target.alive) return target.role;
   
   // Co-op teammates see each other
@@ -2357,6 +2363,7 @@ async function enterRoom(){
       if(gameState?.leader===myId) isLeader=true;
       // Show game start animation for non-leaders when game transitions to playing
       if(!isLeader && _prevStatus==='setup' && gameState?.status==='playing'){
+        myRole=null; // SECURITY: clear stale role before new game role is assigned
         _gameStartedAt = Date.now(); // record local start time
         renderGame();
         showGameStartAnimation(()=>{});
@@ -2721,8 +2728,27 @@ function renderStats(players){
   document.getElementById('iAlive').textContent=alive.length;
   document.getElementById('iDead').textContent=dead.length;
   if(gameState.status==='playing'){
-    document.getElementById('iWolves').textContent=alive.filter(p=>isWolfRole(p.role,gameState)).length;
-    document.getElementById('iVillage').textContent=alive.filter(p=>!isWolfRole(p.role,gameState)).length;
+    // SECURITY FIX: Only count roles that are legitimately visible to THIS client.
+    // Using p.role directly on all alive players leaks hidden roles to all clients via
+    // the wolf/village counter. Count only dead (publicly revealed) wolves; alive wolves
+    // are only counted if this client's role allows seeing them (co-op wolf teammate).
+    const myPlayerObj = gameState.players?.[myId];
+    const iAmWolf = myRole && isWolfRole(myRole, gameState);
+    let aliveWolfCount = 0;
+    let aliveVillageCount = 0;
+    alive.forEach(p => {
+      const visibleRole = getVisibleRole(p.id, myId, myRole, gameState);
+      if(visibleRole) {
+        // We can see this player's role (self, co-op ally, or lover)
+        if(isWolfRole(visibleRole, gameState)) aliveWolfCount++;
+        else aliveVillageCount++;
+      } else {
+        // Role is hidden — count as unknown (village bucket for UI purposes)
+        aliveVillageCount++;
+      }
+    });
+    document.getElementById('iWolves').textContent = dead.filter(p=>isWolfRole(p.role,gameState)).length;
+    document.getElementById('iVillage').textContent = dead.filter(p=>!isWolfRole(p.role,gameState)).length;
   }
 }
 
@@ -2806,11 +2832,15 @@ function renderPlayerList(players){
       html+=`<div class="pc-dead-role"><div class="pc-dead-role-emoji">${rdDead?.e||'💀'}</div><div class="pc-dead-role-name">${tr(p.role||'villager')}</div></div>`;
     } else {
     // Co-op role reveal: show role badge if this player shares a co-op group with me
-    const _myCoopRole = gameState?.players?.[myId]?.role;
-    const _theirRole  = getVisibleRole(p.id, myId, myRole, gameState);
+    // SECURITY: _theirRole must only ever be non-null for alive players —
+    // getVisibleRole returns target.role for dead players, but those are handled
+    // in the isDead branch above. Guard explicitly to prevent dead-player race
+    // conditions during phase transitions from leaking roles as badges.
+    const _myCoopRole = myRole; // use the locally-tracked myRole (already validated from our own player object)
+    const _theirRole  = p.alive ? getVisibleRole(p.id, myId, myRole, gameState) : null;
     let _showRoleBadge = false;
 
-    if(_myCoopRole && _theirRole){
+    if(p.alive && _myCoopRole && _theirRole){
       // Wolves see each other (including yourself)
       const _iAmWolf   = isWolfRole(_myCoopRole, gameState);
       const _theyWolf  = isWolfRole(_theirRole,  gameState);
@@ -2900,9 +2930,14 @@ function circleNodeClick(event, targetId){
     const stepId=nightTurn.stepId;
     const me=gameState?.players?.[myId];
     const iAmAlive=me?.alive;
-    const _wolfhoundIsWolf=myRole==='wolfhound'&&isWolfRole('wolfhound',gameState);
+    // SECURITY: Always derive the current role fresh from gameState, never trust the
+    // global myRole alone (it may be stale if a new game started mid-session).
+    const _freshMyRole = me?.role || null;
+    if(_freshMyRole) myRole = _freshMyRole; // sync global in case it lagged
+    const _effectiveRole = _freshMyRole;
+    const _wolfhoundIsWolf=_effectiveRole==='wolfhound'&&isWolfRole('wolfhound',gameState);
     const nightStep=NIGHT_SEQUENCE.find(s=>s.id===stepId);
-    const isMyTurn=iAmAlive&&nightStep&&(nightStep.roles.includes(myRole)||(stepId==='wolves'&&_wolfhoundIsWolf));
+    const isMyTurn=iAmAlive&&nightStep&&_effectiveRole&&(nightStep.roles.includes(_effectiveRole)||(stepId==='wolves'&&_wolfhoundIsWolf));
     const alreadyActed=stepId==='bigbadwolf'?!!gameState?.nightActions?._bigbadAction:!!gameState?.nightActions?.[myId];
 
     if(!isMyTurn||alreadyActed){
@@ -2927,10 +2962,10 @@ function circleNodeClick(event, targetId){
     if(stepId==='wolves'){
       const nonWolves=alive.filter(p=>!isWolfRole(p.role,gameState));
       if(!nonWolves.find(p=>p.id===targetId)){ closeCirclePopup(); return; }
-      if(myRole==='wolffather'&&!gameState.wolffatherUsed){
+      if(_effectiveRole==='wolffather'&&!gameState.wolffatherUsed){
         addNightBtn('🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>submitAction({type:'kill',target:targetId}));
         addNightBtn('🦠 '+(lang==='ar'?'عدوى':lang==='fr'?'Infecter':'Infect')+' '+tname,'special',()=>submitAction({type:'wolffather_infect',target:targetId}));
-      } else if(myRole==='alphawolf'&&!gameState.alphawolfUsed){
+      } else if(_effectiveRole==='alphawolf'&&!gameState.alphawolfUsed){
         addNightBtn('🐺 '+(lang==='ar'?'اقتل':lang==='fr'?'Tuer':'Kill')+' '+tname,'vote',()=>submitAction({type:'kill',target:targetId}));
         addNightBtn('👑 '+(lang==='ar'?'حوّل':lang==='fr'?'Convertir':'Convert')+' '+tname,'special',()=>submitAction({type:'alphawolf_convert',target:targetId}));
       } else {
