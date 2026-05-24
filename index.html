@@ -2745,7 +2745,8 @@ function renderPlayerList(players){
     const isMe=p.id===myId;
     const isDead=!p.alive;
     const isWitchTurn = isMyNightTurn && nightStepId==='witch';
-    const isNightClickable = isMyNightTurn && !nightAlreadyActed && !isDead && (isWitchTurn ? true : !isMe);
+    const isBodyguardOrSavior = isMyNightTurn && (nightStepId==='bodyguard' || nightStepId==='savior');
+    const isNightClickable = isMyNightTurn && !nightAlreadyActed && !isDead && ((isWitchTurn || isBodyguardOrSavior) ? true : !isMe);
     const isClickable = (canVote && !isDead && !isMe) || isNightClickable;
     const myEliVote=dayVotes[myId]?.target===p.id;
     const myMayorVote=maireVotes[myId]?.target===p.id;
@@ -2796,15 +2797,14 @@ function renderPlayerList(players){
       html+=`<div class="pc-coop-role ${_allyClass}"><div class="pc-coop-role-emoji">${_rdBadge?.e||'❓'}</div><div class="pc-coop-role-name">${tr(_theirRole||'villager')}</div></div>`;
     }
 
-    // Seer vision overlay — show ALL visions the seer has seen across nights (persisted in seerVisions)
+    // Seer vision overlay — show ONLY if seer has seen this player (don't expose actual p.role)
     if(!isMe && !_showRoleBadge && (myRole==='seer'||myRole==='apprenticeseer')){
       const _seerVisions = gameState?.seerVisions?.[myId]||{};
       const _seerVis = _seerVisions[p.id];
-      // Also fall back to current night nightActions if seerVisions not yet written
-      const _seerAct = !_seerVis && gameState?.nightActions?.[myId];
-      const _seerResult = _seerVis?.result || (_seerAct?.type==='seer'&&_seerAct?.target===p.id ? _seerAct.result : null);
-      if(_seerResult && _seerResult!=='clouded'){
-        const _seerIsWolf = isWolfRole(p.role, gameState);
+      // Only show seer overlay if there's a recorded vision for this player
+      if(_seerVis && _seerVis.result && _seerVis.result!=='clouded'){
+        // Use ONLY the stored seer result, NOT the actual role
+        const _seerIsWolf = _seerVis.result.includes('🐺') || _seerVis.result.includes('Loup') || _seerVis.result.includes('ذئب');
         const _seerClass = _seerIsWolf ? 'is-wolf' : 'is-innocent';
         const _seerEmoji = _seerIsWolf ? '🐺' : '✓';
         const _seerLabel = _seerIsWolf
@@ -2923,11 +2923,17 @@ function circleNodeClick(event, targetId){
     } else if(stepId==='bodyguard'){
       const lastProtected=gameState.nightActions?._bodyguardLast;
       if(targetId===lastProtected){ closeCirclePopup(); return; }
-      addNightBtn('🛡 '+(lang==='ar'?'احمِ':lang==='fr'?'Protéger':'Protect')+' '+tname,'protect',()=>submitAction({type:'protect',target:targetId}));
+      // Bodyguard CAN protect themselves
+      if(aliveAll.find(p=>p.id===targetId)){
+        addNightBtn('🛡 '+(lang==='ar'?'احمِ':lang==='fr'?'Protéger':'Protect')+' '+tname,'protect',()=>submitAction({type:'protect',target:targetId}));
+      }
     } else if(stepId==='savior'){
       const lastSaved=gameState.nightActions?._saviorLast;
       if(targetId===lastSaved){ closeCirclePopup(); return; }
-      addNightBtn('✨ '+(lang==='ar'?'أنقذ':lang==='fr'?'Sauver':'Save')+' '+tname,'protect',()=>submitAction({type:'savior_save',target:targetId}));
+      // Savior CAN save themselves
+      if(aliveAll.find(p=>p.id===targetId)){
+        addNightBtn('✨ '+(lang==='ar'?'أنقذ':lang==='fr'?'Sauver':'Save')+' '+tname,'protect',()=>submitAction({type:'savior_save',target:targetId}));
+      }
     } else if(stepId==='witch'){
       const potions=gameState.witchPotions?.[myId]||{life:true,death:true};
       const wolfVictimId=gameState.nightActions?._wolfVictim;
