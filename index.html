@@ -1808,6 +1808,8 @@ async function enterRoom(){
     initFB();
   }
   if(!fbOk||!db){ offlineEnter(); return; }
+  // Always start from clean defaults; room config will overwrite if it exists
+  cfg={roles:['werewolf','seer','witch','villager'], roleCounts:{werewolf:1, villager:1}, dayTimer:60, nightTimer:45};
   try{
     const ref=db.ref(`games/${roomCode}`);
     const snap=await ref.once('value');
@@ -1907,33 +1909,11 @@ function showGame(){
 }
 
 function doLeave(){
+  // Remove self from Firebase before reloading so presence is cleaned up instantly
   if(fbOk&&db&&roomCode&&myId){
     db.ref(`games/${roomCode}/players/${myId}`).remove();
-    db.ref(`games/${roomCode}/readyPlayers`).off();
-    // If the room is in gameover state, reset it to setup so the next session starts clean
-    if(gameState?.status && gameState.status.startsWith('gameover')){
-      db.ref(`games/${roomCode}`).update({
-        status:'setup', phase:'setup',
-        nightTurn:null, nightActions:null, dayVotes:null,
-        maireCandidates:null, maireVotes:null, maireSkipDay:null,
-        maire:null, readyPlayers:null, teamChat:null
-      });
-    }
-    db.ref(`games/${roomCode}`).off();
   }
-  // Reset all local state
-  gameState=null; myRole=null; myId=null; roomCode=null; isLeader=false;
-  _gameOver=false; _previousAlive={}; _lastStepId=null; _advancingStep=false; _phaseTransBlocked=false;
-  // Clear dynamic UI so stale content never shows on next login
-  _resetPlayView();
-  const setupView=document.getElementById('setupView');
-  if(setupView) setupView.style.display='block';
-  document.getElementById('gameScreen').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('createdCodeBox').style.display='none';
-  document.getElementById('inName').value='';
-  document.getElementById('inCode').value='';
-  applyTranslations();
+  window.location.reload();
 }
 
 // ════════════════════════════════════════════
