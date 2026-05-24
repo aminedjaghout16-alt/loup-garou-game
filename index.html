@@ -259,6 +259,66 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
   justify-content:center;font-family:'Creepster',cursive;border:1px solid var(--abyss);z-index:4}
 .pc-mayor-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.9rem;z-index:4}
 .pc-mayor-x2-badge{font-size:.55rem;color:var(--moon);font-weight:700;letter-spacing:.04em;margin-top:.1rem}
+/* ── LOVERS INDICATOR ── */
+.pc-node.is-lover .pc-avatar-wrap{
+  border-color:#f472b6;
+  box-shadow:0 0 0 2px rgba(244,114,182,.35),0 0 16px rgba(244,114,182,.5);
+  animation:loverGlow 2.4s ease-in-out infinite;
+}
+.pc-lover-heart{
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  font-size:.95rem;z-index:5;
+  animation:loverHeartbeat 1.4s ease-in-out infinite;
+  filter:drop-shadow(0 0 4px rgba(244,114,182,.8));
+  pointer-events:none;
+}
+.pc-lover-tag{
+  font-size:.48rem;color:#f9a8d4;font-weight:700;letter-spacing:.04em;
+  margin-top:.05rem;font-family:'Cinzel',serif;
+}
+@keyframes loverHeartbeat{
+  0%,100%{transform:translateX(-50%) scale(1);}
+  30%{transform:translateX(-50%) scale(1.35);}
+  55%{transform:translateX(-50%) scale(1.1);}
+}
+@keyframes loverGlow{
+  0%,100%{box-shadow:0 0 0 2px rgba(244,114,182,.35),0 0 14px rgba(244,114,182,.45);}
+  50%{box-shadow:0 0 0 3px rgba(244,114,182,.6),0 0 24px rgba(244,114,182,.75);}
+}
+/* Lovers reveal toast */
+#loversToast{
+  position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0);pointer-events:none;transition:background .4s;
+}
+#loversToast.active{background:rgba(0,0,0,.72);pointer-events:auto;}
+#loversToast.active .lovers-toast-card{animation:loversCardIn .55s cubic-bezier(.34,1.56,.64,1) forwards;}
+.lovers-toast-card{
+  background:linear-gradient(145deg,#1a0a2e,#0d0d24);
+  border:1px solid #f472b6;border-radius:14px;padding:2rem 2.5rem;
+  max-width:340px;width:90%;text-align:center;
+  box-shadow:0 0 0 1px rgba(244,114,182,.2),0 0 60px rgba(244,114,182,.3);
+  opacity:0;transform:scale(.7) translateY(30px);
+}
+.lovers-toast-hearts{font-size:2.6rem;line-height:1;margin-bottom:.6rem;animation:loverHeartbeat 1.4s ease-in-out infinite;}
+.lovers-toast-title{
+  font-family:'Cinzel Decorative',cursive;font-size:1.05rem;color:#f9a8d4;
+  margin-bottom:.55rem;letter-spacing:.04em;
+}
+.lovers-toast-names{font-family:'Creepster',cursive;font-size:1.5rem;color:#fff;margin-bottom:.5rem;letter-spacing:.04em;}
+.lovers-toast-desc{font-size:.78rem;color:rgba(232,232,232,.75);line-height:1.55;margin-bottom:1.1rem;font-family:'Cormorant Garamond',serif;}
+.lovers-toast-rule{
+  font-size:.7rem;color:#f472b6;background:rgba(244,114,182,.08);
+  border:1px solid rgba(244,114,182,.25);border-radius:6px;
+  padding:.45rem .7rem;line-height:1.5;margin-bottom:1rem;
+}
+.lovers-toast-btn{
+  padding:.6rem 1.6rem;background:#be185d;color:#fff;border:none;
+  border-radius:6px;cursor:pointer;font-family:'Creepster',cursive;
+  font-size:1rem;letter-spacing:.04em;
+  box-shadow:0 0 16px rgba(190,24,93,.45);transition:.2s;
+}
+.lovers-toast-btn:hover{background:#9d174d;box-shadow:0 0 24px rgba(190,24,93,.7);}
+@keyframes loversCardIn{to{opacity:1;transform:scale(1) translateY(0);}}
 .pi{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;background:var(--purple);border:1px solid var(--moon);border-radius:4px;margin-bottom:.35rem;font-size:.88rem}
 .pstatus{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .pstatus.alive{background:var(--green)}
@@ -2822,6 +2882,14 @@ function renderPlayerList(players){
     let extraClass='';
     if(myEliVote) extraClass+=' vote-selected';
     if(myMayorVote) extraClass+=' mayor-selected';
+    // Lovers indicator — only shown to the two linked players, never to others
+    const _loversForBadge = gameState?.loversIds || gameState?.nightActions?._loversIds || [];
+    const _iAmLover   = _loversForBadge.length===2 && _loversForBadge.includes(myId);
+    const _theyLover  = _loversForBadge.length===2 && _loversForBadge.includes(p.id);
+    const _showLoverBadge = _iAmLover && _theyLover && !isDead;
+    const _iAmThisPlayer  = p.id === myId;   // true when rendering my own node
+    const _showMyLoverHeart = _iAmLover && _iAmThisPlayer && !isDead; // heart on my own avatar
+    if(_showLoverBadge || _showMyLoverHeart) extraClass+=' is-lover';
 
     const onclickAttr=isClickable ? `onclick="circleNodeClick(event,'${p.id}')"` : '';
 
@@ -2887,10 +2955,22 @@ function renderPlayerList(players){
     html+=`<div class="pc-status-dot ${p.alive?'alive':'dead'}"></div>`;
     if(voteCount>0) html+=`<div class="pc-vote-count">${voteCount}</div>`;
     if(isMayor) html+=`<div class="pc-mayor-crown">&#x1F451;</div>`;
+    // Lovers heart badge — floats above the avatar, only visible to the two lovers
+    if(_showLoverBadge || _showMyLoverHeart) html+=`<div class="pc-lover-heart">&#x1F498;</div>`;
     html+=`</div>`;
     html+=`<div class="pc-name-box">`;
     html+=`<div class="pc-name">${p.name}${isCrowAccused?' &#x1F426;&#x200D;&#x2B1B;':''}</div>`;
     if(isMe) html+=`<div class="pc-you-tag">${tr('you')}</div>`;
+    // Lover label — shown on the partner's name card so the role visibility is explained
+    if(_showLoverBadge && !_iAmThisPlayer){
+      const _loverLabel = lang==='ar' ? '💘 عاشقك' : lang==='fr' ? '💘 Votre Amour' : '💘 Your Lover';
+      html+=`<div class="pc-lover-tag">${_loverLabel}</div>`;
+    }
+    // On own card, show "You are a Lover" label
+    if(_showMyLoverHeart && _iAmThisPlayer){
+      const _loverSelfLabel = lang==='ar' ? '💘 أنت عاشق' : lang==='fr' ? '💘 Vous êtes Amoureux' : '💘 You are a Lover';
+      html+=`<div class="pc-lover-tag">${_loverSelfLabel}</div>`;
+    }
     if(mayorVoteCount>0&&mayorPending) html+=`<div style="font-size:.55rem;color:var(--moon);font-weight:700">${mayorVoteCount}&#x2696;&#xFE0F;</div>`;
     // Show ×2 badge under the name (like crow), when mayor has voted on this player
     const mayorVotedOnThis = !mayorPending && !!maireId && Object.values(dayVotes).some(a=>a?.type==='vote'&&a.target===p.id&&a.by===maireId&&(a.voteWeight||1)>=2);
@@ -3113,7 +3193,7 @@ function circleNodeClick(event, targetId){
             renderGame();
           }
           const p2Name=gameState.players[targetId]?.name||'?';
-          setTimeout(()=>alert('💘 '+(lang==='ar'?`تم ربط ${firstLover?.name||'?'} و ${p2Name}`:lang==='fr'?`${firstLover?.name||'?'} et ${p2Name} sont amoureux`:`${firstLover?.name||'?'} & ${p2Name} are lovers!`)),100);
+          setTimeout(()=>showLoversToast(firstLover?.name||'?', p2Name),100);
           closeCirclePopup();
         });
       }
@@ -3552,7 +3632,7 @@ function renderPhase(){
             }
             const p1=aliveAll.find(x=>x.id===partner);
             const p2=aliveAll.find(x=>x.id===p.id);
-            setTimeout(()=>alert('💘 '+(lang==='ar'?`تم ربط ${p1?.name||'?'} و ${p2?.name||'?'}`:lang==='fr'?`${p1?.name||'?'} et ${p2?.name||'?'} sont amoureux`:`${p1?.name||'?'} & ${p2?.name||'?'} are lovers!`)),100);
+            setTimeout(()=>showLoversToast(p1?.name||'?', p2?.name||'?'),100);
           }
         });
       });
@@ -5697,6 +5777,38 @@ function closeProfileModal(){
 }
 
 // ════════════════════════════════════════════
+// LOVERS TOAST
+// ════════════════════════════════════════════
+function showLoversToast(name1, name2){
+  const toast = document.getElementById('loversToast');
+  if(!toast) return;
+  // Localise strings
+  const titles   = {en:'Bound by Love 💘',  fr:'Liés par l'Amour 💘',  ar:'مرتبطان بالحب 💘'};
+  const descs    = {
+    en:'Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you is eliminated, the other will follow.',
+    fr:'Cupidon a lié vos âmes. Vous pouvez voir vos rôles respectifs — c'est voulu. Si l'un de vous est éliminé, l'autre le suivra.',
+    ar:'ربط كيوبيد أرواحكما. يمكنكما رؤية أدوار بعضكما — هذا مقصود. إذا مات أحدكما، يتبعه الآخر.'
+  };
+  const rules    = {
+    en:'💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.',
+    fr:'💡 Vous voyez le rôle de cet·te joueur·euse car vous êtes Amoureux. Les autres joueurs ne savent PAS qui sont les Amoureux.',
+    ar:'💡 يمكنك رؤية دور هذا اللاعب لأنكما عاشقان. اللاعبون الآخرون لا يعلمون من هما العاشقان.'
+  };
+  const btnLabels = {en:'I understand ❤️', fr:'Je comprends ❤️', ar:'أفهم ❤️'};
+  const l = lang || 'en';
+  document.getElementById('ltTitle').textContent  = titles[l]  || titles.en;
+  document.getElementById('ltNames').textContent  = name1 + ' & ' + name2;
+  document.getElementById('ltDesc').textContent   = descs[l]   || descs.en;
+  document.getElementById('ltRule').textContent   = rules[l]   || rules.en;
+  document.getElementById('ltBtn').textContent    = btnLabels[l] || btnLabels.en;
+  toast.classList.add('active');
+}
+function closeLoversToast(){
+  const toast = document.getElementById('loversToast');
+  if(toast) toast.classList.remove('active');
+}
+
+// ════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════
 window.addEventListener('load',()=>{
@@ -5709,6 +5821,18 @@ window.addEventListener('load',()=>{
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<!-- ── LOVERS TOAST ── -->
+<div id="loversToast">
+  <div class="lovers-toast-card">
+    <div class="lovers-toast-hearts">💘</div>
+    <div class="lovers-toast-title" id="ltTitle">Bound by Love</div>
+    <div class="lovers-toast-names" id="ltNames"></div>
+    <div class="lovers-toast-desc" id="ltDesc">Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you dies, the other follows.</div>
+    <div class="lovers-toast-rule" id="ltRule">💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.</div>
+    <button class="lovers-toast-btn" id="ltBtn" onclick="closeLoversToast()">I understand ❤️</button>
+  </div>
+</div>
+
 <!-- ── PROFILE MODAL ── -->
 <div id="profileModal" class="hidden">
   <div class="profile-box">
