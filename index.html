@@ -1249,6 +1249,17 @@ let activeChatTab='general'; // 'general', 'wolves', 'twosisters', 'threebrother
 let _previousAlive={}; // track alive states for death animation
 let _gameOver=false; // prevent actions after game end
 
+// ── Disconnect / reconnect system ──────────────────────────────────────────
+let _heartbeatInterval=null;          // setInterval handle for our own heartbeat
+let _heartbeatWatcher=null;           // setInterval handle (leader only) — scans all players
+const HEARTBEAT_INTERVAL_MS  = 10000; // write timestamp every 10 s
+const HEARTBEAT_TIMEOUT_MS   = 15000; // considered disconnected after 15 s without update
+const NIGHT_SKIP_DELAY_MS    = 30000; // auto-skip active-role disconnect after 30 s
+const DEATH_TIMEOUT_MS       = 60000; // mark dead after 1 min offline
+// per-player timeout handles managed by the leader
+const _disconnectDeathTimers = {};    // playerId → setTimeout handle
+const _nightSkipTimers       = {};    // playerId → setTimeout handle
+
 // ════════════════════════════════════════════
 // PLAYER COLORS — unique color per player
 // ════════════════════════════════════════════
@@ -2412,7 +2423,13 @@ async function enterRoom(){
       {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
     );
     // Clean up on disconnect
-    ref.child(`players/${myId}`).onDisconnect().remove();
+    // Graceful disconnect flag — never delete the node mid-game
+    ref.child(`players/${myId}`).onDisconnect().update({
+      disconnected: true,
+      disconnectedAt: Date.now()
+    });
+    // Start our own heartbeat
+    startHeartbeat();
     // Live listener
     let _prevStatus=null;
     ref.on('value', snap=>{
@@ -2424,6 +2441,27 @@ async function enterRoom(){
       }
       // Derive leader status from Firebase data
       if(gameState?.leader===myId) isLeader=true;
+      // ── Leader failover ────────────────────────────────────────────────
+      // If the current leader is disconnected, the connected player with the
+      // earliest joinedAt automatically takes over (deterministic, no election).
+      if(gameState && gameState.status !== 'setup'){
+        const currentLeaderId = gameState.leader;
+        const leaderData = gameState.players?.[currentLeaderId];
+        const leaderGone = leaderData?.disconnected || !leaderData;
+        if(leaderGone){
+          const connected = Object.values(gameState.players||{})
+            .filter(p => p.alive !== false && !p.disconnected)
+            .sort((a,b) => (a.joinedAt||0)-(b.joinedAt||0));
+          const nextLeader = connected[0];
+          if(nextLeader && nextLeader.id === myId && !isLeader){
+            isLeader = true;
+            if(fbOk&&db&&roomCode){
+              db.ref(`games/${roomCode}/leader`).set(myId);
+            }
+            console.log('👑 Leader failover — I am now leader');
+          }
+        }
+      }
       // Show game start animation for non-leaders when game transitions to playing
       if(!isLeader && _prevStatus==='setup' && gameState?.status==='playing'){
         myRole=null; // SECURITY: clear stale role before new game role is assigned
@@ -2442,6 +2480,7 @@ async function enterRoom(){
       if(isLeader && gameState?.maireCandidates && gameState?.maireVotes && !gameState?.maire){
         checkMaireElection();
       }
+      runDisconnectWatcher(); // ← disconnect/reconnect engine
       renderGame();
     });
     showGame();
@@ -2473,10 +2512,108 @@ function showGame(){
   applyTranslations();
 }
 
+// ════════════════════════════════════════════
+// DISCONNECT / RECONNECT ENGINE
+// ════════════════════════════════════════════
+
+// ── Our own heartbeat ──────────────────────────────────────────────────────
+function startHeartbeat(){
+  stopHeartbeat();
+  function beat(){
+    if(!fbOk||!db||!roomCode||!myId) return;
+    db.ref(`games/${roomCode}/players/${myId}`).update({
+      heartbeat: Date.now(),
+      disconnected: false,
+      disconnectedAt: null
+    });
+  }
+  beat(); // immediate first beat
+  _heartbeatInterval = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+}
+
+function stopHeartbeat(){
+  if(_heartbeatInterval){ clearInterval(_heartbeatInterval); _heartbeatInterval=null; }
+}
+
+// ── Leader-side watcher ────────────────────────────────────────────────────
+// Called whenever gameState updates. Scans all players and manages
+// disconnect flags, death timers, and reconnect restoration.
+function runDisconnectWatcher(){
+  if(!isLeader) return;
+  if(!gameState || gameState.status==='setup') return;
+  const now = Date.now();
+  const players = Object.values(gameState.players||{});
+
+  players.forEach(p=>{
+    if(!p.alive) return; // already dead — nothing to manage
+    const lastBeat = p.heartbeat || p.joinedAt || 0;
+    const timedOut  = (now - lastBeat) > HEARTBEAT_TIMEOUT_MS;
+    const isDisc    = !!p.disconnected;
+
+    // ── Detect fresh disconnect ──────────────────────────────────────────
+    if(timedOut && !isDisc){
+      if(fbOk&&db&&roomCode){
+        db.ref(`games/${roomCode}/players/${p.id}`).update({
+          disconnected: true,
+          disconnectedAt: now
+        });
+      }
+    }
+
+    // ── Start 1-minute death timer when newly disconnected ────────────────
+    if(isDisc && !_disconnectDeathTimers[p.id]){
+      const discAt = p.disconnectedAt || now;
+      const elapsed = now - discAt;
+      const remaining = Math.max(0, DEATH_TIMEOUT_MS - elapsed);
+
+      _disconnectDeathTimers[p.id] = setTimeout(()=>{
+        delete _disconnectDeathTimers[p.id];
+        if(!isLeader) return;
+        // Re-check they're still disconnected (might have reconnected)
+        const current = gameState?.players?.[p.id];
+        if(!current || !current.disconnected || !current.alive) return;
+        // Mark dead — game continues, death animation will fire for everyone
+        if(fbOk&&db&&roomCode){
+          db.ref(`games/${roomCode}/players/${p.id}`).update({
+            alive: false,
+            diedFromDisconnect: true
+          });
+        }
+        console.log(`💀 Player ${p.id} (${p.name}) timed out — marked dead`);
+        // If it was their night turn, skip it
+        if(gameState?.phase==='night'){
+          const turn = gameState.nightTurn||{};
+          const step = NIGHT_SEQUENCE.find(s=>s.id===turn.stepId);
+          if(step && step.roles.includes(p.role)){
+            const skipUpd={};
+            skipUpd[`games/${roomCode}/nightActions/${p.id}`]={type:'skip',by:p.id,ts:Date.now(),auto:true,reason:'disconnect_death'};
+            if(fbOk&&db&&roomCode) db.ref().update(skipUpd);
+          }
+        }
+      }, remaining);
+    }
+
+    // ── Cancel death timer if player reconnected ──────────────────────────
+    if(!isDisc && _disconnectDeathTimers[p.id]){
+      clearTimeout(_disconnectDeathTimers[p.id]);
+      delete _disconnectDeathTimers[p.id];
+      console.log(`✅ Player ${p.id} (${p.name}) reconnected — death timer cancelled`);
+    }
+
+    // ── Cancel night-skip timer if player reconnected ─────────────────────
+    if(!isDisc && _nightSkipTimers[p.id]){
+      clearTimeout(_nightSkipTimers[p.id]);
+      delete _nightSkipTimers[p.id];
+    }
+  });
+}
+
 function doLeave(){
   // Remove self from Firebase before reloading so presence is cleaned up instantly
+  stopHeartbeat();
   if(fbOk&&db&&roomCode&&myId){
-    db.ref(`games/${roomCode}/players/${myId}`).remove();
+    // Flag as disconnected; don't delete — the node must persist for game integrity
+    db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()});
   }
   window.location.reload();
 }
@@ -4111,11 +4248,34 @@ function checkTurnComplete(){
       return true;
     });
   }
+  // Disconnected players can't act — treat them as done but schedule a skip timer
+  // so the leader auto-advances after 30 s if they haven't reconnected
+  actingPlayers.forEach(p=>{
+    if(p.disconnected && !_nightSkipTimers[p.id]){
+      _nightSkipTimers[p.id]=setTimeout(()=>{
+        delete _nightSkipTimers[p.id];
+        if(!isLeader) return;
+        if(gameState?.phase!=='night') return;
+        const cur=gameState.nightTurn?.stepId;
+        if(cur!==stepId) return; // turn already moved on
+        if(!gameState.players?.[p.id]?.disconnected) return; // they reconnected
+        // Auto-submit skip on their behalf
+        if(fbOk&&db&&roomCode){
+          const skipUpd={};
+          skipUpd[`games/${roomCode}/nightActions/${p.id}`]={type:'skip',by:p.id,ts:Date.now(),auto:true,reason:'disconnect'};
+          db.ref().update(skipUpd);
+        }
+      }, NIGHT_SKIP_DELAY_MS);
+    }
+  });
+  // Treat disconnected acting players as already-done for the allDone check
+  const actingConnected=actingPlayers.filter(p=>!p.disconnected);
   const actions=gameState.nightActions||{};
   // BigBadWolf step uses _bigbadAction key since the player already has an action from wolves step
+  // actingConnected excludes disconnected players — they don't block the turn
   const allDone = stepId==='bigbadwolf'
-    ? (actingPlayers.length===0 || !!actions._bigbadAction)
-    : (actingPlayers.length===0 || actingPlayers.every(p=>{
+    ? (actingConnected.length===0 || !!actions._bigbadAction)
+    : (actingConnected.length===0 || actingConnected.every(p=>{
         if(!!actions[p.id]) return true;
         // Witch with no potions left has nothing to do — treat as done
         if(stepId==='witch'){
@@ -4737,7 +4897,7 @@ function checkDayVoteComplete(){
   if(gameState?.phase!=='day') return;
   const players=Object.values(gameState.players||{});
   // Revealed village idiots lose voting rights — exclude them from completion check
-  const alive=players.filter(p=>p.alive && !p.idiotRevealed);
+  const alive=players.filter(p=>p.alive && !p.idiotRevealed && !p.disconnected);
   const dayVotes=gameState.dayVotes||{};
   const allVoted=alive.every(p=>!!dayVotes[p.id]);
   if(allVoted && alive.length>0){ 
