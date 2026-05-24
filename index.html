@@ -6214,7 +6214,8 @@ const AUDIO = (function(){
   // ── Switch to a music state ────────────────
   // states: 'night' | 'wolves' | 'day' | null
   function _switchTo(state){
-    if(_activePhase === state) return;
+    // Allow wolves to re-trigger even if already 'wolves' (for night 2, 3, etc.)
+    if(_activePhase === state && state !== 'wolves') return;
     const prev = _activePhase;
     _activePhase = state;
     _clearFades();
@@ -6244,11 +6245,14 @@ const AUDIO = (function(){
       if(nm && !nm.paused){
         _fade(nm, 'out', 0, ()=>{ nm.dataset.shouldPlay = '0'; });
       }
-      // Fade in wolves ambience
+      // Fade in wolves ambience — always reset so it replays on every wolves turn
       const wa = _getTrack('wolves');
       if(wa){
         wa.dataset.shouldPlay = '1';
-        if(wa.paused && _unlocked) wa.play().catch(()=>{});
+        wa.currentTime = 0;  // restart from beginning every wolves turn
+        if(_unlocked){
+          wa.play().catch(()=>{});
+        }
         _fade(wa, 'in', targetVol);
       }
 
@@ -6503,31 +6507,42 @@ window.showGame = function(){
 // ── Start/stop music with game state ─────────────────────────────────────
 // Patch renderGame to track phase music and wolves turn
 const _origRenderGame = renderGame;
+let _audioLastStepId = null;  // track stepId changes separately from phase
 window.renderGame = function(){
   _origRenderGame();
   if(!gameState || gameState.status !== 'playing') return;
 
   const ph = gameState.phase;
-  const stepId = gameState.nightTurn?.stepId;
+  const stepId = gameState.nightTurn?.stepId || null;
 
   if(ph === 'night'){
     const isWolvesTurn = (stepId === 'wolves' || stepId === 'bigbadwolf' || stepId === 'whitewerewolf');
+
     if(isWolvesTurn){
-      // Switch to wolves ambience if not already
-      if(window._audioLastPhase !== 'wolves'){
+      // Only trigger when stepId actually changed TO a wolves step
+      if(_audioLastStepId !== stepId){
+        _audioLastStepId = stepId;
         window._audioLastPhase = 'wolves';
         AUDIO.startWolvesAmbience();
       }
     } else {
-      // Normal night music — restore if we were on wolves
-      if(window._audioLastPhase !== 'night'){
+      // Wolves turn ended — restore night music
+      if(window._audioLastPhase === 'wolves'){
         window._audioLastPhase = 'night';
-        AUDIO.stopWolvesAmbience(); // fades wolves out, night back in
+        _audioLastStepId = stepId;
+        AUDIO.stopWolvesAmbience();
+      } else if(window._audioLastPhase !== 'night'){
+        window._audioLastPhase = 'night';
+        _audioLastStepId = stepId;
+        AUDIO.setPhase('night');
+      } else {
+        _audioLastStepId = stepId;
       }
     }
   } else if(ph === 'day'){
     if(window._audioLastPhase !== 'day'){
       window._audioLastPhase = 'day';
+      _audioLastStepId = null;
       AUDIO.setPhase('day');
     }
   }
