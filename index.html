@@ -3657,9 +3657,12 @@ async function awardGameCoins(winner) {
   console.log('[Coins] awardGameCoins called with winner:', winner);
 
   // ── DEDUP CHECK: only reward each game once ──────────────────
-  // Use roomCode + game start timestamp for a unique per-session ID.
-  // Fallback to roomCode+Date if _gameStartedAt isn't set (reconnect case).
-  const gameId = (gameState?.roomCode || 'unknown') + '_' + (_gameStartedAt || gameState?.startedAt || 'x');
+  // Always use the authoritative Firebase startedAt so ALL clients
+  // (including reconnecting players) produce the same gameId.
+  // _gameStartedAt is a local timestamp that varies per client —
+  // never use it for the dedup key.
+  const firebaseStartedAt = gameState?.startedAt || null;
+  const gameId = (gameState?.roomCode || 'unknown') + '_' + (firebaseStartedAt || 'x');
   if (_rewardedGameIds.has(gameId)) {
     console.log('[Coins] Already rewarded for this game:', gameId);
     return;
@@ -3670,7 +3673,10 @@ async function awardGameCoins(winner) {
   if (allPlayers.length < 3) {
     console.log('[Coins] Skipped: < 3 players'); return;
   }
-  const elapsed = _gameStartedAt ? Date.now() - _gameStartedAt : null;
+  // Use Firebase startedAt (authoritative) for elapsed — not the local
+  // _gameStartedAt which is set to Date.now() at reconnect time and
+  // would make reconnecting players always pass the short-game guard.
+  const elapsed = firebaseStartedAt ? Date.now() - firebaseStartedAt : null;
   if (elapsed !== null && elapsed < 45000) {
     console.log('[Coins] Skipped: game too short'); return;
   }
@@ -3742,18 +3748,25 @@ async function awardGameCoins(winner) {
 
   console.log('[Coins] Awarding', total, 'coins for game', gameId, '| breakdown:', parts);
 
-  // Update local balance (but don't mark as awarded yet)
-  const oldBalance = _coinBalance;
-  _coinBalance += total;
-  _renderCoinBadge();
+  // ── MARK AS REWARDED FIRST (optimistic dedup) ────────────────
+  // We mark the game as rewarded BEFORE the async Firebase write.
+  // This prevents a second call (e.g. re-render race) from issuing
+  // a duplicate reward while the first write is in-flight.
+  _rewardedGameIds.add(gameId);
+  _saveDedupTracking();
 
-  // Persist to Firebase/localStorage — CRITICAL STEP
-  const persistSuccess = await _persistCoins();
+  // ── TRANSACTIONAL INCREMENT ───────────────────────────────────
+  // Use an atomic read-modify-write so each player's Firebase doc is
+  // updated independently.  If player A and player B are in the same
+  // room and both call this at game end, their writes target their
+  // own UID paths and never interfere with each other.
+  // Within a single player's session, the transaction prevents a
+  // double-write race from doubling the reward.
+  const { success: persistSuccess, newBalance } = await _incrementCoinsTransactional(total);
 
   if (persistSuccess) {
-    // Only mark as awarded after successful persistence
-    _rewardedGameIds.add(gameId);
-    _saveDedupTracking();
+    _coinBalance = newBalance; // sync local cache with confirmed DB value
+    _renderCoinBadge();
     console.log('[Coins] ✓ Successfully awarded & persisted. New balance:', _coinBalance);
 
     // Delay the reward modal so it appears AFTER death animations + winner overlay.
@@ -3766,11 +3779,49 @@ async function awardGameCoins(winner) {
     const modalDelay = (newlyDeadCount * 4200) + 400 + 800 + 600; // +600ms breathing room
     setTimeout(() => _showCoinRewardModal(total, parts, won), modalDelay);
   } else {
-    // Rollback if persistence failed
-    _coinBalance = oldBalance;
-    _renderCoinBadge();
-    console.error('[Coins] ✗ Failed to persist rewards, rolled back');
+    // Increment failed entirely — remove the optimistic dedup mark so a
+    // future retry can attempt the reward again.
+    _rewardedGameIds.delete(gameId);
+    _saveDedupTracking();
+    console.error('[Coins] ✗ Failed to persist rewards');
     _showCoinToast(0, lang==='ar'?'خطأ في حفظ المكافأة':lang==='fr'?'Erreur de sauvegarde':'Reward save failed');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TRANSACTIONAL INCREMENT — used for game-end rewards so that
+// concurrent writes from multiple players in the same room never
+// overwrite each other.  Returns {success, newBalance}.
+// ─────────────────────────────────────────────────────────────────
+async function _incrementCoinsTransactional(amount) {
+  if (amount <= 0) return { success: false, newBalance: _coinBalance };
+
+  // Signed-in users: use Firebase transaction (atomic read-modify-write)
+  if (typeof _googleUser !== 'undefined' && _googleUser &&
+      typeof db !== 'undefined' && db) {
+    try {
+      const coinRef = db.ref(`users/${_googleUser.uid}/coins`);
+      let newVal = _coinBalance;
+      await coinRef.transaction(current => {
+        newVal = (current || 0) + amount;
+        return newVal;
+      });
+      _coinBalance = newVal;
+      try { localStorage.setItem(COINS_LS_KEY, String(_coinBalance)); } catch(e) {}
+      console.log('[Coins] Transactional increment +' + amount + ' → new balance:', _coinBalance);
+      return { success: true, newBalance: _coinBalance };
+    } catch(e) {
+      console.error('[Coins] Transactional increment failed, falling back to localStorage:', e);
+      // Offline fallback: at least update local cache so UI is correct
+      _coinBalance += amount;
+      try { localStorage.setItem(COINS_LS_KEY, String(_coinBalance)); } catch(lsErr) {}
+      return { success: true, newBalance: _coinBalance }; // local save counts as success
+    }
+  } else {
+    // Guest / offline mode
+    _coinBalance += amount;
+    try { localStorage.setItem(COINS_LS_KEY, String(_coinBalance)); } catch(e) {}
+    return { success: true, newBalance: _coinBalance };
   }
 }
 
