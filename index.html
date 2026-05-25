@@ -3657,8 +3657,9 @@ async function awardGameCoins(winner) {
   console.log('[Coins] awardGameCoins called with winner:', winner);
 
   // ── DEDUP CHECK: only reward each game once ──────────────────
-  // Create a unique ID for this game using room code + timestamp
-  const gameId = gameState?.roomCode || 'unknown';
+  // Use roomCode + game start timestamp for a unique per-session ID.
+  // Fallback to roomCode+Date if _gameStartedAt isn't set (reconnect case).
+  const gameId = (gameState?.roomCode || 'unknown') + '_' + (_gameStartedAt || gameState?.startedAt || 'x');
   if (_rewardedGameIds.has(gameId)) {
     console.log('[Coins] Already rewarded for this game:', gameId);
     return;
@@ -3754,7 +3755,16 @@ async function awardGameCoins(winner) {
     _rewardedGameIds.add(gameId);
     _saveDedupTracking();
     console.log('[Coins] ✓ Successfully awarded & persisted. New balance:', _coinBalance);
-    _showCoinRewardModal(total, parts);
+
+    // Delay the reward modal so it appears AFTER death animations + winner overlay.
+    // Death anim: newlyDead * 4200ms + 400ms overlay delay + 800ms for overlay entrance.
+    // We read the newly-dead count the same way the audio patch does.
+    const players = Object.values(gameState?.players || {});
+    const newlyDeadCount = players.filter(p =>
+      !p.alive && typeof _previousAlive !== 'undefined' && _previousAlive?.[p.id] === true
+    ).length;
+    const modalDelay = (newlyDeadCount * 4200) + 400 + 800 + 600; // +600ms breathing room
+    setTimeout(() => _showCoinRewardModal(total, parts, won), modalDelay);
   } else {
     // Rollback if persistence failed
     _coinBalance = oldBalance;
@@ -3768,38 +3778,43 @@ async function awardGameCoins(winner) {
 // PERSISTENCE — returns boolean success status
 // ─────────────────────────────────────────────────────────────────
 async function _persistCoins() {
+  // Helper: update all coin display elements in the UI
+  function _updateCoinDisplays() {
+    const storeCoinEl = document.getElementById('storeCoinCount');
+    if (storeCoinEl) storeCoinEl.textContent = _coinBalance.toLocaleString();
+    const badgeVal = document.getElementById('coinBadgeVal');
+    if (badgeVal) badgeVal.textContent = _fmtCoins(_coinBalance);
+    if (typeof _storeCoins !== 'undefined') _storeCoins = _coinBalance;
+  }
+
   if (typeof _googleUser !== 'undefined' && _googleUser &&
       typeof db !== 'undefined' && db) {
     try {
       await db.ref(`users/${_googleUser.uid}/coins`).set(_coinBalance);
       console.log('[Coins] Firebase write succeeded:', _coinBalance);
-      
-      // Keep store coin display in sync if it's open
-      const el = document.getElementById('storeCoinCount');
-      if (el) el.textContent = _coinBalance.toLocaleString();
-      
-      // Also update store's internal cache
-      if (typeof _storeCoins !== 'undefined') {
-        _storeCoins = _coinBalance;
-      }
-      
-      return true; // ← SUCCESS
+      // Also mirror to localStorage as offline cache
+      try { localStorage.setItem(COINS_LS_KEY, String(_coinBalance)); } catch(e) {}
+      _updateCoinDisplays();
+      return true; // ← SUCCESS (Firebase)
     } catch(e) {
       console.error('[Coins] Firebase write failed:', e);
-      localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
-      console.warn('[Coins] Saved locally as fallback');
-      return false; // ← FAILURE
+      // Fall through to localStorage — this IS a successful save (just local)
+      try {
+        localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+        console.warn('[Coins] Saved locally as offline fallback — will sync on reconnect');
+        _updateCoinDisplays();
+        return true; // ← SUCCESS (localStorage fallback — coins ARE persisted)
+      } catch(lsErr) {
+        console.error('[Coins] localStorage also failed:', lsErr);
+        return false; // ← TOTAL FAILURE
+      }
     }
   } else {
-    // Offline/guest mode
+    // Offline/guest mode — localStorage is the primary store
     try {
       localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
       console.log('[Coins] localStorage write succeeded:', _coinBalance);
-      
-      // Update store display
-      const el = document.getElementById('storeCoinCount');
-      if (el) el.textContent = _coinBalance.toLocaleString();
-      
+      _updateCoinDisplays();
       return true; // ← SUCCESS
     } catch(e) {
       console.error('[Coins] localStorage write failed:', e);
@@ -3901,9 +3916,9 @@ function _showCoinToast(amount, reason) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// UI — game-end reward modal
+// UI — game-end reward modal  ("Collect Rewards" screen)
 // ─────────────────────────────────────────────────────────────────
-function _showCoinRewardModal(total, parts) {
+function _showCoinRewardModal(total, parts, won) {
   document.getElementById('coinRewardModal')?.remove();
 
   // Inject keyframes once
@@ -3911,14 +3926,14 @@ function _showCoinRewardModal(total, parts) {
     const st = document.createElement('style');
     st.id = 'coinModalStyle';
     st.textContent = `
-      @keyframes coinModalIn {
-        from { transform:scale(.7) translateY(30px); opacity:0 }
-        to   { transform:scale(1) translateY(0);     opacity:1 }
-      }
-      @keyframes coinSpin {
-        0%   { transform:rotateY(0deg) }
-        100% { transform:rotateY(360deg) }
-      }
+      @keyframes coinModalBgIn  { from{opacity:0} to{opacity:1} }
+      @keyframes coinCardIn     { from{opacity:0;transform:scale(.75) translateY(40px)} to{opacity:1;transform:scale(1) translateY(0)} }
+      @keyframes coinCountUp    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+      @keyframes coinRowSlide   { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
+      @keyframes coinGlow       { 0%,100%{filter:drop-shadow(0 0 8px #d4a017)} 50%{filter:drop-shadow(0 0 28px #e8c44a)} }
+      @keyframes collectPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(185,28,28,.5)} 60%{box-shadow:0 0 0 10px rgba(185,28,28,0)} }
+      @keyframes barGrow        { from{width:0} to{width:var(--target-w)} }
+      .coin-reward-row { animation: coinRowSlide .35s ease both; }
     `;
     document.head.appendChild(st);
   }
@@ -3926,15 +3941,11 @@ function _showCoinRewardModal(total, parts) {
   const modal = document.createElement('div');
   modal.id = 'coinRewardModal';
   modal.style.cssText = [
-    'position:fixed','inset:0','z-index:600',
+    'position:fixed','inset:0','z-index:9500',
     'display:flex','align-items:center','justify-content:center',
-    'padding:1rem','background:rgba(0,0,0,.65)',
+    'padding:1rem','background:rgba(0,0,0,.72)',
+    'animation:coinModalBgIn .4s ease',
   ].join(';');
-
-  const titleText = lang==='ar'?'مكافأة العملات!'
-    : lang==='fr'?'Récompense en pièces !'
-    : 'Coins Earned!';
-  const ctaText = lang==='ar'?'رائع!' : lang==='fr'?'Super !' : 'Awesome!';
 
   // Progress bar toward next cheapest unowned avatar
   let progressHTML = '';
@@ -3946,80 +3957,148 @@ function _showCoinRewardModal(total, parts) {
     if (next) {
       const pct = Math.min(100, Math.round(_coinBalance / next.price * 100));
       const progressLabel = lang==='ar'
-        ? `نحو ${next.name}: ${_coinBalance}/${next.price} 🪙`
+        ? `نحو ${next.name}: ${_coinBalance.toLocaleString()}/${next.price} 🪙`
         : lang==='fr'
-        ? `Vers ${next.name} : ${_coinBalance}/${next.price} 🪙`
-        : `Toward ${next.name}: ${_coinBalance}/${next.price} 🪙`;
+        ? `Vers ${next.name} : ${_coinBalance.toLocaleString()}/${next.price} 🪙`
+        : `Toward ${next.name}: ${_coinBalance.toLocaleString()}/${next.price} 🪙`;
       progressHTML = `
-        <div style="width:100%;margin-bottom:.4rem">
-          <div style="font-size:.72rem;color:var(--ghost);opacity:.6;margin-bottom:.3rem;font-family:'Creepster',cursive">${progressLabel}</div>
-          <div style="background:var(--purple);border-radius:4px;height:6px;overflow:hidden">
-            <div style="background:var(--moon);height:100%;width:${pct}%;border-radius:4px;transition:width .6s ease"></div>
+        <div style="width:100%;margin:0 0 1rem">
+          <div style="font-size:.72rem;color:var(--ghost);opacity:.65;margin-bottom:.35rem;font-family:'Creepster',cursive;letter-spacing:.03em">${progressLabel}</div>
+          <div style="background:rgba(212,160,23,.15);border-radius:4px;height:7px;overflow:hidden;border:1px solid rgba(212,160,23,.2)">
+            <div style="background:linear-gradient(90deg,var(--blood-glow),var(--moon));height:100%;width:0;border-radius:4px;--target-w:${pct}%;animation:barGrow .9s .6s ease forwards"></div>
           </div>
         </div>`;
     }
   }
 
+  // i18n strings
+  const headerText  = won
+    ? (lang==='ar'?'🏆 فزت!':lang==='fr'?'🏆 Victoire !':'🏆 You Won!')
+    : (lang==='ar'?'💪 لعبت جيداً':lang==='fr'?'💪 Bien joué !':'💪 Good Game!');
+  const titleText   = lang==='ar'?'مكافآتك':lang==='fr'?'Vos récompenses':'Your Rewards';
+  const earnedText  = lang==='ar'?'المكسوب':lang==='fr'?'Gagnés':'Earned';
+  const balanceText = lang==='ar'?'رصيد جديد':lang==='fr'?'Nouveau solde':'New balance';
+  const ctaText     = lang==='ar'?'🪙 استلام المكافأة':lang==='fr'?'🪙 Récupérer':'🪙 Collect Reward';
+
+  const rowsHTML = parts.map((p, i) => `
+    <div class="coin-reward-row" style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:.5rem .65rem;border-radius:6px;
+      background:rgba(212,160,23,.07);
+      border:1px solid rgba(212,160,23,.12);
+      font-size:.9rem;color:var(--ghost);
+      animation-delay:${.15 + i * .08}s;
+    ">${p}</div>`).join('');
+
   modal.innerHTML = `
     <div style="
-      background:var(--abyss);border:1px solid var(--moon);border-radius:14px;
-      padding:2rem 1.6rem;width:100%;max-width:340px;text-align:center;
-      box-shadow:0 0 50px rgba(212,160,23,.25);
-      animation:coinModalIn .4s cubic-bezier(.34,1.56,.64,1) both
+      background:linear-gradient(160deg,var(--abyss) 0%,var(--purple) 100%);
+      border:1px solid rgba(212,160,23,.45);border-radius:16px;
+      padding:1.8rem 1.5rem;width:100%;max-width:360px;
+      box-shadow:0 0 60px rgba(212,160,23,.2),0 20px 60px rgba(0,0,0,.5);
+      animation:coinCardIn .45s cubic-bezier(.34,1.56,.64,1) both;
     ">
-      <div style="font-size:3rem;display:inline-block;animation:coinSpin 1s ease-in-out">🪙</div>
-      <div style="font-family:'Creepster',cursive;font-size:1.8rem;color:var(--moon);margin:.5rem 0">${titleText}</div>
-      <div style="font-family:'Creepster',cursive;font-size:3rem;color:var(--moon-pale);line-height:1;margin-bottom:1rem">+${total}</div>
-      <div style="background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:.8rem;margin-bottom:.9rem;text-align:left">
-        ${parts.map(p => `<div style="font-size:.88rem;color:var(--ghost);padding:.2rem 0;border-bottom:1px solid rgba(212,160,23,.1)">${p}</div>`).join('')}
-        <div style="font-size:.75rem;color:var(--moon);opacity:.7;margin-top:.4rem;text-align:right">
-          ${lang==='ar'?'الرصيد الجديد:':lang==='fr'?'Nouveau solde :':'New balance:'} 🪙 ${_fmtCoins(_coinBalance)}
+      <!-- header -->
+      <div style="text-align:center;margin-bottom:1.2rem">
+        <div style="font-family:'Creepster',cursive;font-size:1.5rem;color:var(--moon-pale);letter-spacing:.05em;margin-bottom:.2rem">
+          ${headerText}
+        </div>
+        <div style="font-family:'Creepster',cursive;font-size:1rem;color:var(--ghost);opacity:.6;letter-spacing:.1em;text-transform:uppercase">
+          ${titleText}
         </div>
       </div>
+
+      <!-- big coin + total -->
+      <div style="text-align:center;margin-bottom:1.3rem">
+        <div style="font-size:3.2rem;line-height:1;animation:coinGlow 2s ease-in-out infinite">🪙</div>
+        <div style="font-family:'Creepster',cursive;font-size:3.6rem;color:var(--moon-pale);line-height:1;animation:coinCountUp .5s .1s ease both">
+          +${total.toLocaleString()}
+        </div>
+        <div style="font-size:.75rem;color:var(--moon);opacity:.7;letter-spacing:.1em;text-transform:uppercase">${earnedText}</div>
+      </div>
+
+      <!-- breakdown rows -->
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.1rem">
+        ${rowsHTML}
+      </div>
+
+      <!-- new balance -->
+      <div style="
+        text-align:center;font-family:'Creepster',cursive;
+        font-size:.9rem;color:var(--moon);opacity:.8;
+        margin-bottom:1rem;padding:.45rem;
+        background:rgba(212,160,23,.08);border-radius:6px;
+        border:1px solid rgba(212,160,23,.15);
+      ">
+        ${balanceText}: 🪙 <strong style="color:var(--moon-pale)">${_coinBalance.toLocaleString()}</strong>
+      </div>
+
+      <!-- progress bar -->
       ${progressHTML}
+
+      <!-- collect button -->
       <button id="coinRewardClose" style="
-        width:100%;padding:.7rem;
-        background:var(--blood-glow);color:var(--ghost);border:none;
-        border-radius:6px;cursor:pointer;
-        font-family:'Creepster',cursive;font-size:1.1rem;transition:.2s
+        width:100%;padding:.8rem;
+        background:var(--blood-glow);color:#fff;border:none;
+        border-radius:8px;cursor:pointer;
+        font-family:'Creepster',cursive;font-size:1.15rem;
+        letter-spacing:.05em;transition:.2s;
+        animation:collectPulse 2s 1s ease-in-out infinite;
       ">${ctaText}</button>
     </div>`;
 
   document.body.appendChild(modal);
 
-  modal.querySelector('#coinRewardClose').addEventListener('click', () => {
+  const closeBtn = modal.querySelector('#coinRewardClose');
+  function _dismiss() {
     modal.style.opacity = '0';
     modal.style.transition = 'opacity .3s';
-    setTimeout(() => modal.remove(), 300);
-  });
-  modal.addEventListener('click', e => {
-    if (e.target === modal) modal.querySelector('#coinRewardClose').click();
-  });
+    setTimeout(() => modal.remove(), 320);
+  }
+  closeBtn.addEventListener('click', _dismiss);
+  closeBtn.addEventListener('mouseover', () => { closeBtn.style.background='var(--blood)'; });
+  closeBtn.addEventListener('mouseout',  () => { closeBtn.style.background='var(--blood-glow)'; });
+  modal.addEventListener('click', e => { if (e.target === modal) _dismiss(); });
 }
 
 // ─────────────────────────────────────────────────────────────────
 // PATCH — showGameOver() → also calls awardGameCoins()
-// KEY FIX: Use async wrapper to ensure awardGameCoins completes
+// KEY FIX: showGameOver is declared in a later <script> block, so
+// window.showGameOver is undefined at this point in the parse order.
+// We defer the patch to after all scripts have executed (DOMContentLoaded).
 // ─────────────────────────────────────────────────────────────────
 (function _patchShowGameOver() {
-  const _orig = window.showGameOver;
-  if (!_orig) { console.warn('[Coins] showGameOver not found — skipping patch'); return; }
-  
-  window.showGameOver = function(result) {
-    console.log('[Coins] showGameOver patch called with result:', result.winner);
-    
-    // Call original (handles UI, death anims, overlays)
-    _orig.call(this, result);
-    
-    // Award coins — fire & forget, but log any errors
-    (async () => {
-      try {
-        await awardGameCoins(result.winner);
-      } catch(e) {
-        console.error('[Coins] awardGameCoins threw error:', e);
-      }
-    })();
-  };
+  // Defer until all scripts are parsed and executed
+  function _applyPatch() {
+    const _orig = window.showGameOver;
+    if (typeof _orig !== 'function') {
+      console.warn('[Coins] showGameOver still not found after load — will retry');
+      setTimeout(_applyPatch, 500);
+      return;
+    }
+    window.showGameOver = function(result) {
+      console.log('[Coins] showGameOver patch called with result:', result.winner);
+
+      // Call original (handles UI, death anims, overlays)
+      _orig.call(this, result);
+
+      // Award coins — fire & forget, but log any errors
+      (async () => {
+        try {
+          await awardGameCoins(result.winner);
+        } catch(e) {
+          console.error('[Coins] awardGameCoins threw error:', e);
+        }
+      })();
+    };
+    console.log('[Coins] showGameOver patched successfully');
+  }
+  // Use window load (after all scripts) not DOMContentLoaded
+  if (document.readyState === 'complete') {
+    _applyPatch();
+  } else {
+    window.addEventListener('load', _applyPatch);
+  }
 })();
 
 // ─────────────────────────────────────────────────────────────────
@@ -4146,6 +4225,32 @@ function _showCoinRewardModal(total, parts) {
     }
   };
   _try();
+})();
+
+// ─────────────────────────────────────────────────────────────────
+// OFFLINE RECONNECT SYNC — push localStorage coins → Firebase
+// when the device comes back online after an offline game session
+// ─────────────────────────────────────────────────────────────────
+(function _watchOnline() {
+  window.addEventListener('online', async () => {
+    console.log('[Coins] Back online — checking for unsynced coins');
+    if (typeof _googleUser === 'undefined' || !_googleUser) return;
+    if (typeof db === 'undefined' || !db) return;
+    const local = parseInt(localStorage.getItem(COINS_LS_KEY) || '0', 10);
+    if (local <= 0) return;
+    try {
+      const snap = await db.ref(`users/${_googleUser.uid}/coins`).get();
+      const remote = snap.val() ?? 0;
+      // Take the higher value (local wins if it includes offline rewards)
+      const synced = Math.max(local, remote);
+      if (synced !== remote) {
+        await db.ref(`users/${_googleUser.uid}/coins`).set(synced);
+        _coinBalance = synced;
+        _renderCoinBadge();
+        console.log('[Coins] Synced offline coins to Firebase:', synced);
+      }
+    } catch(e) { console.warn('[Coins] Reconnect sync failed:', e); }
+  });
 })();
 
 // ─────────────────────────────────────────────────────────────────
