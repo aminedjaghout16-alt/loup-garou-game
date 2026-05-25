@@ -6817,10 +6817,15 @@ function renderStats(players){
 
 // Track which node popup is open
 let _circlePopupOpen=null;
+let _circlePopupOutsideHandler=null; // reference to the active outside-click listener
 
 function closeCirclePopup(){
   _circlePopupOpen=null;
   document.querySelectorAll('.pc-vote-popup').forEach(el=>el.remove());
+  if(_circlePopupOutsideHandler){
+    document.removeEventListener('click', _circlePopupOutsideHandler);
+    _circlePopupOutsideHandler=null;
+  }
 }
 
 function renderPlayerList(players){
@@ -6995,7 +7000,31 @@ function renderPlayerList(players){
     html+=`</div>`;
   });
   html+=`</div>`;
+
+  // ── Popup-preservation: save the live popup before wiping innerHTML ──────
+  // renderPlayerList destroys the entire circle DOM on every state update,
+  // which nukes any open action popup.  We detach it first, rebuild the DOM,
+  // then re-attach it to the freshly-created node so it stays visible.
+  let _savedPopup = null;
+  let _savedPopupTargetId = _circlePopupOpen;
+  if (_savedPopupTargetId) {
+    _savedPopup = document.querySelector('.pc-vote-popup');
+    if (_savedPopup) _savedPopup.remove(); // detach from old node (keeps it in memory)
+  }
+
   el.innerHTML=html;
+
+  // Re-attach the saved popup to the newly-rendered node
+  if (_savedPopup && _savedPopupTargetId) {
+    const _newNode = document.getElementById('pcnode_' + _savedPopupTargetId);
+    if (_newNode) {
+      _newNode.style.zIndex = '10';
+      _newNode.appendChild(_savedPopup);
+    } else {
+      // Node no longer exists (player left/died) — discard popup
+      _circlePopupOpen = null;
+    }
+  }
 }
 
 function circleNodeClick(event, targetId){
@@ -7282,7 +7311,15 @@ function circleNodeClick(event, targetId){
   node.appendChild(popup);
 
   setTimeout(()=>{
-    document.addEventListener('click', closeCirclePopup, {once:true});
+    // Close popup only when clicking OUTSIDE of it
+    function _outsideClickHandler(e){
+      const openPopup = document.querySelector('.pc-vote-popup');
+      if (openPopup && openPopup.contains(e.target)) return; // click was inside popup — ignore
+      closeCirclePopup();
+      document.removeEventListener('click', _outsideClickHandler);
+    }
+    _circlePopupOutsideHandler = _outsideClickHandler;
+    document.addEventListener('click', _outsideClickHandler);
   },0);
 }
 // ════════════════════════════════════════════
