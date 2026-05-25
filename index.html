@@ -3653,8 +3653,8 @@ async function spendCoins(amount) {
 // ─────────────────────────────────────────────────────────────────
 // GAME-END REWARD — called via showGameOver() patch below
 // ─────────────────────────────────────────────────────────────────
-async function awardGameCoins(winner, survivedToEnd) {
-  console.log('[Coins] awardGameCoins called with winner:', winner, '| survivedToEnd:', survivedToEnd);
+async function awardGameCoins(winner, survivedToEnd, precomputedNewlyDead) {
+  console.log('[Coins] awardGameCoins called with winner:', winner, '| survivedToEnd:', survivedToEnd, '| newlyDead:', precomputedNewlyDead);
 
   // ── DEDUP CHECK: only reward each game once ──────────────────
   // Always use the authoritative Firebase startedAt so ALL clients
@@ -3776,12 +3776,10 @@ async function awardGameCoins(winner, survivedToEnd) {
     console.log('[Coins] ✓ Successfully awarded & persisted. New balance:', _coinBalance);
 
     // Delay the reward modal so it appears AFTER death animations + winner overlay.
-    // Death anim: newlyDead * 4200ms + 400ms overlay delay + 800ms for overlay entrance.
-    // We read the newly-dead count the same way the audio patch does.
-    const players = Object.values(gameState?.players || {});
-    const newlyDeadCount = players.filter(p =>
-      !p.alive && typeof _previousAlive !== 'undefined' && _previousAlive?.[p.id] === true
-    ).length;
+    // Use the pre-captured newlyDeadCount (passed in from the showGameOver patch) because
+    // _previousAlive has already been updated by the time we reach here, making a live
+    // recalculation always return 0 and causing the modal to appear too early.
+    const newlyDeadCount = (typeof precomputedNewlyDead === 'number') ? precomputedNewlyDead : 0;
     const modalDelay = (newlyDeadCount * 4200) + 400 + 800 + 600; // +600ms breathing room
     setTimeout(() => _showCoinRewardModal(total, parts, won), modalDelay);
   } else {
@@ -4136,19 +4134,24 @@ function _showCoinRewardModal(total, parts, won) {
     window.showGameOver = function(result) {
       console.log('[Coins] showGameOver patch called with result:', result.winner);
 
-      // Capture alive state SYNCHRONOUSLY before any async Firebase updates can
-      // overwrite gameState.  This is the source of truth for the survive bonus.
+      // Capture alive state and newly-dead count SYNCHRONOUSLY before _orig is called.
+      // _orig updates _previousAlive, so we must read it first to get the right count.
+      // survivedToEnd must also be read now before async Firebase updates overwrite gameState.
       const _meAtGameEnd = gameState?.players?.[myId];
       const _survivedToEnd = _meAtGameEnd ? (_meAtGameEnd.alive === true) : false;
-      console.log('[Coins] survivedToEnd captured synchronously:', _survivedToEnd);
+      const _allPlayers = Object.values(gameState?.players || {});
+      const _newlyDeadCount = _allPlayers.filter(p =>
+        !p.alive && typeof _previousAlive !== 'undefined' && _previousAlive?.[p.id] === true
+      ).length;
+      console.log('[Coins] survivedToEnd:', _survivedToEnd, '| newlyDeadCount:', _newlyDeadCount);
 
-      // Call original (handles UI, death anims, overlays)
+      // Call original (handles UI, death anims, overlays; also updates _previousAlive)
       _orig.call(this, result);
 
       // Award coins — fire & forget, but log any errors
       (async () => {
         try {
-          await awardGameCoins(result.winner, _survivedToEnd);
+          await awardGameCoins(result.winner, _survivedToEnd, _newlyDeadCount);
         } catch(e) {
           console.error('[Coins] awardGameCoins threw error:', e);
         }
