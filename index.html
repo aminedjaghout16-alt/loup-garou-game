@@ -1409,8 +1409,8 @@ function avatarCardHTML(av, opts = {}) {
 //   legendary  → breathe + blink + sway + glow + shimmer
 //
 // Usage:
-//   <script src="avatars.js"></script>
-//   <script src="avatar-animations.js"></script>
+//   <script src="avatars.js"><\/script>
+//   <script src="avatar-animations.js"><\/script>
 //   initAvatarAnimations();         // animate all .avatar-card elements
 //   animateSingleCard(cardEl);      // animate one card after injecting it
 // ════════════════════════════════════════════════════════════
@@ -3494,8 +3494,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised)
-// Drop this entire block into index.html just before 
-</body>,
+// Drop this entire block into index.html just before </body>,
 // after all other scripts (Firebase, avatars.js, avatar-store.js,
 // spin-wheel.js, avatar-animations.js).
 //
@@ -4039,8 +4038,8 @@ window.addEventListener('load', () => {
     </div>
 
     
-    <!-- Avatar Store + Daily Spin buttons — shown when signed in -->
-    <div id="avatarSystemBtns" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+    <!-- Avatar Store + Daily Spin -->
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
       <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
       <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
     </div>
@@ -4183,9 +4182,7 @@ window.addEventListener('load', () => {
       <div><span id="t_lstatus">Status:</span> <span id="hStatus">—</span></div>
       <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Creepster',cursive;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
     </div>
-    <button onclick="openAvatarStore()" id="headerStoreBtn" style="padding:.3rem .7rem;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s;display:none" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🎭</button>
-      <button onclick="openSpinWheel()" id="headerSpinBtn" style="padding:.3rem .7rem;background:transparent;border:1px solid rgba(185,28,28,.4);color:var(--blood-glow);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s;display:none" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='transparent'">🎡</button>
-      <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
+    <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
     <button id="headerStatsBtn" onclick="openProfileModal()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">📊</button>
   </div>
 
@@ -5523,19 +5520,6 @@ function _updateGoogleUI(user){
     if(gameEntry) gameEntry.style.display='none';
     if(hBtn) hBtn.style.display='none';
   }
-  // ── Avatar system buttons visibility ──
-  const avatarBtns = document.getElementById('avatarSystemBtns');
-  const hStore = document.getElementById('headerStoreBtn');
-  const hSpin  = document.getElementById('headerSpinBtn');
-  if(user){
-    if(avatarBtns) avatarBtns.style.display='flex';
-    if(hStore) hStore.style.display='inline-block';
-    if(hSpin)  hSpin.style.display='inline-block';
-  } else {
-    if(avatarBtns) avatarBtns.style.display='none';
-    if(hStore) hStore.style.display='none';
-    if(hSpin)  hSpin.style.display='none';
-  }
 }
 
 function doGoogleSignIn(){
@@ -6007,7 +5991,6 @@ function showGame(){
   document.getElementById('hPlayerName').textContent=myName||'';
   buildRolesGrid();
   applyTranslations();
-  // ── Avatar system init ──
   if(typeof initAvatarStore==='function') initAvatarStore();
 }
 
@@ -6469,8 +6452,7 @@ function renderGame(){
   }
   renderChat();
   applyTranslations();
-  // ── Inject equipped avatars into player circle tokens ──
-  if(typeof _injectCircleAvatars === 'function') _injectCircleAvatars();
+  if(typeof _injectCircleAvatars==='function') _injectCircleAvatars();
 }
 
 function renderStats(players){
@@ -9599,108 +9581,52 @@ window.addEventListener('load',()=>{
 
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// PART 7 — WIRING: Avatar system integration helpers
-// ══════════════════════════════════════════════════════════════
+// ══ PART 7 — WIRING HELPERS ══════════════════════════════
 
-// Cache of uid → equippedAvatar fetched from Firebase
 const _playerAvatarCache = {};
 
-/**
- * Called after every renderGame() re-render.
- * Looks at each .pc-node, checks if that player has an equipped avatar
- * stored in Firebase (or in cache), and injects the animated SVG.
- */
 async function _injectCircleAvatars() {
   if (!gameState || !gameState.players) return;
-  const nodes = document.querySelectorAll('.pc-node[id^="pcnode_"]');
-  nodes.forEach(async node => {
+  document.querySelectorAll('.pc-node[id^="pcnode_"]').forEach(async node => {
     const pid = node.id.replace('pcnode_', '');
     const wrap = node.querySelector('.pc-avatar-wrap');
-    if (!wrap) return;
-    // Skip if already has avatar SVG injected
-    if (wrap.querySelector('svg[data-av]')) return;
-
-    // Fetch avatar from Firebase cache or DB
+    if (!wrap || wrap.querySelector('svg[data-av]')) return;
     const avatarId = await _getPlayerEquippedAvatar(pid);
     if (!avatarId) return;
-
     const av = (typeof AVATARS !== 'undefined') && AVATARS.find(a => a.id === avatarId);
     if (!av) return;
-
-    // Clear default emoji content and inject SVG
-    const existingEmoji = wrap.querySelector('.pc-avatar, .pc-dead-role, .pc-coop-role, .pc-seer-overlay');
-    // Only inject into the background layer (don't remove overlays)
-    let svgContainer = wrap.querySelector('.pc-av-svg-layer');
-    if (!svgContainer) {
-      svgContainer = document.createElement('div');
-      svgContainer.className = 'pc-av-svg-layer';
-      svgContainer.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;z-index:0;pointer-events:none';
-      wrap.insertBefore(svgContainer, wrap.firstChild);
+    let layer = wrap.querySelector('.pc-av-svg-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'pc-av-svg-layer';
+      layer.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;z-index:0;pointer-events:none';
+      wrap.insertBefore(layer, wrap.firstChild);
     }
-    svgContainer.innerHTML = av.svg.replace('<svg ', '<svg data-av="1" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" ');
+    layer.innerHTML = av.svg.replace('<svg ', '<svg data-av="1" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" ');
   });
 }
 
-/**
- * Resolve which avatar a player has equipped.
- * For self: use _storeEquipped from avatar-store.js.
- * For others: look up Firebase users/{uid}/equippedAvatar
- * We use the player's Firebase UID which equals their myId if they signed in.
- */
 async function _getPlayerEquippedAvatar(playerId) {
-  // Own player: use local store state
-  if (playerId === myId) {
-    return (typeof getEquippedAvatar === 'function') ? getEquippedAvatar() : null;
-  }
-
-  // Check cache first (invalidates after 5 minutes)
+  if (playerId === myId) return (typeof getEquippedAvatar==='function') ? getEquippedAvatar() : null;
   const cached = _playerAvatarCache[playerId];
   if (cached && cached.ts > Date.now() - 300000) return cached.id;
-
-  // Firebase lookup: player UID = playerId for Google sign-in users
   if (!fbOk || !db) return null;
   try {
-    const snap = await db.ref(`users/${playerId}/equippedAvatar`).once('value');
+    const snap = await db.ref('users/'+playerId+'/equippedAvatar').once('value');
     const id = snap.val() || null;
     _playerAvatarCache[playerId] = { id, ts: Date.now() };
     return id;
   } catch(e) { return null; }
 }
 
-/**
- * Show/hide avatar system UI elements based on game state.
- * Called when entering/leaving game screen.
- */
-function _updateAvatarSystemUI() {
-  const isInGame = gameState && gameState.status !== 'setup';
-  const hStore = document.getElementById('headerStoreBtn');
-  const hSpin  = document.getElementById('headerSpinBtn');
-  // Show store/spin in header only for signed-in users
-  if (_googleUser) {
-    if (hStore) hStore.style.display = 'inline-block';
-    if (hSpin)  hSpin.style.display  = 'inline-block';
-  }
-}
-
-// ── Patch _updateGoogleUI to also init coins when sign-in happens
-const _origUpdateGoogleUI = window._updateGoogleUI;
-// (coins init is handled by part5's auth watcher — no double-patch needed)
-
-// ── Wire avatar store button to also show spin wheel button for guests
-// Guests can use the store to browse but not buy; they can still spin once
-// (stored in localStorage).
-(function _guestAvatarAccess() {
-  const origDoGuestPlay = window.doGuestPlay;
-  if (!origDoGuestPlay) return;
-  window.doGuestPlay = function() {
-    origDoGuestPlay.apply(this, arguments);
-    // Show avatar system buttons for guests too
-    const avatarBtns = document.getElementById('avatarSystemBtns');
-    if (avatarBtns) avatarBtns.style.display = 'flex';
+// Guest: show store/spin buttons too
+(function(){
+  const orig = window.doGuestPlay;
+  if(!orig) return;
+  window.doGuestPlay = function(){
+    orig.apply(this, arguments);
   };
 })();
-
 </script>
 <script>
 // ════════════════════════════════════════════
