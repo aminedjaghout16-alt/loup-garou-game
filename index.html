@@ -2061,6 +2061,13 @@ async function openAvatarStore() {
   document.getElementById('avatarStoreModal').classList.remove('hidden');
   _storeSelected = null;
 
+  // Immediately mirror the authoritative _coinBalance so the store header
+  // always shows the correct amount before (and regardless of) Firebase read.
+  if (typeof _coinBalance !== 'undefined') {
+    _storeCoins = _coinBalance;
+    _updateCoinDisplay();
+  }
+
   await _loadStoreData();
   _renderFeatured();
   _renderGrid();
@@ -2078,23 +2085,33 @@ function closeAvatarStore(e) {
 async function _loadStoreData() {
   _storeOwned = { dusty: true }; // free always owned
 
+  // Seed from the authoritative _coinBalance cache immediately so the store
+  // never shows 0 while the Firebase read is in-flight (or if it fails).
+  if (typeof _coinBalance !== 'undefined') {
+    _storeCoins = _coinBalance;
+  }
+  _updateCoinDisplay();
+
   const uid = typeof _googleUser !== 'undefined' && _googleUser?.uid;
   if (!uid || typeof db === 'undefined' || !db) {
-    _storeCoins = 0;
     _storeEquipped = null;
-    _updateCoinDisplay();
     return;
   }
 
   try {
     const snap = await db.ref(`users/${uid}`).once('value');
     const data = snap.val() || {};
-    _storeCoins    = data.coins || 0;
+    // Use the higher of the Firebase value or the local cache — protects
+    // against a stale Firebase read right after an un-persisted award.
+    const fbCoins = typeof data.coins === 'number' ? data.coins : 0;
+    _storeCoins    = Math.max(fbCoins, typeof _coinBalance !== 'undefined' ? _coinBalance : 0);
+    // Keep _coinBalance authoritative cache in sync
+    if (typeof _coinBalance !== 'undefined') _coinBalance = _storeCoins;
     _storeOwned    = Object.assign({ dusty: true }, data.ownedAvatars || {});
     _storeEquipped = data.equippedAvatar || null;
   } catch(e) {
-    console.warn('[Store] Firebase load failed', e);
-    _storeCoins = 0;
+    console.warn('[Store] Firebase load failed — keeping cached balance', e);
+    // _storeCoins already set from _coinBalance above; nothing more to do
   }
   _updateCoinDisplay();
 }
@@ -2291,6 +2308,9 @@ async function _buyAvatar(id) {
     await db.ref().update(updates);
 
     _storeCoins        = newCoins;
+    // Keep the authoritative _coinBalance cache in sync so the top-left badge
+    // and any future store open immediately reflect the deduction.
+    if (typeof _coinBalance !== 'undefined') _coinBalance = newCoins;
     _storeOwned[id]    = true;
     _storeEquipped     = id;
 
@@ -3892,7 +3912,10 @@ async function _persistCoins() {
     if (storeCoinEl) storeCoinEl.textContent = _coinBalance.toLocaleString();
     const badgeVal = document.getElementById('coinBadgeVal');
     if (badgeVal) badgeVal.textContent = _fmtCoins(_coinBalance);
+    // Keep the store's local variable in sync so affordability checks are correct
     if (typeof _storeCoins !== 'undefined') _storeCoins = _coinBalance;
+    // Refresh store footer affordability state if the store is open
+    if (typeof _updateCoinDisplay === 'function') _updateCoinDisplay();
   }
 
   if (typeof _googleUser !== 'undefined' && _googleUser &&
@@ -4226,6 +4249,9 @@ function _showCoinRewardModal(total, parts, won) {
         console.log('[Coins] Synced after avatar purchase:', _coinBalance);
       } catch(e) { console.warn('[Coins] Failed to sync after purchase', e); }
     }
+    // Keep store display in sync with badge
+    if (typeof _storeCoins !== 'undefined') _storeCoins = _coinBalance;
+    if (typeof _updateCoinDisplay === 'function') _updateCoinDisplay();
     _renderCoinBadge();
   };
 })();
