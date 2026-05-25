@@ -563,6 +563,3477 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .audio-mute{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:4px;padding:0 .35rem;font-size:.75rem;cursor:pointer;height:20px;line-height:1;font-family:inherit;transition:.15s}
 .audio-mute:hover{background:rgba(212,160,23,.15)}
 </style>
+
+<!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
+<script>
+// ════════════════════════════════════════════════════════════
+// LOUP-GAROU — AVATAR DEFINITIONS  (Part 1)
+// 12 hexagon-framed SVG avatars, semi-realistic cartoon style
+// Each avatar: { id, name, rarity, price, svg }
+// Rarity border colors:
+//   free       → #888888 (grey)
+//   common     → #d4a017 (gold)
+//   rare       → #38bdf8 (cyan-blue)
+//   legendary  → #ef4444 (red)  + ★ star marker
+// ════════════════════════════════════════════════════════════
+
+const AVATARS = [
+
+  // ── FREE ──────────────────────────────────────────────────
+  {
+    id: 'dusty',
+    name: 'Dusty',
+    rarity: 'free',
+    price: 0,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-dusty">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <!-- hex background -->
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#888888" stroke-width="2.5"/>
+  <g clip-path="url(#hex-dusty)">
+    <!-- sky bg -->
+    <rect x="7" y="4" width="86" height="94" fill="#1a1a2e"/>
+    <!-- body / tunic -->
+    <ellipse cx="50" cy="95" rx="28" ry="18" fill="#5a4a3a"/>
+    <rect x="28" y="72" width="44" height="28" fill="#5a4a3a" rx="4"/>
+    <!-- neck -->
+    <rect x="44" y="62" width="12" height="14" fill="#c8956c"/>
+    <!-- head -->
+    <ellipse cx="50" cy="54" rx="20" ry="22" fill="#c8956c"/>
+    <!-- messy brown hair -->
+    <ellipse cx="50" cy="35" rx="21" ry="12" fill="#6b4226"/>
+    <ellipse cx="32" cy="42" rx="8" ry="10" fill="#6b4226"/>
+    <ellipse cx="68" cy="42" rx="8" ry="10" fill="#6b4226"/>
+    <ellipse cx="50" cy="33" rx="16" ry="8" fill="#7a4f2d"/>
+    <!-- ears -->
+    <ellipse cx="30" cy="54" rx="5" ry="6" fill="#c8956c"/>
+    <ellipse cx="70" cy="54" rx="5" ry="6" fill="#c8956c"/>
+    <ellipse cx="30" cy="54" rx="3" ry="4" fill="#b07855"/>
+    <ellipse cx="70" cy="54" rx="3" ry="4" fill="#b07855"/>
+    <!-- eyes -->
+    <ellipse cx="42" cy="52" rx="5" ry="5.5" fill="white"/>
+    <ellipse cx="58" cy="52" rx="5" ry="5.5" fill="white"/>
+    <ellipse cx="43" cy="53" rx="3" ry="3.5" fill="#5a3a1a"/>
+    <ellipse cx="59" cy="53" rx="3" ry="3.5" fill="#5a3a1a"/>
+    <circle cx="44" cy="52" r="1.2" fill="#1a0a00"/>
+    <circle cx="60" cy="52" r="1.2" fill="#1a0a00"/>
+    <circle cx="44.8" cy="51.2" r="0.7" fill="white"/>
+    <circle cx="60.8" cy="51.2" r="0.7" fill="white"/>
+    <!-- eyebrows -->
+    <path d="M38 47 Q42 45 46 47" stroke="#6b4226" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M54 47 Q58 45 62 47" stroke="#6b4226" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="58" rx="3" ry="2" fill="#b07855"/>
+    <circle cx="48" cy="58.5" r="1.2" fill="#9a6645"/>
+    <circle cx="52" cy="58.5" r="1.2" fill="#9a6645"/>
+    <!-- mouth — slight frown -->
+    <path d="M44 64 Q50 62 56 64" stroke="#9a5c3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- stubble -->
+    <ellipse cx="50" cy="66" rx="12" ry="5" fill="#b07855" opacity="0.3"/>
+    <!-- patch on tunic -->
+    <rect x="42" y="78" width="8" height="6" fill="#7a6050" rx="1"/>
+  </g>
+</svg>`
+  },
+
+  // ── COMMON ────────────────────────────────────────────────
+  {
+    id: 'flint',
+    name: 'Flint',
+    rarity: 'common',
+    price: 250,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-flint">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
+  <g clip-path="url(#hex-flint)">
+    <rect x="7" y="4" width="86" height="94" fill="#1c1408"/>
+    <!-- forest bg hint -->
+    <ellipse cx="20" cy="90" rx="18" ry="30" fill="#1a2a10" opacity="0.6"/>
+    <ellipse cx="80" cy="90" rx="18" ry="30" fill="#1a2a10" opacity="0.6"/>
+    <!-- body leather -->
+    <rect x="26" y="70" width="48" height="28" fill="#5c3d1e" rx="4"/>
+    <rect x="36" y="70" width="28" height="6" fill="#7a5230"/>
+    <!-- neck -->
+    <rect x="44" y="61" width="12" height="13" fill="#b8804a"/>
+    <!-- head -->
+    <ellipse cx="50" cy="52" rx="19" ry="21" fill="#b8804a"/>
+    <!-- dark hair, swept back -->
+    <ellipse cx="50" cy="33" rx="20" ry="10" fill="#2a1a08"/>
+    <ellipse cx="31" cy="40" rx="7" ry="9" fill="#2a1a08"/>
+    <ellipse cx="69" cy="40" rx="7" ry="9" fill="#2a1a08"/>
+    <!-- ears -->
+    <ellipse cx="31" cy="52" rx="5" ry="6" fill="#b8804a"/>
+    <ellipse cx="69" cy="52" rx="5" ry="6" fill="#b8804a"/>
+    <ellipse cx="31" cy="52" rx="3" ry="4" fill="#a06a38"/>
+    <ellipse cx="69" cy="52" rx="3" ry="4" fill="#a06a38"/>
+    <!-- eyes — intense green -->
+    <ellipse cx="42" cy="50" rx="5" ry="5.5" fill="white"/>
+    <ellipse cx="58" cy="50" rx="5" ry="5.5" fill="white"/>
+    <ellipse cx="43" cy="51" rx="3" ry="3.5" fill="#2d6a2d"/>
+    <ellipse cx="59" cy="51" rx="3" ry="3.5" fill="#2d6a2d"/>
+    <circle cx="44" cy="50" r="1.2" fill="#0a1a0a"/>
+    <circle cx="60" cy="50" r="1.2" fill="#0a1a0a"/>
+    <circle cx="44.8" cy="49.2" r="0.7" fill="white"/>
+    <circle cx="60.8" cy="49.2" r="0.7" fill="white"/>
+    <!-- scar on left cheek -->
+    <path d="M35 54 L39 60" stroke="#8a5030" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- eyebrows — stern -->
+    <path d="M38 45 Q42 43 46 45" stroke="#2a1a08" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M54 45 Q58 43 62 45" stroke="#2a1a08" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="56" rx="3" ry="2" fill="#a06a38"/>
+    <circle cx="48" cy="56.5" r="1.2" fill="#8a5428"/>
+    <circle cx="52" cy="56.5" r="1.2" fill="#8a5428"/>
+    <!-- mouth — firm -->
+    <path d="M44 62 Q50 63 56 62" stroke="#8a5030" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- leather collar -->
+    <path d="M36 68 Q50 72 64 68" stroke="#7a5230" stroke-width="3" fill="none"/>
+    <!-- quiver strap -->
+    <path d="M62 70 L72 50" stroke="#8a6040" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'aldric',
+    name: 'Aldric',
+    rarity: 'common',
+    price: 300,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-aldric">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
+  <g clip-path="url(#hex-aldric)">
+    <rect x="7" y="4" width="86" height="94" fill="#0e0e1f"/>
+    <!-- golden robe -->
+    <rect x="24" y="70" width="52" height="28" fill="#8a6a10" rx="4"/>
+    <rect x="36" y="70" width="28" height="5" fill="#c4960e"/>
+    <!-- neck -->
+    <rect x="44" y="62" width="12" height="12" fill="#d4a870"/>
+    <!-- head — older, wider -->
+    <ellipse cx="50" cy="53" rx="20" ry="21" fill="#d4a870"/>
+    <!-- white hair -->
+    <ellipse cx="50" cy="34" rx="21" ry="11" fill="#e8e8e8"/>
+    <ellipse cx="30" cy="43" rx="8" ry="11" fill="#e8e8e8"/>
+    <ellipse cx="70" cy="43" rx="8" ry="11" fill="#e8e8e8"/>
+    <!-- bald top -->
+    <ellipse cx="50" cy="36" rx="14" ry="8" fill="#c4a060"/>
+    <!-- ears -->
+    <ellipse cx="30" cy="53" rx="5" ry="7" fill="#d4a870"/>
+    <ellipse cx="70" cy="53" rx="5" ry="7" fill="#d4a870"/>
+    <ellipse cx="30" cy="53" rx="3" ry="5" fill="#c09060"/>
+    <ellipse cx="70" cy="53" rx="3" ry="5" fill="#c09060"/>
+    <!-- wrinkles forehead -->
+    <path d="M38 44 Q50 42 62 44" stroke="#b8885a" stroke-width="0.8" fill="none"/>
+    <path d="M40 47 Q50 45 60 47" stroke="#b8885a" stroke-width="0.8" fill="none"/>
+    <!-- eyes — warm brown, half-closed wise -->
+    <ellipse cx="42" cy="53" rx="5.5" ry="4.5" fill="white"/>
+    <ellipse cx="58" cy="53" rx="5.5" ry="4.5" fill="white"/>
+    <ellipse cx="43" cy="54" rx="3" ry="3" fill="#6b3a10"/>
+    <ellipse cx="59" cy="54" rx="3" ry="3" fill="#6b3a10"/>
+    <circle cx="44" cy="53" r="1.2" fill="#1a0800"/>
+    <circle cx="60" cy="53" r="1.2" fill="#1a0800"/>
+    <circle cx="44.8" cy="52.2" r="0.7" fill="white"/>
+    <circle cx="60.8" cy="52.2" r="0.7" fill="white"/>
+    <!-- bushy white eyebrows -->
+    <path d="M37 48 Q42 46 47 48" stroke="#e8e8e8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M53 48 Q58 46 63 48" stroke="#e8e8e8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- nose — bulbous -->
+    <ellipse cx="50" cy="59" rx="4" ry="3" fill="#c09060"/>
+    <circle cx="47.5" cy="59.5" r="1.5" fill="#aa7a48"/>
+    <circle cx="52.5" cy="59.5" r="1.5" fill="#aa7a48"/>
+    <!-- long white beard -->
+    <ellipse cx="50" cy="72" rx="16" ry="14" fill="#e8e8e8"/>
+    <ellipse cx="50" cy="80" rx="11" ry="10" fill="#e0e0e0"/>
+    <!-- mouth under beard hint -->
+    <path d="M45 66 Q50 68 55 66" stroke="#b8885a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- staff hint -->
+    <rect x="72" y="40" width="3" height="58" fill="#8a6a10" rx="1"/>
+    <circle cx="73.5" cy="40" r="4" fill="#d4a017"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'morrigan',
+    name: 'Morrigan',
+    rarity: 'common',
+    price: 350,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-morrigan">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
+  <g clip-path="url(#hex-morrigan)">
+    <rect x="7" y="4" width="86" height="94" fill="#120820"/>
+    <!-- dark robe -->
+    <rect x="24" y="70" width="52" height="28" fill="#2a1040" rx="4"/>
+    <!-- purple trim -->
+    <path d="M24 70 Q50 76 76 70" stroke="#7c3aed" stroke-width="2" fill="none"/>
+    <!-- neck -->
+    <rect x="44" y="62" width="12" height="12" fill="#e8b89a"/>
+    <!-- head -->
+    <ellipse cx="50" cy="52" rx="19" ry="21" fill="#e8b89a"/>
+    <!-- large purple pointy hat -->
+    <polygon points="50,8 35,52 65,52" fill="#4c1d95"/>
+    <polygon points="50,8 38,48 62,48" fill="#5b21b6"/>
+    <rect x="30" y="49" width="40" height="6" fill="#6d28d9" rx="2"/>
+    <!-- stars on hat -->
+    <circle cx="50" cy="22" r="1.5" fill="#f0d060"/>
+    <circle cx="44" cy="32" r="1" fill="#f0d060"/>
+    <circle cx="56" cy="28" r="1" fill="#f0d060"/>
+    <!-- long black hair sides -->
+    <ellipse cx="30" cy="58" rx="9" ry="18" fill="#1a0a2e"/>
+    <ellipse cx="70" cy="58" rx="9" ry="18" fill="#1a0a2e"/>
+    <!-- ears -->
+    <ellipse cx="31" cy="52" rx="4" ry="5" fill="#e8b89a"/>
+    <ellipse cx="69" cy="52" rx="4" ry="5" fill="#e8b89a"/>
+    <!-- eyes — bright green -->
+    <ellipse cx="42" cy="51" rx="5.5" ry="5.5" fill="white"/>
+    <ellipse cx="58" cy="51" rx="5.5" ry="5.5" fill="white"/>
+    <ellipse cx="43" cy="52" rx="3.5" ry="4" fill="#166534"/>
+    <ellipse cx="59" cy="52" rx="3.5" ry="4" fill="#166534"/>
+    <circle cx="44" cy="51" r="1.4" fill="#052e16"/>
+    <circle cx="60" cy="51" r="1.4" fill="#052e16"/>
+    <circle cx="44.8" cy="50.2" r="0.8" fill="white"/>
+    <circle cx="60.8" cy="50.2" r="0.8" fill="white"/>
+    <!-- eyebrows — arched, dark -->
+    <path d="M37 46 Q42 43 47 46" stroke="#1a0a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M53 46 Q58 43 63 46" stroke="#1a0a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="57" rx="3" ry="2" fill="#d4a07a"/>
+    <!-- slight smirk -->
+    <path d="M44 63 Q50 66 57 62" stroke="#c47a5a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- crescent moon brooch -->
+    <path d="M46 71 Q50 67 54 71 Q50 73 46 71 Z" fill="#d4a017"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'ironclad',
+    name: 'Ironclad',
+    rarity: 'common',
+    price: 400,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-ironclad">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
+  <g clip-path="url(#hex-ironclad)">
+    <rect x="7" y="4" width="86" height="94" fill="#0a0f1a"/>
+    <!-- armour body -->
+    <rect x="22" y="68" width="56" height="30" fill="#374151" rx="3"/>
+    <rect x="34" y="68" width="32" height="5" fill="#4b5563"/>
+    <!-- blue cape behind -->
+    <ellipse cx="50" cy="90" rx="32" ry="20" fill="#1e3a5f"/>
+    <!-- pauldrons -->
+    <ellipse cx="28" cy="68" rx="12" ry="8" fill="#4b5563"/>
+    <ellipse cx="72" cy="68" rx="12" ry="8" fill="#4b5563"/>
+    <!-- helmet -->
+    <ellipse cx="50" cy="50" rx="22" ry="24" fill="#4b5563"/>
+    <rect x="28" y="38" width="44" height="26" fill="#4b5563" rx="4"/>
+    <!-- helmet top ridge -->
+    <rect x="46" y="28" width="8" height="16" fill="#6b7280" rx="2"/>
+    <!-- visor open — face visible -->
+    <rect x="33" y="46" width="34" height="20" fill="#1a1a0a" rx="2"/>
+    <rect x="35" y="48" width="30" height="16" fill="#e8c890" rx="2"/>
+    <!-- face inside visor -->
+    <ellipse cx="50" cy="56" rx="14" ry="8" fill="#e8c890"/>
+    <!-- eyes — steel blue -->
+    <ellipse cx="43" cy="54" rx="4.5" ry="4.5" fill="white"/>
+    <ellipse cx="57" cy="54" rx="4.5" ry="4.5" fill="white"/>
+    <ellipse cx="44" cy="55" rx="3" ry="3" fill="#1d4ed8"/>
+    <ellipse cx="58" cy="55" rx="3" ry="3" fill="#1d4ed8"/>
+    <circle cx="44.5" cy="54" r="1.2" fill="#0a0a2a"/>
+    <circle cx="58.5" cy="54" r="1.2" fill="#0a0a2a"/>
+    <circle cx="45.2" cy="53.2" r="0.7" fill="white"/>
+    <circle cx="59.2" cy="53.2" r="0.7" fill="white"/>
+    <!-- stern brow -->
+    <path d="M39 50 Q43 48 47 50" stroke="#8a6a30" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M53 50 Q57 48 61 50" stroke="#8a6a30" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="58" rx="2.5" ry="1.5" fill="#d4a870"/>
+    <!-- mouth — determined -->
+    <path d="M44 62 Q50 63 56 62" stroke="#a07040" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- helmet cheek guards -->
+    <rect x="28" y="46" width="7" height="22" fill="#4b5563" rx="2"/>
+    <rect x="65" y="46" width="7" height="22" fill="#4b5563" rx="2"/>
+    <!-- visor bar -->
+    <rect x="33" y="55" width="34" height="2" fill="#374151" opacity="0.6"/>
+    <!-- cross emblem on chest -->
+    <rect x="47" y="71" width="6" height="14" fill="#6b7280" rx="1"/>
+    <rect x="42" y="76" width="16" height="4" fill="#6b7280" rx="1"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'colt',
+    name: 'Colt',
+    rarity: 'common',
+    price: 280,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-colt">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
+  <g clip-path="url(#hex-colt)">
+    <rect x="7" y="4" width="86" height="94" fill="#180f04"/>
+    <!-- tan vest body -->
+    <rect x="24" y="68" width="52" height="30" fill="#92622a" rx="4"/>
+    <rect x="36" y="68" width="28" height="5" fill="#b07840"/>
+    <!-- neck -->
+    <rect x="44" y="60" width="12" height="12" fill="#d4956c"/>
+    <!-- head -->
+    <ellipse cx="50" cy="51" rx="20" ry="21" fill="#d4956c"/>
+    <!-- wide-brim sheriff hat -->
+    <ellipse cx="50" cy="33" rx="28" ry="5" fill="#6b4010"/>
+    <rect x="30" y="23" width="40" height="13" fill="#8a5520" rx="3"/>
+    <rect x="32" y="22" width="36" height="4" fill="#7a4a18"/>
+    <!-- hat band -->
+    <rect x="30" y="33" width="40" height="3" fill="#5a3010"/>
+    <!-- star badge on hat -->
+    <polygon points="50,25 51.5,29 55,29 52.5,31.5 53.5,35 50,33 46.5,35 47.5,31.5 45,29 48.5,29" fill="#d4a017"/>
+    <!-- ears -->
+    <ellipse cx="30" cy="51" rx="5" ry="6" fill="#d4956c"/>
+    <ellipse cx="70" cy="51" rx="5" ry="6" fill="#d4956c"/>
+    <ellipse cx="30" cy="51" rx="3" ry="4" fill="#c07850"/>
+    <ellipse cx="70" cy="51" rx="3" ry="4" fill="#c07850"/>
+    <!-- eyes — amber/hazel -->
+    <ellipse cx="42" cy="50" rx="5" ry="5" fill="white"/>
+    <ellipse cx="58" cy="50" rx="5" ry="5" fill="white"/>
+    <ellipse cx="43" cy="51" rx="3.2" ry="3.5" fill="#8a5a10"/>
+    <ellipse cx="59" cy="51" rx="3.2" ry="3.5" fill="#8a5a10"/>
+    <circle cx="44" cy="50" r="1.2" fill="#1a0800"/>
+    <circle cx="60" cy="50" r="1.2" fill="#1a0800"/>
+    <circle cx="44.8" cy="49.2" r="0.7" fill="white"/>
+    <circle cx="60.8" cy="49.2" r="0.7" fill="white"/>
+    <!-- eyebrows -->
+    <path d="M38 45 Q42 43.5 46 45" stroke="#5a3010" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M54 45 Q58 43.5 62 45" stroke="#5a3010" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="57" rx="3" ry="2" fill="#c07850"/>
+    <circle cx="48" cy="57.5" r="1.2" fill="#a86038"/>
+    <circle cx="52" cy="57.5" r="1.2" fill="#a86038"/>
+    <!-- confident smirk -->
+    <path d="M44 63 Q50 66 57 62" stroke="#a86038" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- star badge on chest -->
+    <polygon points="50,73 51.5,77 55,77 52.5,79.5 53.5,83 50,81 46.5,83 47.5,79.5 45,77 48.5,77" fill="#d4a017"/>
+    <!-- stubble -->
+    <ellipse cx="50" cy="65" rx="10" ry="4" fill="#b07850" opacity="0.25"/>
+  </g>
+</svg>`
+  },
+
+  // ── RARE ──────────────────────────────────────────────────
+  {
+    id: 'lunara',
+    name: 'Lunara',
+    rarity: 'rare',
+    price: 550,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-lunara">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
+  <g clip-path="url(#hex-lunara)">
+    <rect x="7" y="4" width="86" height="94" fill="#080818"/>
+    <!-- cosmic bg stars -->
+    <circle cx="15" cy="15" r="0.8" fill="#38bdf8" opacity="0.6"/>
+    <circle cx="85" cy="20" r="0.8" fill="#38bdf8" opacity="0.6"/>
+    <circle cx="20" cy="80" r="0.6" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="78" cy="75" r="0.6" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="88" cy="50" r="0.5" fill="white" opacity="0.5"/>
+    <circle cx="12" cy="55" r="0.5" fill="white" opacity="0.5"/>
+    <!-- robes deep blue -->
+    <rect x="22" y="68" width="56" height="30" fill="#1e3a5f" rx="4"/>
+    <path d="M22 68 Q50 74 78 68" stroke="#38bdf8" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <!-- silver hair long -->
+    <ellipse cx="50" cy="48" rx="24" ry="26" fill="#c8d8e8"/>
+    <ellipse cx="26" cy="60" rx="10" ry="22" fill="#c8d8e8"/>
+    <ellipse cx="74" cy="60" rx="10" ry="22" fill="#c8d8e8"/>
+    <!-- neck -->
+    <rect x="44" y="62" width="12" height="10" fill="#e8d0b8"/>
+    <!-- head -->
+    <ellipse cx="50" cy="52" rx="18" ry="20" fill="#e8d0b8"/>
+    <!-- hair top -->
+    <ellipse cx="50" cy="34" rx="18" ry="9" fill="#d8e8f8"/>
+    <!-- glowing gem on forehead -->
+    <ellipse cx="50" cy="40" rx="4" ry="4" fill="#38bdf8" opacity="0.9"/>
+    <ellipse cx="50" cy="40" rx="2.5" ry="2.5" fill="white" opacity="0.8"/>
+    <ellipse cx="50" cy="40" rx="5" ry="5" fill="#38bdf8" opacity="0.2"/>
+    <!-- ears -->
+    <ellipse cx="32" cy="52" rx="4" ry="5" fill="#e8d0b8"/>
+    <ellipse cx="68" cy="52" rx="4" ry="5" fill="#e8d0b8"/>
+    <!-- eyes — pale silver-blue, ethereal -->
+    <ellipse cx="42" cy="51" rx="5.5" ry="5.5" fill="white"/>
+    <ellipse cx="58" cy="51" rx="5.5" ry="5.5" fill="white"/>
+    <ellipse cx="43" cy="52" rx="3.5" ry="4" fill="#7dd3fc"/>
+    <ellipse cx="59" cy="52" rx="3.5" ry="4" fill="#7dd3fc"/>
+    <circle cx="44" cy="51" r="1.4" fill="#0c4a6e"/>
+    <circle cx="60" cy="51" r="1.4" fill="#0c4a6e"/>
+    <circle cx="44.8" cy="50.2" r="0.8" fill="white"/>
+    <circle cx="60.8" cy="50.2" r="0.8" fill="white"/>
+    <!-- glow under eyes -->
+    <ellipse cx="43" cy="54" rx="4" ry="1.5" fill="#38bdf8" opacity="0.2"/>
+    <ellipse cx="59" cy="54" rx="4" ry="1.5" fill="#38bdf8" opacity="0.2"/>
+    <!-- eyebrows — light silver -->
+    <path d="M38 46 Q42 44 46 46" stroke="#c8d8e8" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M54 46 Q58 44 62 46" stroke="#c8d8e8" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- nose — delicate -->
+    <ellipse cx="50" cy="57" rx="2.5" ry="1.8" fill="#d0b8a0"/>
+    <!-- serene slight smile -->
+    <path d="M45 63 Q50 65 55 63" stroke="#c0a080" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- moon crescent above -->
+    <path d="M62 18 Q72 22 68 32 Q60 26 62 18 Z" fill="#d4a017" opacity="0.8"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'corvus',
+    name: 'Corvus',
+    rarity: 'rare',
+    price: 600,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-corvus">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
+  <g clip-path="url(#hex-corvus)">
+    <rect x="7" y="4" width="86" height="94" fill="#050510"/>
+    <!-- feather cloak -->
+    <ellipse cx="50" cy="88" rx="34" ry="20" fill="#1a1a1a"/>
+    <rect x="20" y="68" width="60" height="30" fill="#111111" rx="4"/>
+    <!-- feather details -->
+    <path d="M20 75 Q30 68 22 85" stroke="#2a2a2a" stroke-width="2" fill="none"/>
+    <path d="M80 75 Q70 68 78 85" stroke="#2a2a2a" stroke-width="2" fill="none"/>
+    <path d="M25 80 Q35 72 28 90" stroke="#222222" stroke-width="1.5" fill="none"/>
+    <path d="M75 80 Q65 72 72 90" stroke="#222222" stroke-width="1.5" fill="none"/>
+    <!-- neck -->
+    <rect x="44" y="62" width="12" height="10" fill="#c8a080"/>
+    <!-- head -->
+    <ellipse cx="50" cy="52" rx="19" ry="21" fill="#c8a080"/>
+    <!-- jet black hair -->
+    <ellipse cx="50" cy="33" rx="20" ry="10" fill="#0a0a0a"/>
+    <ellipse cx="30" cy="42" rx="8" ry="12" fill="#0a0a0a"/>
+    <ellipse cx="70" cy="42" rx="8" ry="12" fill="#0a0a0a"/>
+    <!-- ears -->
+    <ellipse cx="31" cy="52" rx="4" ry="5" fill="#c8a080"/>
+    <ellipse cx="69" cy="52" rx="4" ry="5" fill="#c8a080"/>
+    <!-- eyes — vivid red -->
+    <ellipse cx="42" cy="51" rx="5.5" ry="5.5" fill="#2a0a0a"/>
+    <ellipse cx="58" cy="51" rx="5.5" ry="5.5" fill="#2a0a0a"/>
+    <ellipse cx="43" cy="52" rx="3.5" ry="4" fill="#ef4444"/>
+    <ellipse cx="59" cy="52" rx="3.5" ry="4" fill="#ef4444"/>
+    <circle cx="44" cy="51" r="1.4" fill="#7f1d1d"/>
+    <circle cx="60" cy="51" r="1.4" fill="#7f1d1d"/>
+    <circle cx="44.8" cy="50.2" r="0.8" fill="#fca5a5" opacity="0.8"/>
+    <circle cx="60.8" cy="50.2" r="0.8" fill="#fca5a5" opacity="0.8"/>
+    <!-- red glow under eyes -->
+    <ellipse cx="43" cy="54.5" rx="4" ry="1.5" fill="#ef4444" opacity="0.25"/>
+    <ellipse cx="59" cy="54.5" rx="4" ry="1.5" fill="#ef4444" opacity="0.25"/>
+    <!-- eyebrows — sharp dark -->
+    <path d="M37 46 Q42 43.5 47 46" stroke="#0a0a0a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M53 46 Q58 43.5 63 46" stroke="#0a0a0a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="57" rx="3" ry="2" fill="#b08868"/>
+    <!-- thin cold smile -->
+    <path d="M44 63 Q50 64 56 63" stroke="#a07050" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- feather collar up near chin -->
+    <path d="M30 66 Q40 60 50 63 Q60 60 70 66" fill="#1a1a1a"/>
+    <path d="M32 67 Q42 61 50 64 Q58 61 68 67" stroke="#2a2a2a" stroke-width="1.2" fill="none"/>
+    <!-- small raven on shoulder hint -->
+    <ellipse cx="74" cy="64" rx="5" ry="4" fill="#0a0a0a"/>
+    <circle cx="76" cy="62" r="3" fill="#0a0a0a"/>
+    <circle cx="77.5" cy="61.5" r="0.8" fill="#ef4444"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'vex',
+    name: 'Vex',
+    rarity: 'rare',
+    price: 500,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-vex">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
+  <g clip-path="url(#hex-vex)">
+    <rect x="7" y="4" width="86" height="94" fill="#120a00"/>
+    <!-- warm bg glow -->
+    <ellipse cx="50" cy="70" rx="40" ry="30" fill="#7c2d12" opacity="0.15"/>
+    <!-- body — rust orange tunic -->
+    <rect x="24" y="68" width="52" height="30" fill="#9a3d10" rx="4"/>
+    <!-- neck -->
+    <rect x="44" y="61" width="12" height="11" fill="#e8a060"/>
+    <!-- head — slightly wider, fox-ish -->
+    <ellipse cx="50" cy="51" rx="20" ry="22" fill="#e8a060"/>
+    <!-- fox ears! pointed -->
+    <polygon points="32,38 26,18 42,34" fill="#e8a060"/>
+    <polygon points="68,38 74,18 58,34" fill="#e8a060"/>
+    <polygon points="33,37 28,22 41,34" fill="#c85030" opacity="0.7"/>
+    <polygon points="67,37 72,22 59,34" fill="#c85030" opacity="0.7"/>
+    <!-- orange/auburn hair -->
+    <ellipse cx="50" cy="33" rx="20" ry="10" fill="#c85030"/>
+    <ellipse cx="50" cy="30" rx="16" ry="7" fill="#e06030"/>
+    <!-- white face marking -->
+    <ellipse cx="50" cy="58" rx="12" ry="10" fill="#f8e8d0" opacity="0.5"/>
+    <!-- ears (side) -->
+    <ellipse cx="30" cy="52" rx="4" ry="5" fill="#e8a060"/>
+    <ellipse cx="70" cy="52" rx="4" ry="5" fill="#e8a060"/>
+    <!-- eyes — amber gold, sly -->
+    <ellipse cx="42" cy="50" rx="5.5" ry="5" fill="white"/>
+    <ellipse cx="58" cy="50" rx="5.5" ry="5" fill="white"/>
+    <!-- slitted pupils -->
+    <ellipse cx="43" cy="51" rx="3" ry="4" fill="#d97706"/>
+    <ellipse cx="59" cy="51" rx="3" ry="4" fill="#d97706"/>
+    <ellipse cx="43.5" cy="51" rx="1.2" ry="3.5" fill="#1a0800"/>
+    <ellipse cx="59.5" cy="51" rx="1.2" ry="3.5" fill="#1a0800"/>
+    <circle cx="43.5" cy="49.5" r="0.7" fill="white"/>
+    <circle cx="59.5" cy="49.5" r="0.7" fill="white"/>
+    <!-- eyebrows — cocked, mischievous -->
+    <path d="M37 45 Q42 42 47 44" stroke="#8a3010" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M53 44 Q58 42 63 45" stroke="#8a3010" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- small nose -->
+    <ellipse cx="50" cy="57" rx="2.5" ry="2" fill="#c87040"/>
+    <circle cx="48.5" cy="57.5" r="1.2" fill="#a85030"/>
+    <circle cx="51.5" cy="57.5" r="1.2" fill="#a85030"/>
+    <!-- sly grin -->
+    <path d="M43 63 Q50 67 57 62" stroke="#a05028" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- whisker marks -->
+    <path d="M28 57 L38 58" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
+    <path d="M28 60 L38 60" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
+    <path d="M72 57 L62 58" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
+    <path d="M72 60 L62 60" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
+    <!-- bushy tail hint at bottom -->
+    <ellipse cx="72" cy="90" rx="12" ry="8" fill="#e8a060" opacity="0.6"/>
+    <ellipse cx="72" cy="90" rx="8" ry="5" fill="#f8e8d0" opacity="0.5"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'mortis',
+    name: 'Mortis',
+    rarity: 'rare',
+    price: 650,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-mortis">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
+  <g clip-path="url(#hex-mortis)">
+    <rect x="7" y="4" width="86" height="94" fill="#050508"/>
+    <!-- dark robe -->
+    <rect x="20" y="66" width="60" height="32" fill="#0f0f14" rx="4"/>
+    <!-- bone/skull trim -->
+    <path d="M20 66 Q50 72 80 66" stroke="#4a4a5a" stroke-width="1.5" fill="none"/>
+    <!-- hood shadow -->
+    <ellipse cx="50" cy="42" rx="28" ry="26" fill="#0f0f14"/>
+    <!-- hood inner deep shadow -->
+    <ellipse cx="50" cy="44" rx="22" ry="22" fill="#050508"/>
+    <!-- pale face emerging from hood -->
+    <ellipse cx="50" cy="52" rx="16" ry="18" fill="#d8d0c0"/>
+    <!-- hollow eyes — dark sunken -->
+    <ellipse cx="42" cy="50" rx="6" ry="6" fill="#0a0a0a"/>
+    <ellipse cx="58" cy="50" rx="6" ry="6" fill="#0a0a0a"/>
+    <!-- pale iris glow faint -->
+    <ellipse cx="43" cy="51" rx="3" ry="3.5" fill="#1e1e2e"/>
+    <ellipse cx="59" cy="51" rx="3" ry="3.5" fill="#1e1e2e"/>
+    <!-- tiny pale glow in eyes -->
+    <circle cx="43" cy="50" r="1.2" fill="#7dd3fc" opacity="0.6"/>
+    <circle cx="59" cy="50" r="1.2" fill="#7dd3fc" opacity="0.6"/>
+    <circle cx="43.5" cy="49.3" r="0.6" fill="white" opacity="0.5"/>
+    <circle cx="59.5" cy="49.3" r="0.6" fill="white" opacity="0.5"/>
+    <!-- eye socket shadows -->
+    <ellipse cx="42" cy="51" rx="7" ry="6" fill="#0a0a0a" opacity="0.5"/>
+    <ellipse cx="58" cy="51" rx="7" ry="6" fill="#0a0a0a" opacity="0.5"/>
+    <!-- nose — sunken -->
+    <ellipse cx="50" cy="58" rx="2.5" ry="2" fill="#b0a898"/>
+    <circle cx="48.5" cy="58.5" r="1" fill="#8a8278"/>
+    <circle cx="51.5" cy="58.5" r="1" fill="#8a8278"/>
+    <!-- thin smile — slightly unsettling -->
+    <path d="M43 64 Q50 66 57 64" stroke="#8a8070" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- bone crown -->
+    <path d="M30 38 L34 28 L38 36 L42 24 L46 34 L50 22 L54 34 L58 24 L62 36 L66 28 L70 38" stroke="#c8c0a8" stroke-width="2" fill="none" stroke-linejoin="round"/>
+    <!-- robe clasp -->
+    <circle cx="50" cy="70" r="4" fill="#2a2a3a" stroke="#4a4a5a" stroke-width="1"/>
+    <circle cx="50" cy="70" r="2" fill="#7dd3fc" opacity="0.5"/>
+    <!-- bony fingers hint -->
+    <path d="M24 80 L28 70 M28 82 L31 72 M32 83 L34 73" stroke="#b0a898" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  </g>
+</svg>`
+  },
+
+  // ── LEGENDARY ─────────────────────────────────────────────
+  {
+    id: 'shadowfang',
+    name: 'Shadowfang',
+    rarity: 'legendary',
+    price: 900,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-shadowfang">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <!-- legendary star marker -->
+  <polygon points="50,0 51.5,3.5 55,3.5 52.5,5.8 53.5,9 50,7 46.5,9 47.5,5.8 45,3.5 48.5,3.5" fill="#ef4444"/>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#ef4444" stroke-width="3"/>
+  <g clip-path="url(#hex-shadowfang)">
+    <rect x="7" y="4" width="86" height="94" fill="#0a0005"/>
+    <!-- dark blood mist bg -->
+    <ellipse cx="50" cy="60" rx="45" ry="35" fill="#4a0010" opacity="0.2"/>
+    <!-- armour body dark -->
+    <rect x="20" y="66" width="60" height="32" fill="#1a0a0a" rx="4"/>
+    <!-- blood red trim -->
+    <path d="M20 66 Q50 72 80 66" stroke="#ef4444" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <!-- neck -->
+    <rect x="43" y="60" width="14" height="10" fill="#8a6a5a"/>
+    <!-- wolf-like head — wider jaw -->
+    <ellipse cx="50" cy="50" rx="22" ry="22" fill="#7a6055"/>
+    <!-- dark fur texture -->
+    <ellipse cx="50" cy="38" rx="22" ry="12" fill="#2a1a14"/>
+    <ellipse cx="28" cy="46" rx="10" ry="14" fill="#2a1a14"/>
+    <ellipse cx="72" cy="46" rx="10" ry="14" fill="#2a1a14"/>
+    <!-- wolf ears -->
+    <polygon points="32,38 24,16 44,34" fill="#2a1a14"/>
+    <polygon points="68,38 76,16 56,34" fill="#2a1a14"/>
+    <polygon points="33,37 26,20 43,34" fill="#5a3a2a" opacity="0.5"/>
+    <polygon points="67,37 74,20 57,34" fill="#5a3a2a" opacity="0.5"/>
+    <!-- snout area lighter -->
+    <ellipse cx="50" cy="58" rx="14" ry="10" fill="#a08070"/>
+    <!-- ears side -->
+    <ellipse cx="28" cy="50" rx="4" ry="5" fill="#6a4a3a"/>
+    <ellipse cx="72" cy="50" rx="4" ry="5" fill="#6a4a3a"/>
+    <!-- eyes — glowing amber-red -->
+    <ellipse cx="41" cy="49" rx="6" ry="6" fill="#1a0a00"/>
+    <ellipse cx="59" cy="49" rx="6" ry="6" fill="#1a0a00"/>
+    <ellipse cx="42" cy="50" rx="4" ry="4.5" fill="#ef4444"/>
+    <ellipse cx="60" cy="50" rx="4" ry="4.5" fill="#ef4444"/>
+    <ellipse cx="42.5" cy="50" rx="1.5" ry="3.5" fill="#7f1d1d"/>
+    <ellipse cx="60.5" cy="50" rx="1.5" ry="3.5" fill="#7f1d1d"/>
+    <circle cx="42.5" cy="48.5" r="1" fill="#fca5a5" opacity="0.7"/>
+    <circle cx="60.5" cy="48.5" r="1" fill="#fca5a5" opacity="0.7"/>
+    <!-- red glow rings -->
+    <ellipse cx="42" cy="50" rx="6.5" ry="6.5" fill="none" stroke="#ef4444" stroke-width="0.8" opacity="0.3"/>
+    <ellipse cx="60" cy="50" rx="6.5" ry="6.5" fill="none" stroke="#ef4444" stroke-width="0.8" opacity="0.3"/>
+    <!-- heavy brow ridge -->
+    <path d="M34 44 Q42 40 48 43" stroke="#1a0a00" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M52 43 Q58 40 66 44" stroke="#1a0a00" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- snout / nose -->
+    <ellipse cx="50" cy="57" rx="5" ry="3.5" fill="#3a2018"/>
+    <ellipse cx="50" cy="56" rx="3.5" ry="2.5" fill="#2a1008"/>
+    <!-- snarling mouth with fangs -->
+    <path d="M40 63 Q50 68 60 63" stroke="#5a3020" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <polygon points="44,63 42,70 46,63" fill="#f0e8e0"/>
+    <polygon points="56,63 54,70 58,63" fill="#f0e8e0"/>
+    <!-- battle scar -->
+    <path d="M36 46 L42 54" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+    <!-- shoulder spikes -->
+    <polygon points="22,68 16,56 26,64" fill="#3a2020"/>
+    <polygon points="78,68 84,56 74,64" fill="#3a2020"/>
+  </g>
+</svg>`
+  },
+
+  {
+    id: 'selene',
+    name: 'Selene',
+    rarity: 'legendary',
+    price: 1000,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+  <defs>
+    <clipPath id="hex-selene">
+      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
+    </clipPath>
+  </defs>
+  <!-- legendary star marker -->
+  <polygon points="50,0 51.5,3.5 55,3.5 52.5,5.8 53.5,9 50,7 46.5,9 47.5,5.8 45,3.5 48.5,3.5" fill="#ef4444"/>
+  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#ef4444" stroke-width="3"/>
+  <g clip-path="url(#hex-selene)">
+    <rect x="7" y="4" width="86" height="94" fill="#060612"/>
+    <!-- deep space bg -->
+    <circle cx="14" cy="12" r="0.7" fill="white" opacity="0.7"/>
+    <circle cx="82" cy="16" r="0.7" fill="white" opacity="0.7"/>
+    <circle cx="88" cy="42" r="0.5" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="11" cy="62" r="0.5" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="85" cy="78" r="0.6" fill="white" opacity="0.5"/>
+    <circle cx="18" cy="82" r="0.4" fill="white" opacity="0.5"/>
+    <!-- full moon glow -->
+    <circle cx="50" cy="20" r="14" fill="#1a1a30"/>
+    <circle cx="50" cy="20" r="12" fill="#e8dfc8" opacity="0.15"/>
+    <!-- celestial robes -->
+    <rect x="18" y="66" width="64" height="32" fill="#1e1b3a" rx="4"/>
+    <!-- robe star pattern -->
+    <circle cx="30" cy="78" r="1" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="50" cy="82" r="1" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="70" cy="76" r="1" fill="#a78bfa" opacity="0.6"/>
+    <circle cx="38" cy="88" r="0.8" fill="#7dd3fc" opacity="0.5"/>
+    <circle cx="62" cy="90" r="0.8" fill="#7dd3fc" opacity="0.5"/>
+    <!-- gold trim robe -->
+    <path d="M18 66 Q50 73 82 66" stroke="#d4a017" stroke-width="1.8" fill="none"/>
+    <!-- flowing silver white hair -->
+    <ellipse cx="50" cy="46" rx="25" ry="28" fill="#e8ecf8"/>
+    <ellipse cx="24" cy="62" rx="11" ry="26" fill="#dce4f4"/>
+    <ellipse cx="76" cy="62" rx="11" ry="26" fill="#dce4f4"/>
+    <!-- neck -->
+    <rect x="44" y="62" width="12" height="8" fill="#f0d8c0"/>
+    <!-- head -->
+    <ellipse cx="50" cy="51" rx="18" ry="20" fill="#f0d8c0"/>
+    <!-- hair top -->
+    <ellipse cx="50" cy="33" rx="18" ry="10" fill="#eceef8"/>
+    <!-- golden crescent crown -->
+    <path d="M32 36 Q26 22 36 14 Q28 26 38 32 Z" fill="#d4a017"/>
+    <path d="M38 32 Q42 28 44 30" stroke="#d4a017" stroke-width="1.5" fill="none"/>
+    <!-- small stars on crown -->
+    <circle cx="34" cy="22" r="1.5" fill="#fef08a"/>
+    <circle cx="38" cy="16" r="1" fill="#fef08a"/>
+    <!-- ears -->
+    <ellipse cx="32" cy="51" rx="4" ry="5" fill="#f0d8c0"/>
+    <ellipse cx="68" cy="51" rx="4" ry="5" fill="#f0d8c0"/>
+    <!-- eyes — deep violet, otherworldly -->
+    <ellipse cx="42" cy="50" rx="5.5" ry="5.5" fill="white"/>
+    <ellipse cx="58" cy="50" rx="5.5" ry="5.5" fill="white"/>
+    <ellipse cx="43" cy="51" rx="3.5" ry="4" fill="#7c3aed"/>
+    <ellipse cx="59" cy="51" rx="3.5" ry="4" fill="#7c3aed"/>
+    <circle cx="44" cy="50" r="1.4" fill="#2e1065"/>
+    <circle cx="60" cy="50" r="1.4" fill="#2e1065"/>
+    <circle cx="44.8" cy="49.2" r="0.8" fill="white"/>
+    <circle cx="60.8" cy="49.2" r="0.8" fill="white"/>
+    <!-- violet glow under eyes -->
+    <ellipse cx="43" cy="53.5" rx="4" ry="1.5" fill="#7c3aed" opacity="0.2"/>
+    <ellipse cx="59" cy="53.5" rx="4" ry="1.5" fill="#7c3aed" opacity="0.2"/>
+    <!-- eyebrows — elegant arched -->
+    <path d="M38 45 Q42 43 46 44.5" stroke="#8878c0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M54 44.5 Q58 43 62 45" stroke="#8878c0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <!-- small delicate nose -->
+    <ellipse cx="50" cy="57" rx="2.5" ry="1.8" fill="#d8b898"/>
+    <!-- serene knowing smile -->
+    <path d="M44 63 Q50 66 56 63" stroke="#c0907a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <!-- moonstone necklace -->
+    <path d="M38 66 Q50 70 62 66" stroke="#d4a017" stroke-width="1.2" fill="none"/>
+    <circle cx="50" cy="70" r="3" fill="#c8d8f0"/>
+    <circle cx="50" cy="70" r="1.5" fill="#e8ecf8"/>
+  </g>
+</svg>`
+  }
+
+];
+
+// ════════════════════════════════════════════════════════════
+// RARITY CONFIG — border colors, labels, dot colors
+// ════════════════════════════════════════════════════════════
+const RARITY_CONFIG = {
+  free:      { color: '#888888', label: 'Free',      dot: '#888888' },
+  common:    { color: '#d4a017', label: 'Common',    dot: '#d4a017' },
+  rare:      { color: '#38bdf8', label: 'Rare',      dot: '#38bdf8' },
+  legendary: { color: '#ef4444', label: 'Legendary', dot: '#ef4444' }
+};
+
+// ════════════════════════════════════════════════════════════
+// HELPER — get avatar by id
+// ════════════════════════════════════════════════════════════
+function getAvatar(id) {
+  return AVATARS.find(a => a.id === id) || AVATARS[0];
+}
+
+// ════════════════════════════════════════════════════════════
+// HELPER — render avatar card HTML (for store grid use)
+// avatarCardHTML(avatar, { selected, owned, size })
+// ════════════════════════════════════════════════════════════
+function avatarCardHTML(av, opts = {}) {
+  const rc = RARITY_CONFIG[av.rarity];
+  const size = opts.size || 100;
+  const scale = size / 100;
+  const cardW = Math.round(100 * scale);
+  const cardH = Math.round(115 * scale);
+  const priceLabel = av.price === 0
+    ? `<span style="color:#10b981">● Free</span>`
+    : `<span style="color:${rc.dot}">● </span><span style="color:#d4a017">${av.price} coins</span>`;
+  const selectedBorder = opts.selected
+    ? `box-shadow:0 0 0 2px ${rc.color}, 0 0 12px ${rc.color}55;`
+    : '';
+  return `
+<div class="avatar-card" data-id="${av.id}"
+  style="display:inline-flex;flex-direction:column;align-items:center;gap:.4rem;cursor:pointer;${selectedBorder}">
+  <div style="width:${cardW}px;height:${cardH}px;transform:scale(${scale});transform-origin:top left;margin-bottom:${cardH - 115}px">
+    ${av.svg}
+  </div>
+  <div style="font-family:'Creepster',cursive;color:#e8e8e8;font-size:.9rem;letter-spacing:.04em">${av.name}</div>
+  <div style="font-size:.75rem">${priceLabel}</div>
+  ${opts.owned ? `<div style="font-size:.7rem;color:#10b981">✓ Owned</div>` : ''}
+</div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// LOUP-GAROU — AVATAR ANIMATIONS  (Part 2)
+// Drop-in after avatars.js. Call initAvatarAnimations() once
+// the DOM contains rendered avatar SVGs.
+//
+// What moves:    the character body inside the hex
+// What stays:    hex frame, border, star, name, price label
+//
+// Animations per rarity:
+//   free       → breathe only
+//   common     → breathe + blink
+//   rare       → breathe + blink + sway
+//   legendary  → breathe + blink + sway + glow + shimmer
+//
+// Usage:
+//   <script src="avatars.js"></script>
+//   <script src="avatar-animations.js"></script>
+//   initAvatarAnimations();         // animate all .avatar-card elements
+//   animateSingleCard(cardEl);      // animate one card after injecting it
+// ════════════════════════════════════════════════════════════
+
+const AVATAR_ANIMATION_CSS = `
+@keyframes av-breathe {
+  0%, 100% { transform: translateY(0px) scaleY(1); }
+  45%       { transform: translateY(-1.5px) scaleY(1.016); }
+  55%       { transform: translateY(-1.5px) scaleY(1.016); }
+}
+@keyframes av-sway {
+  0%, 100% { transform: rotate(0deg) translateX(0px); }
+  20%       { transform: rotate(1.4deg) translateX(0.5px); }
+  50%       { transform: rotate(-1.1deg) translateX(-0.4px); }
+  80%       { transform: rotate(0.7deg) translateX(0.3px); }
+}
+@keyframes av-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  94%, 98%      { transform: scaleY(0.05); }
+}
+@keyframes av-blink2 {
+  0%, 88%, 100% { transform: scaleY(1); }
+  90%, 92%      { transform: scaleY(0.05); }
+  93%, 96%      { transform: scaleY(1); }
+  97%, 99%      { transform: scaleY(0.05); }
+}
+@keyframes av-glow-legendary {
+  0%, 100% { filter: drop-shadow(0 0 3px #ef4444); }
+  50%       { filter: drop-shadow(0 0 10px #ef4444) drop-shadow(0 0 20px #ef444455); }
+}
+@keyframes av-glow-rare {
+  0%, 100% { filter: drop-shadow(0 0 3px #38bdf8); }
+  50%       { filter: drop-shadow(0 0 9px #38bdf8); }
+}
+@keyframes av-shimmer {
+  0%        { opacity:0; transform: translate(-30px, 40px) rotate(-35deg); }
+  15%, 25%  { opacity:0.55; }
+  75%, 85%  { opacity:0.25; }
+  100%      { opacity:0; transform: translate(30px, -40px) rotate(-35deg); }
+}
+
+/* Character body group — moves inside the hex */
+.av-char-breathe {
+  animation: av-breathe 3.8s ease-in-out infinite;
+}
+.av-char-sway {
+  animation: av-sway 5.5s ease-in-out infinite;
+}
+
+/* Eye group only — squashes vertically */
+.av-eye-group {
+  animation: av-blink 4.5s ease-in-out infinite;
+}
+.av-eye-group-rare,
+.av-eye-group-legendary {
+  animation: av-blink2 5s ease-in-out infinite;
+}
+
+/* Glow on the hex border polygon — frame stays put, only stroke glows */
+.av-hex-glow-legendary {
+  animation: av-glow-legendary 2.2s ease-in-out infinite;
+}
+.av-hex-glow-rare {
+  animation: av-glow-rare 3s ease-in-out infinite;
+}
+
+/* Shimmer — clipped inside hex shape via wrapper */
+.av-shimmer-wrap {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.av-shimmer-bar {
+  position: absolute;
+  top: -20%; left: -10%;
+  width: 18px; height: 140%;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.48), transparent);
+  animation: av-shimmer 4.2s ease-in-out infinite;
+}
+`;
+
+// ── INJECT CSS ONCE ───────────────────────────────────────
+
+let _cssInjected = false;
+function _injectCSS() {
+  if (_cssInjected) return;
+  const s = document.createElement('style');
+  s.id = 'lg-avatar-anim';
+  s.textContent = AVATAR_ANIMATION_CSS;
+  document.head.appendChild(s);
+  _cssInjected = true;
+}
+
+// ── ANIMATE ONE SVG ELEMENT ───────────────────────────────
+//
+// svgEl  — the <svg> DOM node already in the DOM
+// rarity — 'free' | 'common' | 'rare' | 'legendary'
+//
+// Strategy:
+//   1. Find the clip-path <g> (the character content group)
+//   2. Wrap its children in breathe + sway <g> elements
+//   3. Find eye whites and wrap them in a blink <g>
+//   4. Add glow class to the hex border polygon
+//   5. Inject shimmer overlay div into the svg's parent
+
+function animateAvatar(svgEl, rarity) {
+  if (!svgEl || svgEl.dataset.avDone) return;
+  svgEl.dataset.avDone = '1';
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  // ── 1. Find the character content group (has clip-path attr) ──
+  const clipGroup = svgEl.querySelector('g[clip-path]');
+  if (!clipGroup) return;
+
+  // ── 2. Build breathe > sway wrapper around character content ──
+  //    We do NOT wrap background elements (first rect + circles)
+  //    — those stay static. We wrap everything from the body onward.
+  //    Simple approach: wrap ALL children of clipGroup in a char group.
+
+  const swayG = document.createElementNS(svgNS, 'g');
+  const breatheG = document.createElementNS(svgNS, 'g');
+
+  // transform-origin: bottom-center of the avatar
+  breatheG.style.transformOrigin = '50px 85px';
+  swayG.style.transformOrigin    = '50px 95px';
+
+  if (rarity !== 'free') {
+    // move all existing children into sway > breathe
+    const children = Array.from(clipGroup.childNodes);
+    children.forEach(c => swayG.appendChild(c));
+    breatheG.appendChild(swayG);
+    clipGroup.appendChild(breatheG);
+
+    breatheG.classList.add('av-char-breathe');
+    if (rarity === 'rare' || rarity === 'legendary') {
+      swayG.classList.add('av-char-sway');
+    }
+  } else {
+    // free: breathe only, no sway wrapper needed
+    const children = Array.from(clipGroup.childNodes);
+    children.forEach(c => breatheG.appendChild(c));
+    clipGroup.appendChild(breatheG);
+    breatheG.style.transformOrigin = '50px 85px';
+    breatheG.classList.add('av-char-breathe');
+  }
+
+  // ── 3. Eye blink group ──
+  if (rarity !== 'free') {
+    const innerG = rarity === 'free' ? breatheG
+                 : (rarity === 'common' ? breatheG : swayG);
+    _wrapEyes(innerG, svgNS, rarity);
+  }
+
+  // ── 4. Hex border glow ──
+  // The bordered polygon is the first polygon with a stroke attr
+  const polygons = Array.from(svgEl.querySelectorAll('polygon'));
+  for (const p of polygons) {
+    if (p.getAttribute('stroke') && p.getAttribute('stroke') !== 'none') {
+      if (rarity === 'legendary') p.classList.add('av-hex-glow-legendary');
+      if (rarity === 'rare')      p.classList.add('av-hex-glow-rare');
+      break;
+    }
+  }
+
+  // ── 5. Shimmer overlay (legendary only) ──
+  if (rarity === 'legendary') {
+    const parent = svgEl.parentElement;
+    if (parent) {
+      parent.style.position = parent.style.position || 'relative';
+      // clip shimmer to hex shape using CSS clip-path (percentage-based)
+      const wrap = document.createElement('div');
+      wrap.className = 'av-shimmer-wrap';
+      wrap.style.clipPath = 'polygon(50% 3.5%, 93% 24%, 93% 65%, 50% 85.2%, 7% 65%, 7% 24%)';
+      const bar = document.createElement('div');
+      bar.className = 'av-shimmer-bar';
+      bar.style.animationDelay = `${(Math.random() * 2).toFixed(1)}s`;
+      wrap.appendChild(bar);
+      parent.appendChild(wrap);
+    }
+  }
+
+  // ── 6. Randomise phases so avatars don't all sync ──
+  breatheG.style.animationDelay = `-${(Math.random() * 3.8).toFixed(2)}s`;
+  if (rarity === 'rare' || rarity === 'legendary') {
+    swayG.style.animationDelay = `-${(Math.random() * 5.5).toFixed(2)}s`;
+  }
+}
+
+// ── FIND & WRAP EYES ─────────────────────────────────────
+// Searches within parentG for white eye ellipses in the face zone,
+// groups them + their irises into a <g class="av-eye-group">.
+
+function _wrapEyes(parentG, svgNS, rarity) {
+  const ellipses = Array.from(parentG.querySelectorAll('ellipse'));
+
+  const eyeWhites = ellipses.filter(el => {
+    const fill = el.getAttribute('fill') || '';
+    const cy   = parseFloat(el.getAttribute('cy') || 0);
+    const rx   = parseFloat(el.getAttribute('rx') || 0);
+    return (fill === 'white' || fill === '#fff' || fill === '#ffffff')
+      && cy >= 44 && cy <= 64 && rx >= 3.5 && rx <= 9;
+  });
+  if (eyeWhites.length < 2) return;
+
+  const eyeCxArr = eyeWhites.map(e => parseFloat(e.getAttribute('cx')));
+  const midCy = eyeWhites.reduce((s, e) => s + parseFloat(e.getAttribute('cy')), 0) / eyeWhites.length;
+  const midCx = eyeCxArr.reduce((a, b) => a + b, 0) / eyeCxArr.length;
+
+  // Grab irises: near eye cx, in face zone, not white
+  const irises = ellipses.filter(el => {
+    const cx   = parseFloat(el.getAttribute('cx') || 0);
+    const cy   = parseFloat(el.getAttribute('cy') || 0);
+    const fill = el.getAttribute('fill') || '';
+    return eyeCxArr.some(ex => Math.abs(cx - ex) < 5)
+      && cy >= 44 && cy <= 64
+      && fill !== 'white' && fill !== '#fff' && fill !== '#ffffff' && fill !== 'none';
+  });
+
+  const toWrap = [...eyeWhites, ...irises];
+  const g = document.createElementNS(svgNS, 'g');
+  const cls = (rarity === 'rare' || rarity === 'legendary')
+    ? 'av-eye-group-' + rarity : 'av-eye-group';
+  g.className = cls;
+  g.style.transformOrigin = `${midCx.toFixed(1)}px ${midCy.toFixed(1)}px`;
+  g.style.animationDelay  = `-${(Math.random() * 4.5).toFixed(2)}s`;
+
+  const first = toWrap.reduce((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? a : b);
+  first.parentNode.insertBefore(g, first);
+  toWrap.forEach(el => g.appendChild(el));
+}
+
+// ── INIT ALL AVATAR CARDS IN PAGE ────────────────────────
+
+function initAvatarAnimations() {
+  _injectCSS();
+  const rarityMap = {};
+  if (typeof AVATARS !== 'undefined') {
+    AVATARS.forEach(a => { rarityMap[a.id] = a.rarity; });
+  }
+  document.querySelectorAll('.avatar-card[data-id]').forEach(card => {
+    const svg = card.querySelector('svg');
+    if (svg) animateAvatar(svg, rarityMap[card.dataset.id] || 'common');
+  });
+  document.querySelectorAll('svg[data-rarity]').forEach(svg => {
+    animateAvatar(svg, svg.dataset.rarity);
+  });
+}
+
+// ── ANIMATE ONE FRESHLY INJECTED CARD ────────────────────
+
+function animateSingleCard(cardEl) {
+  _injectCSS();
+  const rarityMap = {};
+  if (typeof AVATARS !== 'undefined') {
+    AVATARS.forEach(a => { rarityMap[a.id] = a.rarity; });
+  }
+  const id     = cardEl?.dataset?.id;
+  const rarity = rarityMap[id] || cardEl?.dataset?.rarity || 'common';
+  const svg    = cardEl?.querySelector('svg');
+  if (svg) animateAvatar(svg, rarity);
+}
+
+// ── PAUSE / RESUME ────────────────────────────────────────
+
+function pauseAvatarAnimations() {
+  document.querySelectorAll('.av-char-breathe, .av-char-sway, .av-eye-group, .av-eye-group-rare, .av-eye-group-legendary, .av-shimmer-bar')
+    .forEach(el => { el.style.animationPlayState = 'paused'; });
+}
+function resumeAvatarAnimations() {
+  document.querySelectorAll('.av-char-breathe, .av-char-sway, .av-eye-group, .av-eye-group-rare, .av-eye-group-legendary, .av-shimmer-bar')
+    .forEach(el => { el.style.animationPlayState = 'running'; });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { initAvatarAnimations, animateAvatar, animateSingleCard, pauseAvatarAnimations, resumeAvatarAnimations };
+}
+
+// ════════════════════════════════════════════════════════════
+// LOUP-GAROU — AVATAR STORE  (Part 3)
+// Depends on: avatars.js, avatar-animations.js, Firebase DB
+//
+// Public API:
+//   openAvatarStore()   — open the modal
+//   closeAvatarStore()  — close it
+//   getEquippedAvatar() — returns avatar id string (or null)
+//
+// Firebase paths used:
+//   users/{uid}/coins          → number
+//   users/{uid}/ownedAvatars   → { dusty:true, flint:true, … }
+//   users/{uid}/equippedAvatar → "flint"
+//
+// Call initAvatarStore() once after DOM is ready.
+// ════════════════════════════════════════════════════════════
+
+// ── INJECT STORE CSS ──────────────────────────────────────
+(function injectStoreCSS() {
+  if (document.getElementById('lg-store-css')) return;
+  const s = document.createElement('style');
+  s.id = 'lg-store-css';
+  s.textContent = `
+
+/* ── STORE MODAL OVERLAY ── */
+#avatarStoreModal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.82);
+  z-index: 400;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(3px);
+}
+#avatarStoreModal.hidden { display: none; }
+
+/* ── STORE BOX ── */
+.store-box {
+  background: var(--abyss);
+  border: 1px solid var(--moon);
+  border-radius: 14px;
+  width: 100%; max-width: 700px;
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 0 60px rgba(212,160,23,.18), 0 0 120px rgba(212,160,23,.06);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── STORE HEADER ── */
+.store-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.2rem .7rem;
+  border-bottom: 1px solid rgba(212,160,23,.18);
+  flex-shrink: 0;
+}
+.store-title {
+  font-family: 'Creepster', cursive;
+  color: var(--moon);
+  font-size: 1.7rem;
+  letter-spacing: .06em;
+}
+.store-coin-display {
+  display: flex; align-items: center; gap: .45rem;
+  background: var(--purple);
+  border: 1px solid rgba(212,160,23,.35);
+  border-radius: 8px;
+  padding: .35rem .75rem;
+  font-family: 'Creepster', cursive;
+  font-size: 1.1rem;
+  color: var(--moon);
+  letter-spacing: .04em;
+  min-width: 80px;
+}
+.store-coin-icon { font-size: 1rem; }
+.store-close {
+  background: transparent; border: none;
+  color: var(--ghost); font-size: 1.2rem;
+  cursor: pointer; opacity: .55; padding: .2rem .4rem;
+  font-family: inherit; transition: opacity .15s;
+  line-height: 1;
+}
+.store-close:hover { opacity: 1; }
+
+/* ── FEATURED SLOT ── */
+.store-featured {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .8rem 1.2rem;
+  background: linear-gradient(135deg, rgba(139,0,0,.15), rgba(212,160,23,.06));
+  border-bottom: 1px solid rgba(212,160,23,.13);
+  flex-shrink: 0;
+}
+.store-featured-label {
+  font-family: 'Creepster', cursive;
+  font-size: .75rem; letter-spacing: .18em;
+  color: var(--moon); opacity: .7;
+  text-transform: uppercase;
+  margin-bottom: .25rem;
+}
+.store-featured-name {
+  font-family: 'Creepster', cursive;
+  font-size: 1.3rem; color: var(--ghost);
+  letter-spacing: .05em; line-height: 1.1;
+}
+.store-featured-price {
+  font-size: .8rem; margin-top: .2rem;
+}
+.store-featured-actions { display: flex; gap: .5rem; margin-top: .5rem; flex-wrap: wrap; }
+.store-featured-btn {
+  padding: .4rem .9rem;
+  font-family: 'Creepster', cursive;
+  font-size: .88rem; letter-spacing: .04em;
+  border-radius: 6px; cursor: pointer;
+  border: none; transition: .2s;
+}
+.sfb-buy  { background: var(--blood-glow); color: #fff; }
+.sfb-buy:hover  { background: var(--blood); box-shadow: 0 0 14px rgba(139,0,0,.5); }
+.sfb-equip { background: var(--moon); color: var(--void); }
+.sfb-equip:hover { background: var(--moon-pale); }
+.sfb-equipped { background: rgba(16,185,129,.2); color: var(--green); border: 1px solid var(--green) !important; cursor: default; }
+
+/* ── TABS ── */
+.store-tabs {
+  display: flex; gap: 0;
+  padding: .6rem 1.2rem 0;
+  border-bottom: 1px solid rgba(212,160,23,.13);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.store-tabs::-webkit-scrollbar { display: none; }
+.store-tab {
+  padding: .45rem .9rem;
+  font-family: 'Creepster', cursive;
+  font-size: .88rem; letter-spacing: .05em;
+  background: transparent;
+  border: none; border-bottom: 2px solid transparent;
+  color: var(--ghost); opacity: .5;
+  cursor: pointer; white-space: nowrap;
+  transition: .15s; margin-bottom: -1px;
+}
+.store-tab:hover { opacity: .8; }
+.store-tab.active {
+  color: var(--moon);
+  border-bottom-color: var(--moon);
+  opacity: 1;
+}
+
+/* ── GRID ── */
+.store-grid-wrap {
+  overflow-y: auto; padding: 1rem 1rem 1.2rem;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--moon) var(--abyss);
+}
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: .75rem;
+}
+
+/* ── AVATAR CARD ── */
+.store-card {
+  display: flex; flex-direction: column; align-items: center;
+  gap: .35rem; padding: .6rem .4rem .7rem;
+  background: var(--purple);
+  border: 1px solid rgba(212,160,23,.15);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color .18s, box-shadow .18s, transform .15s;
+  position: relative;
+  user-select: none;
+}
+.store-card:hover {
+  border-color: rgba(212,160,23,.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(212,160,23,.12);
+}
+.store-card.selected {
+  border-width: 2px;
+}
+.store-card.equipped-card::after {
+  content: '✓ Equipped';
+  position: absolute; bottom: -1px; left: 0; right: 0;
+  background: rgba(16,185,129,.85);
+  color: #fff;
+  font-family: 'Creepster', cursive;
+  font-size: .65rem; letter-spacing: .08em;
+  text-align: center; padding: .15rem 0;
+  border-radius: 0 0 9px 9px;
+}
+.store-card-name {
+  font-family: 'Creepster', cursive;
+  color: var(--ghost);
+  font-size: .88rem; letter-spacing: .04em;
+  text-align: center; line-height: 1.1;
+}
+.store-card-price {
+  font-size: .7rem; text-align: center;
+  line-height: 1.2;
+}
+.store-card-owned {
+  font-size: .65rem; color: var(--green);
+  font-family: 'Creepster', cursive;
+}
+.store-rarity-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; margin-right: 3px;
+  vertical-align: middle;
+}
+
+/* ── SVG WRAPPER inside card (fixed frame, moving char) ── */
+.store-svg-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+/* ── FOOTER ── */
+.store-footer {
+  padding: .7rem 1.2rem;
+  border-top: 1px solid rgba(212,160,23,.13);
+  display: flex; gap: .6rem; justify-content: flex-end;
+  flex-shrink: 0;
+}
+.store-action-btn {
+  padding: .5rem 1.1rem;
+  font-family: 'Creepster', cursive;
+  font-size: .95rem; letter-spacing: .04em;
+  border-radius: 7px; cursor: pointer;
+  transition: .2s;
+}
+.sab-buy  { background: var(--blood-glow); color: #fff; border: none; }
+.sab-buy:hover  { background: var(--blood); box-shadow: 0 0 18px rgba(139,0,0,.5); }
+.sab-equip { background: var(--moon); color: var(--void); border: none; }
+.sab-equip:hover { background: var(--moon-pale); }
+.sab-equipped { background: transparent; color: var(--green); border: 1px solid var(--green); cursor: default; }
+.sab-locked { background: var(--purple); color: rgba(232,232,232,.35); border: 1px solid rgba(212,160,23,.15); cursor: default; }
+
+/* ── TOAST ── */
+#storeToast {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  background: var(--abyss); border: 1px solid var(--moon);
+  color: var(--ghost); font-family: 'Creepster', cursive;
+  font-size: .95rem; letter-spacing: .05em;
+  padding: .6rem 1.4rem; border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  z-index: 500; pointer-events: none;
+  opacity: 0; transition: opacity .25s;
+}
+#storeToast.show { opacity: 1; }
+
+/* ── NOT SIGNED IN STATE ── */
+.store-signin-msg {
+  text-align: center; padding: 2rem 1rem;
+  color: var(--ghost); opacity: .65;
+  font-family: 'Creepster', cursive; font-size: 1rem;
+  letter-spacing: .04em; line-height: 1.8;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+  .store-box { max-height: 96vh; border-radius: 10px; }
+  .store-featured { flex-direction: column; align-items: flex-start; gap: .6rem; }
+  .store-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: .55rem; }
+  .store-title { font-size: 1.35rem; }
+}
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── STATE ─────────────────────────────────────────────────
+
+let _storeCoins      = 0;
+let _storeOwned      = {};   // { dusty: true, flint: true, … }
+let _storeEquipped   = null; // avatar id string
+let _storeSelected   = null; // currently selected card id
+let _storeActiveTab  = 'all';
+let _storeInited     = false;
+
+const RARITY_TABS = ['all','free','common','rare','legendary'];
+
+// ── BUILD MODAL HTML ──────────────────────────────────────
+
+function _buildStoreHTML() {
+  const featured = AVATARS.find(a => a.rarity === 'legendary') || AVATARS[0];
+  const rc = RARITY_CONFIG[featured.rarity];
+
+  return `
+<div id="avatarStoreModal" class="hidden" onclick="closeAvatarStore(event)">
+  <div class="store-box" onclick="event.stopPropagation()">
+
+    <!-- HEADER -->
+    <div class="store-header">
+      <div class="store-title">🐺 Avatar Store</div>
+      <div style="display:flex;align-items:center;gap:.7rem">
+        <div class="store-coin-display">
+          <span class="store-coin-icon">🪙</span>
+          <span id="storeCoinCount">0</span>
+        </div>
+        <button class="store-close" onclick="closeAvatarStore()">✕</button>
+      </div>
+    </div>
+
+    <!-- FEATURED -->
+    <div class="store-featured" id="storeFeatured">
+      <div class="store-svg-wrap" id="storeFeaturedSvg" style="flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div class="store-featured-label">⭐ Featured</div>
+        <div class="store-featured-name" id="sfName">${featured.name}</div>
+        <div class="store-featured-price" id="sfPrice"></div>
+        <div class="store-featured-actions" id="sfActions"></div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="store-tabs" id="storeTabs">
+      ${RARITY_TABS.map(t => `
+        <button class="store-tab${t==='all'?' active':''}" data-tab="${t}"
+          onclick="storeSetTab('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</button>
+      `).join('')}
+    </div>
+
+    <!-- GRID -->
+    <div class="store-grid-wrap">
+      <div class="store-grid" id="storeGrid"></div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="store-footer" id="storeFooter">
+      <button class="store-action-btn sab-locked" id="storeActionBtn" disabled>Select an avatar</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="storeToast"></div>
+`;
+}
+
+// ── INIT ──────────────────────────────────────────────────
+
+function initAvatarStore() {
+  if (_storeInited) return;
+  _storeInited = true;
+
+  // Inject HTML
+  const wrap = document.createElement('div');
+  wrap.innerHTML = _buildStoreHTML();
+  document.body.appendChild(wrap.firstElementChild); // modal
+  document.body.appendChild(wrap.lastElementChild);  // toast
+
+  // Free avatar always owned
+  _storeOwned['dusty'] = true;
+}
+
+// ── OPEN / CLOSE ──────────────────────────────────────────
+
+async function openAvatarStore() {
+  if (!_storeInited) initAvatarStore();
+  document.getElementById('avatarStoreModal').classList.remove('hidden');
+  _storeSelected = null;
+
+  await _loadStoreData();
+  _renderFeatured();
+  _renderGrid();
+  _updateFooter();
+}
+
+function closeAvatarStore(e) {
+  // If called from overlay click, only close if clicking the backdrop
+  if (e && e.target !== document.getElementById('avatarStoreModal')) return;
+  document.getElementById('avatarStoreModal').classList.add('hidden');
+}
+
+// ── LOAD DATA FROM FIREBASE ───────────────────────────────
+
+async function _loadStoreData() {
+  _storeOwned = { dusty: true }; // free always owned
+
+  const uid = typeof _googleUser !== 'undefined' && _googleUser?.uid;
+  if (!uid || typeof db === 'undefined' || !db) {
+    _storeCoins = 0;
+    _storeEquipped = null;
+    _updateCoinDisplay();
+    return;
+  }
+
+  try {
+    const snap = await db.ref(`users/${uid}`).once('value');
+    const data = snap.val() || {};
+    _storeCoins    = data.coins || 0;
+    _storeOwned    = Object.assign({ dusty: true }, data.ownedAvatars || {});
+    _storeEquipped = data.equippedAvatar || null;
+  } catch(e) {
+    console.warn('[Store] Firebase load failed', e);
+    _storeCoins = 0;
+  }
+  _updateCoinDisplay();
+}
+
+// ── RENDER FEATURED ───────────────────────────────────────
+
+function _renderFeatured() {
+  // Pick the highest rarity unowned avatar as featured; else the legendary
+  const unowned = AVATARS.filter(a => !_storeOwned[a.id] && a.rarity === 'legendary');
+  const featured = unowned[0] || AVATARS.find(a => a.rarity === 'legendary') || AVATARS[0];
+
+  document.getElementById('sfName').textContent = featured.name;
+
+  const rc = RARITY_CONFIG[featured.rarity];
+  document.getElementById('sfPrice').innerHTML = featured.price === 0
+    ? `<span style="color:var(--green)">● Free</span>`
+    : `<span class="store-rarity-dot" style="background:${rc.dot}"></span><span style="color:var(--moon)">${featured.price} coins</span>`;
+
+  // Avatar SVG in featured
+  const svgWrap = document.getElementById('storeFeaturedSvg');
+  svgWrap.innerHTML = `<div style="position:relative;display:inline-block;line-height:0">${featured.svg}</div>`;
+  const svgEl = svgWrap.querySelector('svg');
+  if (svgEl) {
+    svgEl.setAttribute('width', '80');
+    svgEl.setAttribute('height', '92');
+    if (typeof animateAvatar === 'function') animateAvatar(svgEl, featured.rarity);
+  }
+
+  // Featured actions
+  const actWrap = document.getElementById('sfActions');
+  actWrap.innerHTML = '';
+  const owned   = !!_storeOwned[featured.id];
+  const equipped = _storeEquipped === featured.id;
+
+  if (equipped) {
+    actWrap.innerHTML = `<button class="store-featured-btn sfb-equipped" disabled>✓ Equipped</button>`;
+  } else if (owned) {
+    const b = document.createElement('button');
+    b.className = 'store-featured-btn sfb-equip';
+    b.textContent = 'Equip';
+    b.onclick = () => _equipAvatar(featured.id);
+    actWrap.appendChild(b);
+  } else {
+    const b = document.createElement('button');
+    b.className = 'store-featured-btn sfb-buy';
+    b.textContent = `Buy · ${featured.price} 🪙`;
+    b.onclick = () => _buyAvatar(featured.id);
+    actWrap.appendChild(b);
+  }
+}
+
+// ── RENDER GRID ───────────────────────────────────────────
+
+function _renderGrid() {
+  const grid = document.getElementById('storeGrid');
+  grid.innerHTML = '';
+
+  const filtered = _storeActiveTab === 'all'
+    ? AVATARS
+    : AVATARS.filter(a => a.rarity === _storeActiveTab);
+
+  filtered.forEach(av => {
+    const rc      = RARITY_CONFIG[av.rarity];
+    const owned   = !!_storeOwned[av.id];
+    const equipped = _storeEquipped === av.id;
+    const selected = _storeSelected === av.id;
+
+    const card = document.createElement('div');
+    card.className = 'store-card' + (equipped ? ' equipped-card' : '') + (selected ? ' selected' : '');
+    card.dataset.id = av.id;
+    if (selected) card.style.borderColor = rc.color;
+    if (selected) card.style.boxShadow = `0 0 14px ${rc.color}44`;
+
+    // Price label
+    const priceHTML = owned
+      ? `<span class="store-card-owned">✓ Owned</span>`
+      : av.price === 0
+        ? `<span style="color:var(--green);font-size:.68rem">Free</span>`
+        : `<span class="store-rarity-dot" style="background:${rc.dot}"></span><span style="color:var(--moon);font-size:.7rem">${av.price}</span><span style="color:var(--ghost);opacity:.5;font-size:.65rem"> 🪙</span>`;
+
+    // Build SVG wrapper (fixed frame, char animates inside)
+    const svgDiv = document.createElement('div');
+    svgDiv.className = 'store-svg-wrap';
+    svgDiv.innerHTML = av.svg;
+    const svgEl = svgDiv.querySelector('svg');
+    if (svgEl) {
+      svgEl.setAttribute('width', '80');
+      svgEl.setAttribute('height', '92');
+    }
+
+    card.appendChild(svgDiv);
+    card.innerHTML += `
+      <div class="store-card-name">${av.name}</div>
+      <div class="store-card-price">${priceHTML}</div>
+    `;
+    card.prepend(svgDiv); // put SVG first
+
+    card.addEventListener('click', () => _selectCard(av.id));
+    grid.appendChild(card);
+
+    // Animate after appended
+    if (svgEl && typeof animateAvatar === 'function') {
+      animateAvatar(svgEl, av.rarity);
+    }
+  });
+}
+
+// ── TABS ──────────────────────────────────────────────────
+
+function storeSetTab(tab) {
+  _storeActiveTab = tab;
+  _storeSelected  = null;
+  document.querySelectorAll('.store-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  _renderGrid();
+  _updateFooter();
+}
+
+// ── SELECT CARD ───────────────────────────────────────────
+
+function _selectCard(id) {
+  _storeSelected = id;
+  _renderGrid();   // re-render to update selection highlight
+  _updateFooter();
+}
+
+// ── FOOTER ACTION BUTTON ──────────────────────────────────
+
+function _updateFooter() {
+  const btn = document.getElementById('storeActionBtn');
+  if (!_storeSelected) {
+    btn.className = 'store-action-btn sab-locked';
+    btn.textContent = 'Select an avatar';
+    btn.disabled = true;
+    btn.onclick = null;
+    return;
+  }
+
+  const av     = getAvatar(_storeSelected);
+  const owned  = !!_storeOwned[av.id];
+  const equipped = _storeEquipped === av.id;
+
+  if (equipped) {
+    btn.className = 'store-action-btn sab-equipped';
+    btn.textContent = '✓ Equipped';
+    btn.disabled = true;
+    btn.onclick = null;
+  } else if (owned) {
+    btn.className = 'store-action-btn sab-equip';
+    btn.textContent = `Equip ${av.name}`;
+    btn.disabled = false;
+    btn.onclick = () => _equipAvatar(av.id);
+  } else {
+    const canAfford = _storeCoins >= av.price;
+    btn.className = 'store-action-btn sab-buy' + (canAfford ? '' : ' sab-locked');
+    btn.textContent = av.price === 0 ? `Claim ${av.name} (Free)` : `Buy · ${av.price} 🪙`;
+    btn.disabled = !canAfford && av.price !== 0;
+    btn.onclick = canAfford || av.price === 0 ? () => _buyAvatar(av.id) : null;
+  }
+}
+
+// ── BUY ───────────────────────────────────────────────────
+
+async function _buyAvatar(id) {
+  const av  = getAvatar(id);
+  const uid = typeof _googleUser !== 'undefined' && _googleUser?.uid;
+
+  if (!uid) {
+    _showToast('Sign in to buy avatars 🐺');
+    return;
+  }
+  if (_storeOwned[id]) {
+    _equipAvatar(id);
+    return;
+  }
+  if (av.price > 0 && _storeCoins < av.price) {
+    _showToast('Not enough coins 🪙');
+    return;
+  }
+
+  try {
+    const newCoins = _storeCoins - av.price;
+    const updates  = {};
+    updates[`users/${uid}/coins`]                     = newCoins;
+    updates[`users/${uid}/ownedAvatars/${id}`]        = true;
+    updates[`users/${uid}/equippedAvatar`]            = id;
+    await db.ref().update(updates);
+
+    _storeCoins        = newCoins;
+    _storeOwned[id]    = true;
+    _storeEquipped     = id;
+
+    _updateCoinDisplay();
+    _renderFeatured();
+    _renderGrid();
+    _updateFooter();
+    _showToast(`${av.name} unlocked! 🎉`);
+  } catch(e) {
+    console.error('[Store] Buy failed', e);
+    _showToast('Purchase failed, try again.');
+  }
+}
+
+// ── EQUIP ─────────────────────────────────────────────────
+
+async function _equipAvatar(id) {
+  const av  = getAvatar(id);
+  const uid = typeof _googleUser !== 'undefined' && _googleUser?.uid;
+
+  _storeEquipped = id;
+
+  if (uid && typeof db !== 'undefined' && db) {
+    try {
+      await db.ref(`users/${uid}/equippedAvatar`).set(id);
+    } catch(e) { console.warn('[Store] Equip save failed', e); }
+  }
+
+  _renderFeatured();
+  _renderGrid();
+  _updateFooter();
+  _showToast(`${av.name} equipped ✓`);
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+
+function _updateCoinDisplay() {
+  const el = document.getElementById('storeCoinCount');
+  if (el) el.textContent = _storeCoins.toLocaleString();
+}
+
+let _toastTimer = null;
+function _showToast(msg) {
+  const t = document.getElementById('storeToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── PUBLIC API ────────────────────────────────────────────
+
+function getEquippedAvatar() {
+  return _storeEquipped;
+}
+
+// ── EXPORT ────────────────────────────────────────────────
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { initAvatarStore, openAvatarStore, closeAvatarStore, getEquippedAvatar };
+}
+
+// ════════════════════════════════════════════════════════════
+// LOUP-GAROU — DAILY SPIN WHEEL  (Part 4)
+// 12 segments · 24h cooldown · weighted rewards
+//
+// Segment pool (12 total, drawn randomly each day):
+//   Nothing          — 3 slots  (25%)
+//   Coins (small)    — 3 slots  (25%)   50–150
+//   Coins (big)      — 2 slots  (16%)   200–500
+//   Common avatar    — 2 slots  (16%)
+//   Rare avatar      — 1 slot   ( 8%)
+//   Legendary avatar — 1 slot   ( 8%)  (if already owned → 300 coins)
+//
+// Firebase paths:
+//   users/{uid}/lastSpin        → timestamp ms
+//   users/{uid}/coins           → number
+//   users/{uid}/ownedAvatars/*  → true
+//
+// Public API:
+//   openSpinWheel()
+//   closeSpinWheel()
+// ════════════════════════════════════════════════════════════
+
+// ── CSS ───────────────────────────────────────────────────
+(function injectSpinCSS(){
+  if(document.getElementById('lg-spin-css')) return;
+  const s=document.createElement('style');
+  s.id='lg-spin-css';
+  s.textContent=`
+
+/* ── OVERLAY ── */
+#spinModal{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:410;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  backdrop-filter:blur(4px)}
+#spinModal.hidden{display:none}
+
+/* ── BOX ── */
+.spin-box{background:var(--abyss);border:1px solid var(--moon);border-radius:16px;
+  width:100%;max-width:480px;padding:1.4rem 1.2rem 1.6rem;
+  box-shadow:0 0 80px rgba(212,160,23,.15);position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:.9rem;
+  max-height:96vh;overflow-y:auto}
+
+/* ── HEADER ── */
+.spin-title{font-family:'Creepster',cursive;color:var(--moon);
+  font-size:1.9rem;letter-spacing:.07em;text-align:center}
+.spin-sub{font-size:.8rem;color:var(--ghost);opacity:.55;
+  font-family:'Creepster',cursive;letter-spacing:.06em;text-align:center}
+.spin-close{position:absolute;top:.7rem;right:.9rem;background:transparent;
+  border:none;color:var(--ghost);font-size:1.2rem;cursor:pointer;
+  opacity:.5;font-family:inherit;line-height:1}
+.spin-close:hover{opacity:1}
+
+/* ── WHEEL CONTAINER ── */
+.spin-wheel-wrap{position:relative;width:300px;height:300px;flex-shrink:0}
+
+/* Canvas wheel */
+#spinCanvas{border-radius:50%;display:block;
+  filter:drop-shadow(0 0 18px rgba(212,160,23,.25))}
+
+/* Pointer / arrow at top */
+.spin-pointer{position:absolute;top:-14px;left:50%;
+  transform:translateX(-50%);
+  width:0;height:0;
+  border-left:13px solid transparent;
+  border-right:13px solid transparent;
+  border-top:26px solid var(--moon);
+  filter:drop-shadow(0 2px 6px rgba(212,160,23,.6));
+  z-index:2}
+
+/* Center hub */
+.spin-hub{position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:38px;height:38px;border-radius:50%;
+  background:var(--abyss);border:3px solid var(--moon);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;z-index:3;pointer-events:none}
+
+/* ── SPIN BUTTON ── */
+.spin-btn{padding:.7rem 2.2rem;font-family:'Creepster',cursive;
+  font-size:1.15rem;letter-spacing:.06em;border:none;border-radius:9px;
+  background:var(--blood-glow);color:#fff;cursor:pointer;transition:.2s;
+  box-shadow:0 0 20px rgba(185,28,28,.3)}
+.spin-btn:hover:not(:disabled){background:var(--blood);
+  box-shadow:0 0 28px rgba(139,0,0,.55)}
+.spin-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+
+/* ── TIMER ── */
+.spin-timer{font-family:'Creepster',cursive;font-size:1rem;
+  color:var(--ghost);opacity:.65;letter-spacing:.06em;text-align:center}
+.spin-timer span{color:var(--moon);opacity:1}
+
+/* ── RESULT CARD ── */
+.spin-result{display:none;flex-direction:column;align-items:center;gap:.5rem;
+  background:var(--purple);border:1px solid var(--moon);
+  border-radius:12px;padding:1.1rem 1.4rem;width:100%;text-align:center;
+  animation:spinResultIn .4s cubic-bezier(.17,.67,.1,1.3) forwards}
+.spin-result.show{display:flex}
+@keyframes spinResultIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.spin-result-icon{font-size:2.6rem;line-height:1}
+.spin-result-label{font-family:'Creepster',cursive;color:var(--moon);
+  font-size:1.3rem;letter-spacing:.05em}
+.spin-result-sub{font-size:.8rem;color:var(--ghost);opacity:.65}
+
+/* ── LEGEND ── */
+.spin-legend{display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;
+  width:100%;font-size:.72rem;color:var(--ghost);opacity:.6;
+  font-family:'Creepster',cursive;letter-spacing:.03em}
+.spin-legend-row{display:flex;align-items:center;gap:.35rem}
+.spin-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+@media(max-width:360px){
+  .spin-wheel-wrap{width:260px;height:260px}
+  #spinCanvas{width:260px;height:260px}
+}
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── SEGMENT DEFINITIONS ───────────────────────────────────
+// weight = relative probability (sum = 100)
+const SPIN_SEGMENTS = [
+  {type:'nothing',  label:'Nothing',   emoji:'💨', color:'#2a2a3e', weight:25},
+  {type:'coins',    label:'50 Coins',  emoji:'🪙', color:'#78350f', weight:12, coins:50},
+  {type:'coins',    label:'100 Coins', emoji:'🪙', color:'#92400e', weight:9,  coins:100},
+  {type:'coins',    label:'150 Coins', emoji:'🪙', color:'#b45309', weight:7,  coins:150},
+  {type:'coins',    label:'200 Coins', emoji:'🪙', color:'#d97706', weight:6,  coins:200},
+  {type:'coins',    label:'500 Coins', emoji:'🪙', color:'#f59e0b', weight:4,  coins:500},
+  {type:'free',     label:'Free Avatar',    emoji:'🎁', color:'#374151', weight:0}, // resolved at runtime
+  {type:'common',   label:'Common Avatar',  emoji:'⚔️', color:'#78350f', weight:12},
+  {type:'common',   label:'Common Avatar',  emoji:'⚔️', color:'#6b4f1e', weight:0}, // second common slot
+  {type:'rare',     label:'Rare Avatar',    emoji:'💎', color:'#0e4d7a', weight:8},
+  {type:'legendary',label:'Legendary Avatar',emoji:'🌟',color:'#7f1d1d', weight:6},
+  {type:'nothing',  label:'Nothing',   emoji:'💨', color:'#1e1e2e', weight:0},
+];
+
+// The 12 display segments are built fresh each open from a weighted draw
+// so the wheel layout shuffles daily. We store the built set in state.
+let _spinSegments12 = [];
+
+// ── STATE ─────────────────────────────────────────────────
+let _spinInited   = false;
+let _spinning     = false;
+let _spinAngle    = 0;      // current rotation in radians
+let _spinAnimId   = null;
+let _timerInterval= null;
+
+// ── BUILD 12 SEGMENTS ─────────────────────────────────────
+function _buildSpinSegments(ownedMap){
+  // Pool: 3×nothing, 3×coins(small), 2×coins(big), 2×common, 1×rare, 1×legendary
+  const pool = [
+    {type:'nothing',  label:'Nothing',    emoji:'💨', color:'#2a2a3e'},
+    {type:'nothing',  label:'Nothing',    emoji:'💨', color:'#1e1e2e'},
+    {type:'nothing',  label:'Nothing',    emoji:'💨', color:'#252535'},
+    {type:'coins',    label:'50 🪙',      emoji:'🪙', color:'#78350f', coins:50},
+    {type:'coins',    label:'100 🪙',     emoji:'🪙', color:'#92400e', coins:100},
+    {type:'coins',    label:'150 🪙',     emoji:'🪙', color:'#b45309', coins:150},
+    {type:'coins',    label:'200 🪙',     emoji:'🪙', color:'#d97706', coins:200},
+    {type:'coins',    label:'500 🪙',     emoji:'🪙', color:'#f59e0b', coins:500},
+    {type:'common',   label:'',           emoji:'⚔️', color:'#5c3d1e', _avatarRarity:'common'},
+    {type:'common',   label:'',           emoji:'⚔️', color:'#6b4f2e', _avatarRarity:'common'},
+    {type:'rare',     label:'',           emoji:'💎', color:'#0e4d7a', _avatarRarity:'rare'},
+    {type:'legendary',label:'',           emoji:'🌟', color:'#7f1d1d', _avatarRarity:'legendary'},
+  ];
+
+  // Assign random unowned avatar to each avatar slot
+  pool.forEach(seg => {
+    if(seg._avatarRarity){
+      const candidates = AVATARS.filter(a =>
+        a.rarity === seg._avatarRarity && !ownedMap[a.id]
+      );
+      if(candidates.length){
+        const pick = candidates[Math.floor(Math.random()*candidates.length)];
+        seg.label    = pick.name;
+        seg.avatarId = pick.id;
+        seg.emoji    = _rarityEmoji(seg._avatarRarity);
+      } else {
+        // All owned — give coins instead
+        const bonus = seg._avatarRarity==='legendary' ? 300
+                    : seg._avatarRarity==='rare'      ? 150 : 80;
+        seg.type   = 'coins';
+        seg.label  = `${bonus} 🪙`;
+        seg.coins  = bonus;
+        seg.emoji  = '🪙';
+        seg.color  = '#b45309';
+      }
+    }
+  });
+
+  // Shuffle
+  for(let i=pool.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+  return pool; // exactly 12
+}
+
+function _rarityEmoji(r){
+  return r==='legendary'?'🌟':r==='rare'?'💎':'⚔️';
+}
+
+// ── SEGMENT COLORS (rarity border ring colors) ────────────
+const SEG_BORDER = {
+  nothing:   '#444466',
+  coins:     '#d4a017',
+  common:    '#d4a017',
+  rare:      '#38bdf8',
+  legendary: '#ef4444',
+};
+
+// ── DRAW WHEEL ────────────────────────────────────────────
+function _drawWheel(rotationRad){
+  const canvas = document.getElementById('spinCanvas');
+  if(!canvas) return;
+  const ctx    = canvas.getContext('2d');
+  const W      = canvas.width;
+  const cx     = W/2, cy=W/2, r=W/2-4;
+  const slices = _spinSegments12.length;
+  const arc    = (Math.PI*2)/slices;
+
+  ctx.clearRect(0,0,W,W);
+
+  _spinSegments12.forEach((seg,i)=>{
+    const start = rotationRad + i*arc - Math.PI/2;
+    const end   = start + arc;
+
+    // Slice fill
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+
+    // Rarity border arc
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,start,end);
+    ctx.strokeStyle = SEG_BORDER[seg.type] || '#888';
+    ctx.lineWidth   = 3;
+    ctx.stroke();
+
+    // Spoke line
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.lineTo(cx + Math.cos(start)*r, cy + Math.sin(start)*r);
+    ctx.strokeStyle = 'rgba(0,0,0,.35)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    // Label text
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start + arc/2);
+    ctx.textAlign    = 'right';
+    ctx.textBaseline = 'middle';
+
+    // Emoji
+    ctx.font = `${Math.round(W*0.065)}px serif`;
+    ctx.fillText(seg.emoji, r-8, 0);
+
+    // Label
+    const maxLen = 9;
+    let lbl = seg.label.length > maxLen
+      ? seg.label.slice(0, maxLen-1)+'…'
+      : seg.label;
+    ctx.font = `bold ${Math.round(W*0.046)}px 'Creepster',cursive`;
+    ctx.fillStyle = '#f0e8d8';
+    ctx.shadowColor = 'rgba(0,0,0,.7)';
+    ctx.shadowBlur  = 3;
+    ctx.fillText(lbl, r-32, 0);
+    ctx.restore();
+  });
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(212,160,23,.55)';
+  ctx.lineWidth   = 2.5;
+  ctx.stroke();
+}
+
+// ── INIT MODAL HTML ───────────────────────────────────────
+function _buildSpinHTML(){
+  return `
+<div id="spinModal" class="hidden" onclick="_spinBackdropClick(event)">
+  <div class="spin-box">
+    <button class="spin-close" onclick="closeSpinWheel()">✕</button>
+    <div class="spin-title">🎡 Daily Spin</div>
+    <div class="spin-sub">One free spin every 24 hours</div>
+
+    <div class="spin-wheel-wrap">
+      <div class="spin-pointer"></div>
+      <canvas id="spinCanvas" width="300" height="300"></canvas>
+      <div class="spin-hub">🐺</div>
+    </div>
+
+    <button class="spin-btn" id="spinBtn" onclick="doSpin()">SPIN!</button>
+    <div class="spin-timer" id="spinTimer"></div>
+
+    <div class="spin-result" id="spinResult">
+      <div class="spin-result-icon" id="spinResultIcon">🎁</div>
+      <div class="spin-result-label" id="spinResultLabel">—</div>
+      <div class="spin-result-sub"   id="spinResultSub"></div>
+    </div>
+
+    <div class="spin-legend" id="spinLegend">
+      <div class="spin-legend-row"><div class="spin-legend-dot" style="background:#2a2a3e;border:1px solid #444466"></div>Nothing (25%)</div>
+      <div class="spin-legend-row"><div class="spin-legend-dot" style="background:#d97706"></div>Coins (38%)</div>
+      <div class="spin-legend-row"><div class="spin-legend-dot" style="background:#5c3d1e;border:1px solid #d4a017"></div>Common (17%)</div>
+      <div class="spin-legend-row"><div class="spin-legend-dot" style="background:#0e4d7a;border:1px solid #38bdf8"></div>Rare (8%)</div>
+      <div class="spin-legend-row"><div class="spin-legend-dot" style="background:#7f1d1d;border:1px solid #ef4444"></div>Legendary (8%)</div>
+      <div class="spin-legend-row" style="opacity:.45">— Resets every 24 h —</div>
+    </div>
+  </div>
+</div>`;
+}
+
+function _spinBackdropClick(e){
+  if(e.target===document.getElementById('spinModal')) closeSpinWheel();
+}
+
+// ── OPEN / CLOSE ──────────────────────────────────────────
+async function openSpinWheel(){
+  if(!_spinInited){
+    _spinInited=true;
+    const wrap=document.createElement('div');
+    wrap.innerHTML=_buildSpinHTML();
+    document.body.appendChild(wrap.firstElementChild);
+  }
+
+  document.getElementById('spinModal').classList.remove('hidden');
+  document.getElementById('spinResult').classList.remove('show');
+
+  // Load owned avatars to personalise wheel
+  const ownedMap = await _loadOwnedMap();
+
+  // Build & draw wheel
+  _spinSegments12 = _buildSpinSegments(ownedMap);
+  _spinAngle      = 0;
+  _drawWheel(_spinAngle);
+
+  // Check cooldown
+  _updateSpinUI(await _getLastSpin());
+  _startTimerTick();
+}
+
+function closeSpinWheel(){
+  document.getElementById('spinModal').classList.add('hidden');
+  clearInterval(_timerInterval);
+  _timerInterval=null;
+  if(_spinAnimId){ cancelAnimationFrame(_spinAnimId); _spinAnimId=null; }
+}
+
+// ── TIMER TICK ────────────────────────────────────────────
+function _startTimerTick(){
+  clearInterval(_timerInterval);
+  _timerInterval=setInterval(async()=>{
+    _updateSpinUI(await _getLastSpin());
+  },1000);
+}
+
+async function _updateSpinUI(lastSpin){
+  const btn   = document.getElementById('spinBtn');
+  const timer = document.getElementById('spinTimer');
+  if(!btn||!timer) return;
+
+  const now       = Date.now();
+  const cooldown  = 24*60*60*1000;
+  const remaining = lastSpin ? (lastSpin + cooldown - now) : 0;
+
+  if(remaining <= 0){
+    btn.disabled   = false;
+    btn.textContent= 'SPIN!';
+    timer.textContent = 'Your daily spin is ready 🎡';
+  } else {
+    btn.disabled = true;
+    const h = Math.floor(remaining/3600000);
+    const m = Math.floor((remaining%3600000)/60000);
+    const s = Math.floor((remaining%60000)/1000);
+    const hh=String(h).padStart(2,'0');
+    const mm=String(m).padStart(2,'0');
+    const ss=String(s).padStart(2,'0');
+    timer.innerHTML=`Next spin in <span>${hh}:${mm}:${ss}</span>`;
+    btn.textContent='Come back later';
+  }
+}
+
+// ── DO SPIN ───────────────────────────────────────────────
+async function doSpin(){
+  if(_spinning) return;
+  const lastSpin = await _getLastSpin();
+  const now      = Date.now();
+  if(lastSpin && now - lastSpin < 24*60*60*1000){
+    _updateSpinUI(lastSpin);
+    return;
+  }
+
+  _spinning = true;
+  document.getElementById('spinBtn').disabled=true;
+  document.getElementById('spinResult').classList.remove('show');
+
+  // Pick winning segment index
+  const winIdx = _pickWeightedSegment();
+  const seg    = _spinSegments12[winIdx];
+
+  // Calculate target angle so winning segment lands under pointer (top = -Math.PI/2)
+  const slices   = 12;
+  const arc      = (Math.PI*2)/slices;
+  // Segment centre angle (from 0, before rotation offset)
+  const segCentre= arc*winIdx + arc/2;
+  // We want segCentre + finalAngle ≡ 0 (mod 2π) → points to top
+  // Add extra full rotations for drama (5–8 spins)
+  const extraSpins = (5 + Math.floor(Math.random()*4)) * Math.PI*2;
+  const targetAngle= extraSpins + (Math.PI*2 - segCentre);
+
+  // Animation
+  const duration = 5000 + Math.random()*1500; // 5–6.5s
+  const startTime= performance.now();
+  const startAngle=_spinAngle;
+
+  function easeOut(t){ return 1-Math.pow(1-t,4); }
+
+  function frame(now){
+    const elapsed = now - startTime;
+    const t       = Math.min(elapsed/duration,1);
+    _spinAngle    = startAngle + targetAngle * easeOut(t);
+    _drawWheel(_spinAngle);
+    if(t<1){
+      _spinAnimId=requestAnimationFrame(frame);
+    } else {
+      _spinAnimId=null;
+      _onSpinEnd(seg, winIdx);
+    }
+  }
+  _spinAnimId=requestAnimationFrame(frame);
+}
+
+// ── WEIGHTED PICK ─────────────────────────────────────────
+function _pickWeightedSegment(){
+  // Each slot in _spinSegments12 has equal visual weight on wheel
+  // but we bias the random pick by using the original type distribution
+  // Simple: pick uniformly (each slot equally likely visually)
+  return Math.floor(Math.random()*_spinSegments12.length);
+}
+
+// ── ON SPIN END ───────────────────────────────────────────
+async function _onSpinEnd(seg, winIdx){
+  _spinning=false;
+
+  // Save lastSpin timestamp
+  const uid = typeof _googleUser!=='undefined' && _googleUser?.uid;
+  const now = Date.now();
+
+  if(uid && typeof db!=='undefined' && db){
+    try{ await db.ref(`users/${uid}/lastSpin`).set(now); }
+    catch(e){ console.warn('[Spin] Save lastSpin failed',e); }
+  } else {
+    try{ localStorage.setItem('lg_lastSpin', now); }catch(e){}
+  }
+
+  // Apply reward
+  let resultIcon  = seg.emoji;
+  let resultLabel = '';
+  let resultSub   = '';
+
+  if(seg.type==='nothing'){
+    resultIcon  = '💨';
+    resultLabel = 'Nothing this time…';
+    resultSub   = 'Better luck tomorrow!';
+  } else if(seg.type==='coins'){
+    resultIcon  = '🪙';
+    resultLabel = `+${seg.coins} Coins!`;
+    resultSub   = 'Added to your wallet';
+    await _grantCoins(seg.coins, uid);
+  } else if(seg.avatarId){
+    // Avatar reward
+    const av = AVATARS.find(a=>a.id===seg.avatarId);
+    if(av){
+      resultIcon  = seg.emoji;
+      resultLabel = av.name + ' unlocked!';
+      resultSub   = `${av.rarity.charAt(0).toUpperCase()+av.rarity.slice(1)} avatar added to your collection`;
+      await _grantAvatar(av.id, uid);
+    }
+  }
+
+  // Show result card
+  document.getElementById('spinResultIcon').textContent  = resultIcon;
+  document.getElementById('spinResultLabel').textContent = resultLabel;
+  document.getElementById('spinResultSub').textContent   = resultSub;
+  document.getElementById('spinResult').classList.add('show');
+
+  _updateSpinUI(now);
+}
+
+// ── GRANT HELPERS ─────────────────────────────────────────
+async function _grantCoins(amount, uid){
+  if(!uid || typeof db==='undefined' || !db) return;
+  try{
+    const snap = await db.ref(`users/${uid}/coins`).once('value');
+    const cur  = snap.val()||0;
+    await db.ref(`users/${uid}/coins`).set(cur+amount);
+    // Update store coin display if open
+    const el=document.getElementById('storeCoinCount');
+    if(el) el.textContent=(cur+amount).toLocaleString();
+  }catch(e){ console.warn('[Spin] grantCoins failed',e); }
+}
+
+async function _grantAvatar(avatarId, uid){
+  if(!uid || typeof db==='undefined' || !db) return;
+  try{
+    await db.ref(`users/${uid}/ownedAvatars/${avatarId}`).set(true);
+  }catch(e){ console.warn('[Spin] grantAvatar failed',e); }
+}
+
+// ── LOAD HELPERS ─────────────────────────────────────────
+async function _loadOwnedMap(){
+  const uid = typeof _googleUser!=='undefined' && _googleUser?.uid;
+  if(!uid || typeof db==='undefined' || !db) return { dusty:true };
+  try{
+    const snap = await db.ref(`users/${uid}/ownedAvatars`).once('value');
+    return Object.assign({dusty:true}, snap.val()||{});
+  }catch(e){ return {dusty:true}; }
+}
+
+async function _getLastSpin(){
+  const uid = typeof _googleUser!=='undefined' && _googleUser?.uid;
+  if(uid && typeof db!=='undefined' && db){
+    try{
+      const snap=await db.ref(`users/${uid}/lastSpin`).once('value');
+      return snap.val()||null;
+    }catch(e){}
+  }
+  // Fallback localStorage
+  try{
+    const v=localStorage.getItem('lg_lastSpin');
+    return v ? parseInt(v) : null;
+  }catch(e){ return null; }
+}
+
+// ── EXPORT ────────────────────────────────────────────────
+if(typeof module!=='undefined'&&module.exports){
+  module.exports={openSpinWheel,closeSpinWheel};
+}
+
+// ════════════════════════════════════════════════════════════
+// LOUP-GAROU — CIRCLE TOKENS (Part 6)
+// In-game token board with:
+//   - Muted colored circles (no avatar shown until reveal)
+//   - Players see their own token immediately (different visual state)
+//   - Others see blank circles
+//   - Auto-reveal after vote result
+//   - Expand-in-place animation for reveal overlay
+//
+// Usage:
+//   const board = new CircleTokenBoard({
+//     columns: 3,
+//     rows: 3,
+//     containerId: 'token-board',
+//     onTokenPlace: (playerId, position) => {},
+//     onTokenReveal: (playerId, position) => {}
+//   });
+//   board.placeToken(playerId, position, avatarId);
+//   board.revealTokens();  // auto-reveal all tokens
+// ════════════════════════════════════════════════════════════
+
+const CIRCLE_TOKEN_CSS = `
+/* ── TOKEN BOARD ── */
+.circle-token-board {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(10, 10, 26, 0.4);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+  border-radius: 8px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.circle-token-board.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.circle-token-board.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.circle-token-board.cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+/* ── CIRCLE TOKEN ── */
+.circle-token {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-token:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 12px rgba(212, 160, 23, 0.4);
+}
+
+/* ── MUTED STATE (blank circle) ── */
+.circle-token.muted {
+  background: radial-gradient(circle at 30% 30%, rgba(212, 160, 23, 0.15), rgba(139, 0, 0, 0.1));
+  border: 2px solid rgba(212, 160, 23, 0.3);
+  color: rgba(232, 232, 232, 0.4);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* ── OWN TOKEN STATE (visible to player) ── */
+.circle-token.own {
+  background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.1));
+  border: 2px solid rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.circle-token.own::before {
+  content: attr(data-initials);
+  position: absolute;
+  color: #10b981;
+  font-weight: 700;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  z-index: 2;
+}
+
+/* ── REVEALED STATE (shows avatar) ── */
+.circle-token.revealed {
+  background: #1a0a2e;
+  border: 2px solid rgba(212, 160, 23, 0.6);
+}
+
+.circle-token-avatar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-token-avatar svg {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+}
+
+/* ── REVEAL OVERLAY (expand-in-place animation) ── */
+.circle-token-reveal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  animation: reveal-overlay-fade-in 0.3s ease-out forwards;
+}
+
+@keyframes reveal-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.circle-token-reveal-content {
+  position: relative;
+  background: var(--abyss);
+  border: 2px solid var(--moon);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(212, 160, 23, 0.3);
+  animation: reveal-content-expand 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center;
+}
+
+@keyframes reveal-content-expand {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.circle-token-reveal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 12px;
+  margin: 1.2rem 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.circle-token-reveal-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  background: rgba(212, 160, 23, 0.08);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+  border-radius: 8px;
+  animation: reveal-item-pop 0.4s ease-out backwards;
+}
+
+.circle-token-reveal-item:nth-child(1) { animation-delay: 0.05s; }
+.circle-token-reveal-item:nth-child(2) { animation-delay: 0.1s; }
+.circle-token-reveal-item:nth-child(3) { animation-delay: 0.15s; }
+.circle-token-reveal-item:nth-child(4) { animation-delay: 0.2s; }
+.circle-token-reveal-item:nth-child(5) { animation-delay: 0.25s; }
+.circle-token-reveal-item:nth-child(n+6) { animation-delay: 0.3s; }
+
+@keyframes reveal-item-pop {
+  from {
+    transform: scale(0) rotateZ(-30deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotateZ(0deg);
+    opacity: 1;
+  }
+}
+
+.circle-token-reveal-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  background: var(--purple);
+  border: 1px solid rgba(212, 160, 23, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.circle-token-reveal-avatar svg {
+  width: 95%;
+  height: 95%;
+  object-fit: contain;
+}
+
+.circle-token-reveal-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--moon-pale);
+  word-break: break-word;
+  max-width: 75px;
+  line-height: 1.2;
+}
+
+.circle-token-reveal-close {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  background: transparent;
+  border: none;
+  color: var(--ghost);
+  font-size: 1.3rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: 0.2s;
+  z-index: 10;
+}
+
+.circle-token-reveal-close:hover {
+  opacity: 1;
+  color: var(--moon);
+}
+
+.circle-token-reveal-title {
+  font-family: 'Creepster', cursive;
+  font-size: 1.6rem;
+  color: var(--moon);
+  margin-bottom: 0.5rem;
+}
+
+.circle-token-reveal-subtitle {
+  font-size: 0.85rem;
+  color: var(--ghost);
+  opacity: 0.7;
+  margin-bottom: 1rem;
+}
+
+.circle-token-reveal-continue {
+  margin-top: 1.2rem;
+  padding: 0.6rem 1.4rem;
+  background: var(--blood-glow);
+  color: var(--ghost);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.circle-token-reveal-continue:hover {
+  background: var(--blood);
+  box-shadow: 0 0 12px rgba(139, 0, 0, 0.6);
+}
+
+/* ── REVEAL PULSE ANIMATION (on circle when revealed) ── */
+@keyframes token-reveal-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 160, 23, 0.6); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(212, 160, 23, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 160, 23, 0); }
+}
+
+.circle-token.reveal-pulse {
+  animation: token-reveal-pulse 0.6s ease-out;
+}
+`;
+
+// ════════════════════════════════════════════════════════════
+// CLASS: CircleTokenBoard
+// ════════════════════════════════════════════════════════════
+
+class CircleTokenBoard {
+  constructor(options = {}) {
+    this.columns = options.columns || 3;
+    this.rows = options.rows || 3;
+    this.containerId = options.containerId || 'token-board';
+    this.onTokenPlace = options.onTokenPlace || (() => {});
+    this.onTokenReveal = options.onTokenReveal || (() => {});
+    
+    // State: tokenId -> { playerId, avatarId, position, isOwn, revealed }
+    this.tokens = new Map();
+    this.currentPlayerId = options.currentPlayerId || null;
+    this.totalPositions = this.columns * this.rows;
+    this.revealedOverlay = null;
+    
+    this._cssInjected = false;
+    this._init();
+  }
+
+  _init() {
+    this._injectCSS();
+    this._createBoard();
+  }
+
+  _injectCSS() {
+    if (this._cssInjected) return;
+    const style = document.createElement('style');
+    style.id = 'lg-circle-tokens';
+    style.textContent = CIRCLE_TOKEN_CSS;
+    document.head.appendChild(style);
+    this._cssInjected = true;
+  }
+
+  _createBoard() {
+    const container = document.getElementById(this.containerId);
+    if (!container) {
+      console.warn(`[CircleTokenBoard] Container #${this.containerId} not found`);
+      return;
+    }
+
+    container.innerHTML = '';
+    container.className = `circle-token-board cols-${this.columns}`;
+    container.dataset.rows = this.rows;
+    container.dataset.cols = this.columns;
+
+    for (let i = 0; i < this.totalPositions; i++) {
+      const circle = document.createElement('div');
+      circle.className = 'circle-token muted';
+      circle.dataset.position = i;
+      circle.dataset.state = 'empty';
+      circle.setAttribute('aria-label', `Circle ${i + 1}`);
+      circle.addEventListener('click', () => this._handleCircleClick(i));
+      
+      container.appendChild(circle);
+    }
+  }
+
+  _handleCircleClick(position) {
+    // Could be used for manual reveal or inspection
+    // For now, just log
+    console.log('[CircleTokenBoard] Clicked position:', position);
+  }
+
+  /**
+   * Place a token at a position
+   * @param {string} playerId - Player ID
+   * @param {number} position - 0-based index
+   * @param {string} avatarId - Avatar ID (e.g., 'vampire', 'werewolf')
+   * @param {string} playerName - Player name for initials
+   */
+  placeToken(playerId, position, avatarId, playerName = '') {
+    if (position < 0 || position >= this.totalPositions) {
+      console.warn('[CircleTokenBoard] Invalid position:', position);
+      return;
+    }
+
+    const tokenId = `token-${playerId}-${position}`;
+    const isOwn = playerId === this.currentPlayerId;
+
+    const circle = document.querySelector(`[data-position="${position}"]`);
+    if (!circle) return;
+
+    // Store token data
+    this.tokens.set(tokenId, {
+      playerId,
+      avatarId,
+      position,
+      isOwn,
+      playerName,
+      revealed: false
+    });
+
+    // Update circle state
+    circle.dataset.state = 'placed';
+    circle.dataset.tokenId = tokenId;
+    circle.dataset.playerId = playerId;
+
+    if (isOwn) {
+      // Own token: show initials in green
+      circle.classList.remove('muted');
+      circle.classList.add('own');
+      const initials = playerName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+      circle.setAttribute('data-initials', initials);
+    } else {
+      // Others' tokens: keep muted
+      circle.classList.add('muted');
+      circle.classList.remove('own');
+    }
+
+    this.onTokenPlace(playerId, position);
+  }
+
+  /**
+   * Reveal a single token
+   * @param {number} position - Position to reveal
+   */
+  revealToken(position) {
+    const circle = document.querySelector(`[data-position="${position}"]`);
+    if (!circle) return;
+
+    const tokenId = circle.dataset.tokenId;
+    if (!tokenId || !this.tokens.has(tokenId)) return;
+
+    const token = this.tokens.get(tokenId);
+    token.revealed = true;
+
+    // Get avatar SVG from AVATARS global or cache
+    const avatarSvg = this._getAvatarSVG(token.avatarId);
+    if (!avatarSvg) return;
+
+    circle.classList.remove('muted', 'own');
+    circle.classList.add('revealed');
+    circle.removeAttribute('data-initials');
+
+    // Clear inner content and inject avatar
+    const avatarContainer = document.createElement('div');
+    avatarContainer.className = 'circle-token-avatar';
+    avatarContainer.innerHTML = avatarSvg;
+    circle.innerHTML = '';
+    circle.appendChild(avatarContainer);
+
+    // Pulse animation
+    circle.classList.add('reveal-pulse');
+    setTimeout(() => circle.classList.remove('reveal-pulse'), 600);
+
+    this.onTokenReveal(token.playerId, position);
+  }
+
+  /**
+   * Reveal all tokens (after vote result)
+   * Shows expand-in-place overlay with all revealed tokens
+   */
+  revealAllTokens() {
+    // First, reveal all circles on the board
+    for (let pos = 0; pos < this.totalPositions; pos++) {
+      this.revealToken(pos);
+    }
+
+    // Then show reveal overlay with summary
+    this._showRevealOverlay();
+  }
+
+  /**
+   * Show the expand-in-place reveal overlay
+   */
+  _showRevealOverlay() {
+    if (this.revealedOverlay) return; // Already open
+
+    const overlay = document.createElement('div');
+    overlay.className = 'circle-token-reveal-overlay';
+    
+    const content = document.createElement('div');
+    content.className = 'circle-token-reveal-content';
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'circle-token-reveal-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.addEventListener('click', () => this._closeRevealOverlay());
+
+    // Title
+    const title = document.createElement('div');
+    title.className = 'circle-token-reveal-title';
+    title.textContent = 'Tokens Revealed';
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'circle-token-reveal-subtitle';
+    subtitle.textContent = 'All tokens have been placed and revealed';
+
+    // Grid of revealed tokens
+    const grid = document.createElement('div');
+    grid.className = 'circle-token-reveal-grid';
+
+    const revealedTokens = Array.from(this.tokens.values())
+      .filter(t => t.revealed)
+      .sort((a, b) => a.position - b.position);
+
+    revealedTokens.forEach(token => {
+      const item = document.createElement('div');
+      item.className = 'circle-token-reveal-item';
+
+      const avatarDiv = document.createElement('div');
+      avatarDiv.className = 'circle-token-reveal-avatar';
+      const avatarSvg = this._getAvatarSVG(token.avatarId);
+      if (avatarSvg) {
+        avatarDiv.innerHTML = avatarSvg;
+      }
+
+      const name = document.createElement('div');
+      name.className = 'circle-token-reveal-name';
+      name.textContent = token.playerName || `P${token.playerId}`;
+
+      item.appendChild(avatarDiv);
+      item.appendChild(name);
+      grid.appendChild(item);
+    });
+
+    // Continue button
+    const continueBtn = document.createElement('button');
+    continueBtn.className = 'circle-token-reveal-continue';
+    continueBtn.textContent = 'Continue';
+    continueBtn.addEventListener('click', () => this._closeRevealOverlay());
+
+    content.appendChild(closeBtn);
+    content.appendChild(title);
+    content.appendChild(subtitle);
+    content.appendChild(grid);
+    content.appendChild(continueBtn);
+
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    this.revealedOverlay = overlay;
+
+    // Close on overlay click (outside content)
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) this._closeRevealOverlay();
+    });
+  }
+
+  /**
+   * Close the reveal overlay
+   */
+  _closeRevealOverlay() {
+    if (this.revealedOverlay) {
+      this.revealedOverlay.style.animation = 'reveal-overlay-fade-in 0.3s ease-out reverse forwards';
+      setTimeout(() => {
+        if (this.revealedOverlay && this.revealedOverlay.parentNode) {
+          this.revealedOverlay.parentNode.removeChild(this.revealedOverlay);
+        }
+        this.revealedOverlay = null;
+      }, 300);
+    }
+  }
+
+  /**
+   * Get avatar SVG string from AVATARS global
+   * Falls back to a simple placeholder if not found
+   */
+  _getAvatarSVG(avatarId) {
+    // If AVATARS global exists, find the avatar
+    if (typeof AVATARS !== 'undefined' && Array.isArray(AVATARS)) {
+      const avatar = AVATARS.find(a => a.id === avatarId);
+      if (avatar && avatar.svg) {
+        return avatar.svg;
+      }
+    }
+
+    // Fallback: return placeholder SVG
+    return `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="45" fill="#1a0a2e" stroke="#d4a017" stroke-width="2"/>
+        <text x="50" y="55" text-anchor="middle" font-size="14" fill="#d4a017" font-weight="bold">
+          ${avatarId.substring(0, 1).toUpperCase()}
+        </text>
+      </svg>
+    `;
+  }
+
+  /**
+   * Reset the board
+   */
+  reset() {
+    this.tokens.clear();
+    this._createBoard();
+    this._closeRevealOverlay();
+  }
+
+  /**
+   * Get token at position
+   */
+  getToken(position) {
+    const circle = document.querySelector(`[data-position="${position}"]`);
+    if (!circle) return null;
+    const tokenId = circle.dataset.tokenId;
+    return tokenId ? this.tokens.get(tokenId) : null;
+  }
+
+  /**
+   * Get all tokens
+   */
+  getAllTokens() {
+    return Array.from(this.tokens.values());
+  }
+
+  /**
+   * Set current player (for own token visibility)
+   */
+  setCurrentPlayer(playerId) {
+    this.currentPlayerId = playerId;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════════════════
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CircleTokenBoard, CIRCLE_TOKEN_CSS };
+}
+
+// ════════════════════════════════════════════════════════════════
+// PART 5 — COIN ECONOMY  (revised)
+// Drop this entire block into index.html just before 
+<!-- ══ SPIN WHEEL MODAL ══ -->
+<div id="spinModal" class="hidden">
+  <div class="spin-box">
+    <button class="spin-close" onclick="closeSpinWheel()">✕</button>
+    <div class="spin-title">🎡 Daily Spin</div>
+    <div class="spin-sub">One free spin every 24 hours</div>
+    <div class="spin-wheel-wrap">
+      <div class="spin-pointer"></div>
+      <canvas id="spinCanvas" width="300" height="300"></canvas>
+      <div class="spin-hub">🐺</div>
+    </div>
+    <div id="spinResult" class="spin-result">
+      <div class="spin-result-icon" id="spinResultIcon">🪙</div>
+      <div class="spin-result-label" id="spinResultLabel"></div>
+      <div class="spin-result-sub" id="spinResultSub"></div>
+    </div>
+    <button class="spin-btn" id="spinBtn" onclick="doSpin()" disabled>Loading…</button>
+    <div class="spin-timer" id="spinTimer"></div>
+    <div class="spin-legend" id="spinLegend"></div>
+  </div>
+</div>
+</body>,
+// after all other scripts (Firebase, avatars.js, avatar-store.js,
+// spin-wheel.js, avatar-animations.js).
+//
+// ── ECONOMY DESIGN ─────────────────────────────────────────────
+//
+//  Avatar price reference:
+//    Free      →    0
+//    Common    →  250 – 400  (avg ~315)
+//    Rare      →  500 – 650  (avg ~575)
+//    Legendary →  900 – 1000
+//
+//  Per-game rewards (with anti-farm guards):
+//    Win               +60   ← cheapest common in ~4-5 solid wins
+//    Loss/participation+20   ← still earns something; ~13 losses = 1 common
+//    Survived alive    +15   ← bonus on top of win or loss
+//    Long game (>5 min)+25   ← rewards real play sessions
+//    Solo-role win     +100  ← high-skill, matches legendary price tier
+//
+//  With daily spin:
+//    50–500 coins from spin, plus potential free avatar wins.
+//    A dedicated player can buy a common in 2-3 days of play,
+//    a legendary in roughly 1–2 weeks.
+//
+// ── WHAT THIS FILE DOES ────────────────────────────────────────
+//  1. Maintains a _coinBalance cache kept in sync with Firebase
+//  2. Persists to Firebase (signed-in) or localStorage (guest)
+//  3. Migrates localStorage coins → Firebase on sign-in
+//  4. Awards coins at game end with same anti-farm guards as stats
+//  5. Shows a persistent 🪙 badge (top-left, fixed)
+//  6. Shows a toast for small gains and a modal for game-end rewards
+//  7. Patches _grantCoins (spin-wheel.js) to update the badge
+//  8. Patches _buyAvatar (avatar-store.js) to update the badge
+//  9. Exposes getCoinBalance() / addCoins() / spendCoins()
+// ════════════════════════════════════════════════════════════════
+
+/* ── Reward amounts ───────────────────────────────────────────── */
+const COIN_REWARDS = {
+  win:      60,
+  loss:     20,
+  survive:  15,
+  longGame: 25,
+  soloWin:  100,
+};
+
+/* Solo roles that get the soloWin bonus instead of base win */
+const SOLO_WIN_ROLES = new Set([
+  'angel','assassin','sectleader','fluteplayer',
+  'pyromaniac','necromancer','blackcat','puppeteer',
+  'demonchild','spiderwoman','trickster','whitewerewolf',
+]);
+
+/* ── State ────────────────────────────────────────────────────── */
+let _coinBalance  = 0;
+let _coinInitDone = false;
+const COINS_LS_KEY = 'lgCoins_v1';
+
+// ─────────────────────────────────────────────────────────────────
+// INIT — load balance on boot
+// ─────────────────────────────────────────────────────────────────
+async function initCoins() {
+  if (_coinInitDone) return;
+  _coinInitDone = true;
+
+  if (typeof _googleUser !== 'undefined' && _googleUser && typeof db !== 'undefined' && db) {
+    try {
+      const snap = await db.ref(`users/${_googleUser.uid}/coins`).get();
+      _coinBalance = snap.val() ?? 0;
+    } catch(e) {
+      console.warn('[Coins] Firebase read failed', e);
+      _coinBalance = parseInt(localStorage.getItem(COINS_LS_KEY) || '0', 10);
+    }
+  } else {
+    _coinBalance = parseInt(localStorage.getItem(COINS_LS_KEY) || '0', 10);
+  }
+
+  _renderCoinBadge();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PUBLIC API
+// ─────────────────────────────────────────────────────────────────
+
+function getCoinBalance() {
+  return _coinBalance;
+}
+
+async function addCoins(amount, reason) {
+  if (amount <= 0) return;
+  _coinBalance += amount;
+  _renderCoinBadge();
+  _showCoinToast(amount, reason);
+  await _persistCoins();
+}
+
+/**
+ * Deduct coins. Returns true on success, false if insufficient.
+ * Caller is responsible for UI feedback on false.
+ */
+async function spendCoins(amount) {
+  if (amount > _coinBalance) return false;
+  _coinBalance -= amount;
+  _renderCoinBadge();
+  await _persistCoins();
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// GAME-END REWARD — called via showGameOver() patch below
+// ─────────────────────────────────────────────────────────────────
+async function awardGameCoins(winner) {
+  // ── Anti-farm (same guards as savePlayerStats) ──────────────
+  const allPlayers = Object.values(gameState?.players || {});
+  if (allPlayers.length < 3) {
+    console.log('[Coins] Skipped: < 3 players'); return;
+  }
+  const elapsed = _gameStartedAt ? Date.now() - _gameStartedAt : null;
+  if (elapsed !== null && elapsed < 45000) {
+    console.log('[Coins] Skipped: game too short'); return;
+  }
+  const isDup = typeof hasDuplicateFingerprint === 'function'
+    ? await hasDuplicateFingerprint() : false;
+  if (isDup) {
+    console.log('[Coins] Skipped: duplicate fingerprint'); return;
+  }
+  // ────────────────────────────────────────────────────────────
+
+  const me = gameState?.players?.[myId];
+  if (!me) return;
+
+  const myTeam = (typeof ROLES_DEF !== 'undefined' && ROLES_DEF[me.role]?.team) || 'village';
+  let won = false;
+  if (winner === 'werewolf') won = (myTeam === 'werewolf');
+  else if (winner === 'village') won = (myTeam === 'village');
+  else won = (me.role === winner);
+
+  let total = 0;
+  const parts = [];
+
+  // Base win / loss
+  if (won) {
+    const isSolo = SOLO_WIN_ROLES.has(me.role) && me.role === winner;
+    const base = isSolo ? COIN_REWARDS.soloWin : COIN_REWARDS.win;
+    total += base;
+    parts.push(
+      isSolo
+        ? (lang==='ar' ? `🌟 فوز منفرد +${base}` : lang==='fr' ? `🌟 Victoire solo +${base}` : `🌟 Solo win +${base}`)
+        : (lang==='ar' ? `🏆 فوز +${base}`        : lang==='fr' ? `🏆 Victoire +${base}`      : `🏆 Win +${base}`)
+    );
+  } else {
+    total += COIN_REWARDS.loss;
+    parts.push(
+      lang==='ar' ? `💪 مشاركة +${COIN_REWARDS.loss}`
+      : lang==='fr' ? `💪 Participation +${COIN_REWARDS.loss}`
+      : `💪 Participation +${COIN_REWARDS.loss}`
+    );
+  }
+
+  // Survival bonus
+  if (me.alive) {
+    total += COIN_REWARDS.survive;
+    parts.push(
+      lang==='ar' ? `💚 نجاة +${COIN_REWARDS.survive}`
+      : lang==='fr' ? `💚 Survie +${COIN_REWARDS.survive}`
+      : `💚 Survived +${COIN_REWARDS.survive}`
+    );
+  }
+
+  // Long-game bonus (> 5 min)
+  if (elapsed !== null && elapsed >= 300000) {
+    total += COIN_REWARDS.longGame;
+    parts.push(
+      lang==='ar' ? `⏳ لعبة طويلة +${COIN_REWARDS.longGame}`
+      : lang==='fr' ? `⏳ Longue partie +${COIN_REWARDS.longGame}`
+      : `⏳ Long game +${COIN_REWARDS.longGame}`
+    );
+  }
+
+  if (total <= 0) return;
+
+  _coinBalance += total;
+  _renderCoinBadge();
+  await _persistCoins();
+  _showCoinRewardModal(total, parts);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PERSISTENCE
+// ─────────────────────────────────────────────────────────────────
+async function _persistCoins() {
+  if (typeof _googleUser !== 'undefined' && _googleUser &&
+      typeof db !== 'undefined' && db) {
+    try {
+      await db.ref(`users/${_googleUser.uid}/coins`).set(_coinBalance);
+    } catch(e) {
+      localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+      console.warn('[Coins] Firebase write failed, saved locally', e);
+    }
+  } else {
+    localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+  }
+
+  // Keep store coin display in sync if it's open
+  const el = document.getElementById('storeCoinCount');
+  if (el) el.textContent = _coinBalance.toLocaleString();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// UI — persistent coin badge (top-left)
+// ─────────────────────────────────────────────────────────────────
+function _renderCoinBadge() {
+  let badge = document.getElementById('coinBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'coinBadge';
+    badge.style.cssText = [
+      'position:fixed',
+      'top:.8rem',
+      'left:.8rem',
+      'z-index:500',
+      'background:var(--abyss)',
+      'border:1px solid var(--moon)',
+      'border-radius:20px',
+      'padding:.3rem .75rem',
+      'display:flex',
+      'align-items:center',
+      'gap:.35rem',
+      'font-family:"Creepster",cursive',
+      'font-size:1rem',
+      'color:var(--moon)',
+      'box-shadow:0 0 12px rgba(212,160,23,.25)',
+      'cursor:pointer',
+      'user-select:none',
+      'transition:transform .15s',
+    ].join(';');
+    badge.title = lang==='ar'?'رصيد عملاتك — اضغط للمتجر'
+      : lang==='fr'?'Votre solde — cliquer pour la boutique'
+      : 'Your coins — click to open store';
+    badge.innerHTML = '<span style="font-size:1.1rem">🪙</span><span id="coinBadgeVal">0</span>';
+    badge.addEventListener('click', () => {
+      if (typeof openAvatarStore === 'function') openAvatarStore();
+    });
+    document.body.appendChild(badge);
+  }
+
+  const val = document.getElementById('coinBadgeVal');
+  if (val) val.textContent = _fmtCoins(_coinBalance);
+
+  badge.style.transform = 'scale(1.18)';
+  setTimeout(() => { badge.style.transform = 'scale(1)'; }, 220);
+}
+
+function _fmtCoins(n) {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(n);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// UI — small toast (spin wheel gains, etc.)
+// ─────────────────────────────────────────────────────────────────
+function _showCoinToast(amount, reason) {
+  const toast = document.createElement('div');
+  toast.style.cssText = [
+    'position:fixed',
+    'bottom:5rem',
+    'left:50%',
+    'transform:translateX(-50%) translateY(0)',
+    'background:var(--abyss)',
+    'border:1px solid var(--moon)',
+    'border-radius:24px',
+    'padding:.45rem 1.2rem',
+    'font-family:"Creepster",cursive',
+    'font-size:1rem',
+    'color:var(--moon)',
+    'z-index:9999',
+    'pointer-events:none',
+    'opacity:0',
+    'transition:opacity .3s, transform .3s',
+    'white-space:nowrap',
+    'box-shadow:0 0 18px rgba(212,160,23,.3)',
+  ].join(';');
+
+  const label = reason
+    || (lang==='ar'?'مكافأة':lang==='fr'?'Récompense':'Reward');
+  toast.innerHTML = `🪙 +${amount} <span style="opacity:.7;font-size:.85rem">${label}</span>`;
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(-8px)';
+  }));
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(4px)';
+    setTimeout(() => toast.remove(), 400);
+  }, 2400);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// UI — game-end reward modal
+// ─────────────────────────────────────────────────────────────────
+function _showCoinRewardModal(total, parts) {
+  document.getElementById('coinRewardModal')?.remove();
+
+  // Inject keyframes once
+  if (!document.getElementById('coinModalStyle')) {
+    const st = document.createElement('style');
+    st.id = 'coinModalStyle';
+    st.textContent = `
+      @keyframes coinModalIn {
+        from { transform:scale(.7) translateY(30px); opacity:0 }
+        to   { transform:scale(1) translateY(0);     opacity:1 }
+      }
+      @keyframes coinSpin {
+        0%   { transform:rotateY(0deg) }
+        100% { transform:rotateY(360deg) }
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'coinRewardModal';
+  modal.style.cssText = [
+    'position:fixed','inset:0','z-index:600',
+    'display:flex','align-items:center','justify-content:center',
+    'padding:1rem','background:rgba(0,0,0,.65)',
+  ].join(';');
+
+  const titleText = lang==='ar'?'مكافأة العملات!'
+    : lang==='fr'?'Récompense en pièces !'
+    : 'Coins Earned!';
+  const ctaText = lang==='ar'?'رائع!' : lang==='fr'?'Super !' : 'Awesome!';
+
+  // Progress bar toward next cheapest unowned avatar
+  let progressHTML = '';
+  if (typeof AVATARS !== 'undefined') {
+    const ownedIds = typeof _storeOwned !== 'undefined' ? _storeOwned : {};
+    const unowned = AVATARS.filter(a => !ownedIds[a.id] && a.price > 0)
+      .sort((a,b) => a.price - b.price);
+    const next = unowned[0];
+    if (next) {
+      const pct = Math.min(100, Math.round(_coinBalance / next.price * 100));
+      const progressLabel = lang==='ar'
+        ? `نحو ${next.name}: ${_coinBalance}/${next.price} 🪙`
+        : lang==='fr'
+        ? `Vers ${next.name} : ${_coinBalance}/${next.price} 🪙`
+        : `Toward ${next.name}: ${_coinBalance}/${next.price} 🪙`;
+      progressHTML = `
+        <div style="width:100%;margin-bottom:.4rem">
+          <div style="font-size:.72rem;color:var(--ghost);opacity:.6;margin-bottom:.3rem;font-family:'Creepster',cursive">${progressLabel}</div>
+          <div style="background:var(--purple);border-radius:4px;height:6px;overflow:hidden">
+            <div style="background:var(--moon);height:100%;width:${pct}%;border-radius:4px;transition:width .6s ease"></div>
+          </div>
+        </div>`;
+    }
+  }
+
+  modal.innerHTML = `
+    <div style="
+      background:var(--abyss);border:1px solid var(--moon);border-radius:14px;
+      padding:2rem 1.6rem;width:100%;max-width:340px;text-align:center;
+      box-shadow:0 0 50px rgba(212,160,23,.25);
+      animation:coinModalIn .4s cubic-bezier(.34,1.56,.64,1) both
+    ">
+      <div style="font-size:3rem;display:inline-block;animation:coinSpin 1s ease-in-out">🪙</div>
+      <div style="font-family:'Creepster',cursive;font-size:1.8rem;color:var(--moon);margin:.5rem 0">${titleText}</div>
+      <div style="font-family:'Creepster',cursive;font-size:3rem;color:var(--moon-pale);line-height:1;margin-bottom:1rem">+${total}</div>
+      <div style="background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:.8rem;margin-bottom:.9rem;text-align:left">
+        ${parts.map(p => `<div style="font-size:.88rem;color:var(--ghost);padding:.2rem 0;border-bottom:1px solid rgba(212,160,23,.1)">${p}</div>`).join('')}
+        <div style="font-size:.75rem;color:var(--moon);opacity:.7;margin-top:.4rem;text-align:right">
+          ${lang==='ar'?'الرصيد الجديد:':lang==='fr'?'Nouveau solde :':'New balance:'} 🪙 ${_fmtCoins(_coinBalance)}
+        </div>
+      </div>
+      ${progressHTML}
+      <button id="coinRewardClose" style="
+        width:100%;padding:.7rem;
+        background:var(--blood-glow);color:var(--ghost);border:none;
+        border-radius:6px;cursor:pointer;
+        font-family:'Creepster',cursive;font-size:1.1rem;transition:.2s
+      ">${ctaText}</button>
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#coinRewardClose').addEventListener('click', () => {
+    modal.style.opacity = '0';
+    modal.style.transition = 'opacity .3s';
+    setTimeout(() => modal.remove(), 300);
+  });
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.querySelector('#coinRewardClose').click();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PATCH — showGameOver() → also calls awardGameCoins()
+// ─────────────────────────────────────────────────────────────────
+(function _patchShowGameOver() {
+  const _orig = window.showGameOver;
+  if (!_orig) { console.warn('[Coins] showGameOver not found — skipping patch'); return; }
+  window.showGameOver = function(result) {
+    _orig.call(this, result);
+    awardGameCoins(result.winner);
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────────
+// PATCH — _grantCoins() in spin-wheel.js
+// Original writes directly to Firebase and updates #storeCoinCount
+// but never updates _coinBalance or the badge.
+// We replace it so the badge stays in sync.
+// ─────────────────────────────────────────────────────────────────
+(function _patchGrantCoins() {
+  // Override the spin wheel's internal helper
+  window._grantCoins = async function(amount, uid) {
+    // Update our authoritative cache
+    _coinBalance += amount;
+    _renderCoinBadge();
+
+    // Persist to Firebase
+    if (uid && typeof db !== 'undefined' && db) {
+      try {
+        await db.ref(`users/${uid}/coins`).set(_coinBalance);
+      } catch(e) {
+        localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+        console.warn('[Coins] Spin grantCoins Firebase write failed', e);
+      }
+    } else {
+      localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+    }
+
+    // Update store display if open
+    const el = document.getElementById('storeCoinCount');
+    if (el) el.textContent = _coinBalance.toLocaleString();
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────────
+// PATCH — _buyAvatar() in avatar-store.js
+// Original deducts from _storeCoins and writes to Firebase but
+// doesn't touch _coinBalance or the badge.
+// We wrap it to sync the badge after any purchase.
+// ─────────────────────────────────────────────────────────────────
+(function _patchBuyAvatar() {
+  const _orig = window._buyAvatar;
+  if (!_orig) return;
+  window._buyAvatar = async function(id) {
+    await _orig.call(this, id);
+    // Re-read balance from Firebase to get ground truth after purchase
+    if (typeof _googleUser !== 'undefined' && _googleUser &&
+        typeof db !== 'undefined' && db) {
+      try {
+        const snap = await db.ref(`users/${_googleUser.uid}/coins`).get();
+        _coinBalance = snap.val() ?? _coinBalance;
+      } catch(e) { /* use current cache */ }
+    }
+    _renderCoinBadge();
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────────
+// PATCH — initFB() so coins load as soon as Firebase is ready
+// ─────────────────────────────────────────────────────────────────
+(function _patchInitFB() {
+  const _orig = window.initFB;
+  window.initFB = function() {
+    const r = _orig ? _orig.apply(this, arguments) : undefined;
+    initCoins();
+    return r;
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────────
+// AUTH WATCHER — re-init on Google sign-in / sign-out
+// Also migrates guest localStorage coins → Firebase on sign-in
+// ─────────────────────────────────────────────────────────────────
+(function _watchAuth() {
+  const _try = () => {
+    if (window.firebase?.auth) {
+      firebase.auth().onAuthStateChanged(async user => {
+        _coinInitDone = false;
+        await initCoins();
+
+        if (user && typeof db !== 'undefined' && db) {
+          const local = parseInt(localStorage.getItem(COINS_LS_KEY) || '0', 10);
+          if (local > 0) {
+            try {
+              const snap = await db.ref(`users/${user.uid}/coins`).get();
+              const remote = snap.val() ?? 0;
+              const merged = Math.max(local, remote);
+              if (merged !== remote) {
+                await db.ref(`users/${user.uid}/coins`).set(merged);
+                _coinBalance = merged;
+                _renderCoinBadge();
+              }
+              localStorage.removeItem(COINS_LS_KEY);
+              console.log('[Coins] Migrated guest coins to Firebase:', merged);
+            } catch(e) { console.warn('[Coins] Migration failed', e); }
+          }
+        }
+      });
+    } else {
+      setTimeout(_try, 500);
+    }
+  };
+  _try();
+})();
+
+// ─────────────────────────────────────────────────────────────────
+// BOOT FALLBACK — if Firebase is already up when script runs
+// ─────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  setTimeout(() => { if (!_coinInitDone) initCoins(); }, 800);
+});
+
+</script>
 </head>
 <body>
 
@@ -588,6 +4059,12 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
       <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
     </div>
 
+    
+    <!-- Avatar Store + Daily Spin buttons — shown when signed in -->
+    <div id="avatarSystemBtns" style="display:none;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+      <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
+      <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
+    </div>
     <div id="gameEntryWrap" style="display:none">
     <div class="fg">
       <label id="t_name">Your Name</label>
@@ -727,7 +4204,9 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
       <div><span id="t_lstatus">Status:</span> <span id="hStatus">—</span></div>
       <div id="hPlayerName" style="background:var(--moon);color:var(--void);padding:.25rem .7rem;border-radius:4px;font-family:'Creepster',cursive;font-weight:700;font-size:.9rem;letter-spacing:.04em"></div>
     </div>
-    <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
+    <button onclick="openAvatarStore()" id="headerStoreBtn" style="padding:.3rem .7rem;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s;display:none" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🎭</button>
+      <button onclick="openSpinWheel()" id="headerSpinBtn" style="padding:.3rem .7rem;background:transparent;border:1px solid rgba(185,28,28,.4);color:var(--blood-glow);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s;display:none" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='transparent'">🎡</button>
+      <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
     <button id="headerStatsBtn" onclick="openProfileModal()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">📊</button>
   </div>
 
@@ -2061,6 +5540,19 @@ function _updateGoogleUI(user){
     if(gameEntry) gameEntry.style.display='none';
     if(hBtn) hBtn.style.display='none';
   }
+  // ── Avatar system buttons visibility ──
+  const avatarBtns = document.getElementById('avatarSystemBtns');
+  const hStore = document.getElementById('headerStoreBtn');
+  const hSpin  = document.getElementById('headerSpinBtn');
+  if(user){
+    if(avatarBtns) avatarBtns.style.display='flex';
+    if(hStore) hStore.style.display='inline-block';
+    if(hSpin)  hSpin.style.display='inline-block';
+  } else {
+    if(avatarBtns) avatarBtns.style.display='none';
+    if(hStore) hStore.style.display='none';
+    if(hSpin)  hSpin.style.display='none';
+  }
 }
 
 function doGoogleSignIn(){
@@ -2532,6 +6024,8 @@ function showGame(){
   document.getElementById('hPlayerName').textContent=myName||'';
   buildRolesGrid();
   applyTranslations();
+  // ── Avatar system init ──
+  if(typeof initAvatarStore==='function') initAvatarStore();
 }
 
 // ════════════════════════════════════════════
@@ -2992,6 +6486,8 @@ function renderGame(){
   }
   renderChat();
   applyTranslations();
+  // ── Inject equipped avatars into player circle tokens ──
+  if(typeof _injectCircleAvatars === 'function') _injectCircleAvatars();
 }
 
 function renderStats(players){
@@ -6118,6 +9614,111 @@ window.addEventListener('load',()=>{
   </div>
 </div>
 
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// PART 7 — WIRING: Avatar system integration helpers
+// ══════════════════════════════════════════════════════════════
+
+// Cache of uid → equippedAvatar fetched from Firebase
+const _playerAvatarCache = {};
+
+/**
+ * Called after every renderGame() re-render.
+ * Looks at each .pc-node, checks if that player has an equipped avatar
+ * stored in Firebase (or in cache), and injects the animated SVG.
+ */
+async function _injectCircleAvatars() {
+  if (!gameState || !gameState.players) return;
+  const nodes = document.querySelectorAll('.pc-node[id^="pcnode_"]');
+  nodes.forEach(async node => {
+    const pid = node.id.replace('pcnode_', '');
+    const wrap = node.querySelector('.pc-avatar-wrap');
+    if (!wrap) return;
+    // Skip if already has avatar SVG injected
+    if (wrap.querySelector('svg[data-av]')) return;
+
+    // Fetch avatar from Firebase cache or DB
+    const avatarId = await _getPlayerEquippedAvatar(pid);
+    if (!avatarId) return;
+
+    const av = (typeof AVATARS !== 'undefined') && AVATARS.find(a => a.id === avatarId);
+    if (!av) return;
+
+    // Clear default emoji content and inject SVG
+    const existingEmoji = wrap.querySelector('.pc-avatar, .pc-dead-role, .pc-coop-role, .pc-seer-overlay');
+    // Only inject into the background layer (don't remove overlays)
+    let svgContainer = wrap.querySelector('.pc-av-svg-layer');
+    if (!svgContainer) {
+      svgContainer = document.createElement('div');
+      svgContainer.className = 'pc-av-svg-layer';
+      svgContainer.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;z-index:0;pointer-events:none';
+      wrap.insertBefore(svgContainer, wrap.firstChild);
+    }
+    svgContainer.innerHTML = av.svg.replace('<svg ', '<svg data-av="1" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" ');
+  });
+}
+
+/**
+ * Resolve which avatar a player has equipped.
+ * For self: use _storeEquipped from avatar-store.js.
+ * For others: look up Firebase users/{uid}/equippedAvatar
+ * We use the player's Firebase UID which equals their myId if they signed in.
+ */
+async function _getPlayerEquippedAvatar(playerId) {
+  // Own player: use local store state
+  if (playerId === myId) {
+    return (typeof getEquippedAvatar === 'function') ? getEquippedAvatar() : null;
+  }
+
+  // Check cache first (invalidates after 5 minutes)
+  const cached = _playerAvatarCache[playerId];
+  if (cached && cached.ts > Date.now() - 300000) return cached.id;
+
+  // Firebase lookup: player UID = playerId for Google sign-in users
+  if (!fbOk || !db) return null;
+  try {
+    const snap = await db.ref(`users/${playerId}/equippedAvatar`).once('value');
+    const id = snap.val() || null;
+    _playerAvatarCache[playerId] = { id, ts: Date.now() };
+    return id;
+  } catch(e) { return null; }
+}
+
+/**
+ * Show/hide avatar system UI elements based on game state.
+ * Called when entering/leaving game screen.
+ */
+function _updateAvatarSystemUI() {
+  const isInGame = gameState && gameState.status !== 'setup';
+  const hStore = document.getElementById('headerStoreBtn');
+  const hSpin  = document.getElementById('headerSpinBtn');
+  // Show store/spin in header only for signed-in users
+  if (_googleUser) {
+    if (hStore) hStore.style.display = 'inline-block';
+    if (hSpin)  hSpin.style.display  = 'inline-block';
+  }
+}
+
+// ── Patch _updateGoogleUI to also init coins when sign-in happens
+const _origUpdateGoogleUI = window._updateGoogleUI;
+// (coins init is handled by part5's auth watcher — no double-patch needed)
+
+// ── Wire avatar store button to also show spin wheel button for guests
+// Guests can use the store to browse but not buy; they can still spin once
+// (stored in localStorage).
+(function _guestAvatarAccess() {
+  const origDoGuestPlay = window.doGuestPlay;
+  if (!origDoGuestPlay) return;
+  window.doGuestPlay = function() {
+    origDoGuestPlay.apply(this, arguments);
+    // Show avatar system buttons for guests too
+    const avatarBtns = document.getElementById('avatarSystemBtns');
+    if (avatarBtns) avatarBtns.style.display = 'flex';
+  };
+})();
+
+</script>
 <script>
 // ════════════════════════════════════════════
 // AUDIO ENGINE
