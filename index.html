@@ -3576,6 +3576,7 @@ const COIN_REWARD_DEDUP_KEY = 'lgCoinRewardDedup_v1'; // track game IDs already 
 
 // Tracking: which game has already been rewarded (prevent duplicates on reconnect)
 let _rewardedGameIds = new Set();
+let _pendingReward = null; // set by _scheduleRewardPopup, consumed by closeWinnerOverlay
 
 // ─────────────────────────────────────────────────────────────────
 // INIT — load balance on boot & restore dedup tracking
@@ -3735,11 +3736,11 @@ function _scheduleRewardPopup(winner, survivedToEnd, newlyDeadCount) {
   const reward = _computeReward(winner, survivedToEnd);
   if (!reward || reward.total <= 0) { console.log('[Coins] No reward to show'); return; }
 
-  // Wait for death anims (4200ms each) + winner overlay entrance (~2700ms)
-  const delay = (newlyDeadCount * 4200) + 2700;
-  console.log('[Coins] Popup scheduled in', delay, 'ms');
-  setTimeout(() => _showRewardPopup(reward, gameId), delay);
-}
+  // Store the reward so closeWinnerOverlay() can show it when the player
+  // clicks Continue — never fire a setTimeout so the modal never interrupts
+  // the win/lose animation.
+  console.log('[Coins] Reward ready — will show after player clicks Continue');
+  _pendingReward = { reward, gameId };
 
 // ── Render the Collect Rewards modal ─────────────────────────────
 function _showRewardPopup(reward, gameId) {
@@ -5451,6 +5452,13 @@ function closeWinnerOverlay(){
     // Reveal score sheet
     const sheet=document.getElementById('gameOverScoreSheet');
     if(sheet) sheet.style.display='block';
+    // Show reward popup now that the animation screen is dismissed
+    if(_pendingReward){
+      const{reward,gameId}=_pendingReward;
+      _pendingReward=null;
+      console.log('[Coins] Showing reward popup after Continue click');
+      _showRewardPopup(reward,gameId);
+    }
   }, 500);
 }
 
