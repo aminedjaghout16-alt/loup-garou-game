@@ -87,6 +87,43 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .profile-close{position:absolute;top:.7rem;right:.9rem;background:transparent;border:none;color:var(--ghost);font-size:1.3rem;cursor:pointer;opacity:.6;font-family:inherit}
 .profile-close:hover{opacity:1}
 .profile-signin-note{text-align:center;color:var(--ghost);opacity:.7;font-size:.85rem;padding:.5rem}
+
+/* ── LEADERBOARD MODAL ── */
+#leaderboardModal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:310;display:flex;align-items:center;justify-content:center;padding:1rem}
+#leaderboardModal.hidden{display:none}
+.lb-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.6rem 1.4rem;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;position:relative;box-shadow:0 0 50px rgba(212,160,23,.18)}
+.lb-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.9rem;text-align:center;margin-bottom:.3rem}
+.lb-subtitle{text-align:center;font-size:.78rem;color:var(--ghost);opacity:.5;margin-bottom:1.1rem}
+.lb-tabs{display:flex;gap:.35rem;margin-bottom:1rem}
+.lb-tab{flex:1;padding:.4rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s;text-align:center}
+.lb-tab.active{background:var(--moon);color:var(--void);font-weight:700}
+.lb-podium{display:flex;align-items:flex-end;justify-content:center;gap:.7rem;margin-bottom:1.2rem}
+.lb-podium-slot{display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.lb-podium-avatar{border-radius:50%;border:2px solid var(--moon);display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:var(--purple);overflow:hidden;flex-shrink:0}
+.lb-podium-avatar img{width:100%;height:100%;object-fit:cover}
+.lb-podium-name{font-size:.7rem;color:var(--ghost);max-width:70px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-podium-val{font-family:'Creepster',cursive;color:var(--moon);font-size:1rem}
+.lb-podium-rank{font-size:.65rem;color:var(--ghost);opacity:.6}
+.lb-podium-block{border-radius:6px 6px 0 0;width:52px;display:flex;align-items:center;justify-content:center;font-family:'Creepster',cursive;font-size:1.1rem;background:var(--purple);border:1px solid rgba(212,160,23,.3)}
+.lb-row{display:flex;align-items:center;gap:.7rem;padding:.6rem .5rem;border-radius:7px;transition:.15s}
+.lb-row:hover{background:rgba(212,160,23,.06)}
+.lb-row.lb-me{background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3)}
+.lb-rank-num{font-family:'Creepster',cursive;font-size:1.1rem;color:var(--ghost);opacity:.5;width:24px;text-align:center;flex-shrink:0}
+.lb-avatar-sm{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;overflow:hidden}
+.lb-avatar-sm img{width:100%;height:100%;object-fit:cover}
+.lb-info{flex:1;min-width:0}
+.lb-info-name{font-size:.88rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-info-sub{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.1rem}
+.lb-badge{padding:.18rem .5rem;border-radius:4px;font-size:.68rem;font-weight:700;flex-shrink:0}
+.lb-stat-val{font-family:'Creepster',cursive;font-size:1.15rem;color:var(--moon);min-width:36px;text-align:right;flex-shrink:0}
+.lb-empty{text-align:center;color:var(--ghost);opacity:.4;font-size:.85rem;padding:2rem 0}
+.lb-loading{text-align:center;color:var(--ghost);opacity:.5;font-size:.85rem;padding:1.5rem 0}
+.lb-my-rank-bar{background:var(--purple);border:1px solid rgba(212,160,23,.25);border-radius:8px;padding:.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.7rem}
+.lb-my-rank-bar .lmr-rank{font-family:'Creepster',cursive;font-size:1.6rem;color:var(--moon)}
+.lb-my-rank-bar .lmr-label{font-size:.72rem;color:var(--ghost);opacity:.6}
+.lb-my-rank-bar .lmr-stat{margin-left:auto;text-align:right}
+.lb-my-rank-bar .lmr-sv{font-family:'Creepster',cursive;font-size:1.2rem;color:var(--moon-pale)}
+.lb-my-rank-bar .lmr-sl{font-size:.68rem;color:var(--ghost);opacity:.5}
 /* Profile button in login */
 .profile-btn{margin-top:.8rem;width:100%;padding:.6rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:5px;cursor:pointer;font-family:inherit;font-size:.85rem;transition:.2s}
 .profile-btn:hover{background:rgba(212,160,23,.1);border-color:var(--moon)}
@@ -4373,21 +4410,25 @@ window.addEventListener('load', () => {
     <p id="t_sub">Join the game of deception and survival</p>
 
     <!-- Google account bar (shown when signed in) -->
-    <div id="googleUserBar" style="display:none;align-items:center;gap:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem">
+    <div id="googleUserBar" style="display:none;flex-wrap:wrap;align-items:center;gap:.5rem;background:var(--purple);border:1px solid var(--moon);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem">
       <img id="googleAvatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--moon);object-fit:cover">
       <div style="flex:1;text-align:left;min-width:0">
         <div id="googleDisplayName" style="color:var(--moon-pale);font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
         <div id="googleEmail" style="color:var(--ghost);font-size:.72rem;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
       </div>
-      <button onclick="openProfileModal()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'" id="t_viewstats">📊 Stats</button>
-      <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+        <button onclick="openProfileModal()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'" id="t_viewstats">📊 Stats</button>
+        <button onclick="openLeaderboard()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🏆 Ranks</button>
+        <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
+      </div>
     </div>
 
     
-    <!-- Avatar Store + Daily Spin -->
+    <!-- Avatar Store + Daily Spin + Leaderboard -->
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
       <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
       <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
+      <button onclick="openLeaderboard()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🏆 Leaderboard</button>
     </div>
     <div id="gameEntryWrap" style="display:none">
     <div class="fg">
@@ -4530,6 +4571,7 @@ window.addEventListener('load', () => {
     </div>
     <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
     <button id="headerStatsBtn" onclick="openProfileModal()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">📊</button>
+    <button id="headerLbBtn" onclick="openLeaderboard()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🏆</button>
   </div>
 
   <div class="g-content">
@@ -5855,6 +5897,7 @@ function _updateGoogleUI(user){
   const userBar=document.getElementById('googleUserBar');
   const nameInput=document.getElementById('inName');
   const hBtn=document.getElementById('headerStatsBtn');
+  const hLbBtn=document.getElementById('headerLbBtn');
   const emailWrap=document.getElementById('emailLoginWrap');
   const gameEntry=document.getElementById('gameEntryWrap');
   if(user){
@@ -5864,6 +5907,7 @@ function _updateGoogleUI(user){
     if(userBar) userBar.style.display='flex';
     if(gameEntry) gameEntry.style.display='block';
     if(hBtn) hBtn.style.display='inline-block';
+    if(hLbBtn) hLbBtn.style.display='inline-block';
     const avatar=document.getElementById('googleAvatar');
     const displayName=document.getElementById('googleDisplayName');
     const email=document.getElementById('googleEmail');
@@ -9883,6 +9927,205 @@ function closeProfileModal(){
 }
 
 // ════════════════════════════════════════════
+// LEADERBOARD
+// ════════════════════════════════════════════
+const RANK_BADGES = [
+  {min:0,   label:'Peasant',    color:'#888',  bg:'rgba(136,136,136,.15)'},
+  {min:5,   label:'Villager',   color:'#a8c090',bg:'rgba(168,192,144,.15)'},
+  {min:15,  label:'Hunter',     color:'#78b0d8',bg:'rgba(120,176,216,.15)'},
+  {min:30,  label:'Witch',      color:'#c07ad8',bg:'rgba(192,122,216,.15)'},
+  {min:60,  label:'Seer',       color:'#d8c058',bg:'rgba(216,192,88,.15)'},
+  {min:100, label:'Wolf Lord',  color:'#d87858',bg:'rgba(216,120,88,.15)'},
+  {min:200, label:'Alpha Wolf', color:'#d4a017',bg:'rgba(212,160,23,.2)'},
+];
+
+function getRankBadge(wins){
+  let badge = RANK_BADGES[0];
+  for(const b of RANK_BADGES){ if(wins >= b.min) badge = b; }
+  return badge;
+}
+
+let _lbSort = 'wins';
+let _lbCache = null;
+
+function lbSetSort(sort){
+  _lbSort = sort;
+  ['wins','coins','streak','rate'].forEach(s=>{
+    const el = document.getElementById('lbTab'+s.charAt(0).toUpperCase()+s.slice(1));
+    if(el) el.classList.toggle('active', s === sort);
+  });
+  if(_lbCache) _renderLeaderboard(_lbCache);
+}
+
+async function openLeaderboard(){
+  document.getElementById('leaderboardModal').classList.remove('hidden');
+  await lbRefresh();
+}
+
+function closeLeaderboard(){
+  document.getElementById('leaderboardModal').classList.add('hidden');
+}
+
+async function lbRefresh(){
+  const listEl = document.getElementById('lbList');
+  const podiumEl = document.getElementById('lbPodium');
+  listEl.innerHTML = '<div class="lb-loading">Loading rankings…</div>';
+  podiumEl.innerHTML = '';
+  _lbCache = null;
+  if(typeof db === 'undefined' || !db){
+    listEl.innerHTML = '<div class="lb-empty">Firebase not connected.</div>';
+    return;
+  }
+  try{
+    const snap = await db.ref('users').once('value');
+    const raw = snap.val() || {};
+    const players = [];
+    for(const [uid, data] of Object.entries(raw)){
+      if(!data.stats && !data.coins) continue;
+      const s = data.stats || {};
+      const games = s.gamesPlayed || 0;
+      const wins  = s.wins || 0;
+      const losses= s.losses || 0;
+      const coins = typeof data.coins === 'number' ? data.coins : 0;
+      const streak= s.winStreak || 0;
+      const rate  = games >= 3 ? Math.round(wins / games * 100) : 0;
+      const name  = data.displayName || data.name || 'Anonymous';
+      const photo = data.photoURL || null;
+      players.push({uid, name, photo, wins, losses, games, coins, streak, rate});
+    }
+    _lbCache = players;
+    _renderLeaderboard(players);
+  } catch(e){
+    listEl.innerHTML = '<div class="lb-empty">Could not load rankings.</div>';
+    console.warn('Leaderboard fetch error', e);
+  }
+}
+
+function _renderLeaderboard(players){
+  const sort = _lbSort;
+  const sorted = [...players].sort((a,b)=>{
+    if(sort === 'wins')   return b.wins - a.wins;
+    if(sort === 'coins')  return b.coins - a.coins;
+    if(sort === 'streak') return b.streak - a.streak;
+    if(sort === 'rate')   return b.rate - a.rate || b.games - a.games;
+    return 0;
+  }).filter(p => {
+    if(sort === 'wins')   return p.wins > 0 || p.games > 0;
+    if(sort === 'coins')  return p.coins > 0;
+    if(sort === 'streak') return p.streak > 0;
+    if(sort === 'rate')   return p.games >= 3;
+    return true;
+  });
+
+  const statKey = {wins:'wins', coins:'coins', streak:'streak', rate:'rate'}[sort];
+  const statLbl = {wins:'wins', coins:'coins', streak:'win streak', rate:'win rate'}[sort];
+  const statFmt = v => sort === 'rate' ? v + '%' : v.toLocaleString();
+
+  document.getElementById('lbMyStatLbl').textContent = statLbl;
+
+  const uid = (typeof _googleUser !== 'undefined' && _googleUser) ? _googleUser.uid : null;
+  const myIdx = uid ? sorted.findIndex(p => p.uid === uid) : -1;
+  const myData = myIdx >= 0 ? sorted[myIdx] : null;
+
+  // My rank bar
+  const myBar = document.getElementById('lbMyRankBar');
+  if(myData && uid){
+    myBar.style.display = 'flex';
+    document.getElementById('lbMyRankNum').textContent = '#' + (myIdx + 1);
+    document.getElementById('lbMyName').textContent = myData.name;
+    document.getElementById('lbMyStatVal').textContent = statFmt(myData[statKey]);
+    const badge = getRankBadge(myData.wins);
+    document.getElementById('lbMyBadge').textContent = badge.label;
+    const avEl = document.getElementById('lbMyAvatarSm');
+    avEl.innerHTML = myData.photo
+      ? `<img src="${myData.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : '🐺';
+  } else {
+    myBar.style.display = 'none';
+  }
+
+  // Podium top 3
+  const podiumEl = document.getElementById('lbPodium');
+  const podiumOrder = [1, 0, 2]; // 2nd, 1st, 3rd
+  const podiumHeights = [52, 72, 40];
+  const podiumColors = ['#888', '#d4a017', '#c87941'];
+  const podiumSizes = [46, 58, 40];
+  podiumEl.innerHTML = '';
+  podiumOrder.forEach((idx, pi) => {
+    const p = sorted[idx];
+    if(!p) return;
+    const isMe = p.uid === uid;
+    const badge = getRankBadge(p.wins);
+    const slot = document.createElement('div');
+    slot.className = 'lb-podium-slot';
+    slot.innerHTML = `
+      <div class="lb-podium-avatar" style="width:${podiumSizes[pi]}px;height:${podiumSizes[pi]}px;border-color:${podiumColors[pi]}">
+        ${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : '🐺'}
+      </div>
+      <div class="lb-podium-name" style="${isMe ? 'color:var(--moon-pale)' : ''}">${p.name}</div>
+      <div class="lb-podium-val">${statFmt(p[statKey])}</div>
+      <div class="lb-podium-block" style="height:${podiumHeights[pi]}px;border-color:${podiumColors[pi]};color:${podiumColors[pi]}">${['🥈','🥇','🥉'][pi]}</div>
+    `;
+    podiumEl.appendChild(slot);
+  });
+
+  // List (rank 4+)
+  const listEl = document.getElementById('lbList');
+  if(sorted.length === 0){
+    listEl.innerHTML = '<div class="lb-empty">No data yet — play some games!</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  sorted.forEach((p, i) => {
+    if(i < 3) return;
+    const isMe = p.uid === uid;
+    const badge = getRankBadge(p.wins);
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (isMe ? ' lb-me' : '');
+    row.innerHTML = `
+      <div class="lb-rank-num">${i+1}</div>
+      <div class="lb-avatar-sm">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : '🐺'}</div>
+      <div class="lb-info">
+        <div class="lb-info-name" style="${isMe ? 'color:var(--moon-pale)' : ''}">${p.name}${isMe ? ' (you)' : ''}</div>
+        <div class="lb-info-sub">${p.games} games · ${p.rate}% win rate</div>
+      </div>
+      <div class="lb-badge" style="background:${badge.bg};color:${badge.color}">${badge.label}</div>
+      <div class="lb-stat-val">${statFmt(p[statKey])}</div>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+// headerLbBtn visibility handled inside _updateGoogleUI directly
+
+// Patch recordGameResult to also track win streak
+const _origRecordGameResult = window.recordGameResult;
+window.recordGameResult = async function(winner){
+  if(_origRecordGameResult) await _origRecordGameResult(winner);
+  // Streak tracking
+  if(typeof _googleUser === 'undefined' || !_googleUser || typeof db === 'undefined' || !db) return;
+  const uid = _googleUser.uid;
+  const me = gameState?.players?.[myId];
+  if(!me) return;
+  const myTeam = (typeof ROLES_DEF !== 'undefined' && ROLES_DEF[me.role]?.team) || 'village';
+  let won = false;
+  if(winner === 'werewolf') won = (myTeam === 'werewolf');
+  else if(winner === 'village') won = (myTeam === 'village');
+  else won = (me.role === winner);
+  try{
+    await db.ref(`users/${uid}/stats`).transaction(s => {
+      if(!s) return s;
+      s.winStreak = won ? (s.winStreak || 0) + 1 : 0;
+      s.bestStreak = Math.max(s.bestStreak || 0, s.winStreak || 0);
+      return s;
+    });
+    // Also store displayName + photoURL for leaderboard display
+    await db.ref(`users/${uid}`).update({
+      displayName: _googleUser.displayName || _googleUser.email || 'Anonymous',
+      photoURL: _googleUser.photoURL || null,
+    });
+  } catch(e){ console.warn('Streak save failed', e); }
+};
 // LOVERS TOAST
 // ════════════════════════════════════════════
 function showLoversToast(name1, name2){
@@ -9959,6 +10202,50 @@ window.addEventListener('load',()=>{
     <div class="lovers-toast-desc" id="ltDesc">Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you dies, the other follows.</div>
     <div class="lovers-toast-rule" id="ltRule">💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.</div>
     <button class="lovers-toast-btn" id="ltBtn" onclick="closeLoversToast()">I understand ❤️</button>
+  </div>
+</div>
+
+<!-- ── LEADERBOARD MODAL ── -->
+<div id="leaderboardModal" class="hidden">
+  <div class="lb-box">
+    <button class="profile-close" onclick="closeLeaderboard()">✕</button>
+    <h2>🏆 Global Rankings</h2>
+    <div class="lb-subtitle" id="lbSubtitle">Top players worldwide</div>
+
+    <!-- My rank bar (shown when signed in) -->
+    <div class="lb-my-rank-bar" id="lbMyRankBar" style="display:none">
+      <div>
+        <div class="lmr-rank" id="lbMyRankNum">#—</div>
+        <div class="lmr-label">Your rank</div>
+      </div>
+      <div id="lbMyAvatarSm" style="width:38px;height:38px;border-radius:50%;border:2px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="lbMyName">—</div>
+        <div style="font-size:.68rem;color:var(--ghost);opacity:.5" id="lbMyBadge">—</div>
+      </div>
+      <div class="lmr-stat">
+        <div class="lmr-sv" id="lbMyStatVal">—</div>
+        <div class="lmr-sl" id="lbMyStatLbl">wins</div>
+      </div>
+    </div>
+
+    <!-- Sort tabs -->
+    <div class="lb-tabs">
+      <button class="lb-tab active" id="lbTabWins" onclick="lbSetSort('wins')">🏅 Wins</button>
+      <button class="lb-tab" id="lbTabCoins" onclick="lbSetSort('coins')">🪙 Coins</button>
+      <button class="lb-tab" id="lbTabStreak" onclick="lbSetSort('streak')">🔥 Streak</button>
+      <button class="lb-tab" id="lbTabRate" onclick="lbSetSort('rate')">📈 Win Rate</button>
+    </div>
+
+    <!-- Podium (top 3) -->
+    <div class="lb-podium" id="lbPodium"></div>
+
+    <!-- Full list -->
+    <div id="lbList"></div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button onclick="lbRefresh()" style="background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:5px;padding:.4rem 1.2rem;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">↻ Refresh</button>
+    </div>
   </div>
 </div>
 
