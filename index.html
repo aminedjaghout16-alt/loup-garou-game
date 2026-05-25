@@ -132,6 +132,47 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .mm-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
 .mm-name-panel input:focus{outline:none;border-color:var(--moon-pale)}
 
+/* ── PUBLIC ROOMS SCREEN ── */
+#publicRoomsModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:315;display:flex;align-items:center;justify-content:center;padding:1rem}
+#publicRoomsModal.hidden{display:none}
+.pr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:1.6rem 1.4rem;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;position:relative;box-shadow:0 0 50px rgba(212,160,23,.16)}
+.pr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:.3rem}
+.pr-subtitle{text-align:center;font-size:.75rem;color:var(--ghost);opacity:.45;margin-bottom:1rem}
+.pr-toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center}
+.pr-refresh-btn{padding:.4rem .9rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s;white-space:nowrap}
+.pr-refresh-btn:hover{background:rgba(212,160,23,.1)}
+.pr-refresh-btn.spinning{animation:prSpin .7s linear infinite}
+@keyframes prSpin{to{transform:rotate(360deg)}}
+.pr-create-link{padding:.4rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;transition:.2s;white-space:nowrap;margin-left:auto}
+.pr-create-link:hover{background:var(--blood)}
+.pr-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.6rem;padding-right:.2rem}
+.pr-list::-webkit-scrollbar{width:4px}
+.pr-list::-webkit-scrollbar-thumb{background:var(--moon);border-radius:2px}
+.pr-card{background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem;transition:.2s;cursor:default}
+.pr-card:hover{border-color:rgba(212,160,23,.5);background:rgba(26,10,46,.85)}
+.pr-card-icon{font-size:1.6rem;flex-shrink:0;width:40px;text-align:center}
+.pr-card-info{flex:1;min-width:0}
+.pr-card-name{font-size:.92rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-card-host{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.15rem}
+.pr-card-meta{display:flex;align-items:center;gap:.5rem;margin-top:.35rem;flex-wrap:wrap}
+.pr-card-players{font-size:.72rem;padding:.15rem .5rem;border-radius:4px;font-weight:700}
+.pr-card-players.open{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
+.pr-card-players.full{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25)}
+.pr-card-age{font-size:.68rem;color:var(--ghost);opacity:.4}
+.pr-join-btn{padding:.45rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:700;transition:.2s;flex-shrink:0}
+.pr-join-btn:hover{background:var(--blood);box-shadow:0 0 12px rgba(185,28,28,.4)}
+.pr-join-btn:disabled{opacity:.4;cursor:not-allowed}
+.pr-empty{text-align:center;padding:2.5rem 1rem;color:var(--ghost);opacity:.4}
+.pr-empty .pr-empty-icon{font-size:2.5rem;margin-bottom:.5rem}
+.pr-empty p{font-size:.85rem}
+.pr-loading{text-align:center;padding:2rem;color:var(--ghost);opacity:.5;font-size:.85rem}
+/* join name panel inside public rooms */
+.pr-join-panel{background:var(--purple);border:1px solid rgba(212,160,23,.3);border-radius:8px;padding:.9rem;margin-top:.8rem;display:none;flex-direction:column;gap:.6rem}
+.pr-join-panel.open{display:flex}
+.pr-join-panel label{font-size:.8rem;color:var(--moon);font-weight:700}
+.pr-join-panel input{width:100%;padding:.6rem;background:var(--abyss);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:.95rem}
+.pr-join-panel input:focus{outline:none;border-color:var(--moon-pale)}
+
 /* ── ROOM CREATION MODAL ── */
 #roomCreateModal{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:320;display:flex;align-items:center;justify-content:center;padding:1rem}
 #roomCreateModal.hidden{display:none}
@@ -10408,8 +10449,158 @@ function mmDoJoin(){
 }
 
 function mmOpenPublicRooms(){
-  // Part 3 — placeholder for now
-  _showToast('Public rooms coming in Part 3! 🌐');
+  document.getElementById('publicRoomsModal').classList.remove('hidden');
+  prStartLiveListener();
+}
+
+// ════════════════════════════════════════════
+// PART 3 — PUBLIC ROOMS LIST
+// ════════════════════════════════════════════
+let _prListener = null;
+let _prJoinTarget = null; // code of room user wants to join
+
+function closePublicRooms(){
+  document.getElementById('publicRoomsModal').classList.add('hidden');
+  prStopListener();
+}
+
+function prStopListener(){
+  if(_prListener && typeof db !== 'undefined' && db){
+    db.ref('publicRooms').off('value', _prListener);
+    _prListener = null;
+  }
+}
+
+function prStartLiveListener(){
+  prStopListener();
+  const listEl = document.getElementById('prList');
+  listEl.innerHTML = '<div class="pr-loading">Loading rooms…</div>';
+
+  if(typeof db === 'undefined' || !db){
+    initFBWithRetry(()=> prStartLiveListener());
+    return;
+  }
+
+  _prListener = db.ref('publicRooms').orderByChild('createdAt').on('value', snap => {
+    const rooms = [];
+    snap.forEach(child => {
+      const r = child.val();
+      if(r && r.status === 'waiting') rooms.push(r);
+    });
+    // newest first
+    rooms.sort((a,b) => b.createdAt - a.createdAt);
+    prRenderRooms(rooms);
+  }, err => {
+    document.getElementById('prList').innerHTML =
+      '<div class="pr-empty"><div class="pr-empty-icon">⚠️</div><p>Could not load rooms</p></div>';
+  });
+}
+
+function prRefresh(){
+  const btn = document.getElementById('prRefreshBtn');
+  btn.classList.add('spinning');
+  prStopListener();
+  prStartLiveListener();
+  setTimeout(()=> btn.classList.remove('spinning'), 700);
+}
+
+function prRenderRooms(rooms){
+  const listEl = document.getElementById('prList');
+  // keep join panel if open
+  const panel = document.getElementById('prJoinPanel');
+
+  if(rooms.length === 0){
+    listEl.innerHTML = '';
+    listEl.appendChild(panel);
+    const empty = document.createElement('div');
+    empty.className = 'pr-empty';
+    empty.innerHTML = `<div class="pr-empty-icon">🌙</div><p>No open rooms right now.<br>Be the first to create one!</p>`;
+    listEl.appendChild(empty);
+    document.getElementById('prSubtitle').textContent = 'No open rooms right now';
+    return;
+  }
+
+  document.getElementById('prSubtitle').textContent =
+    rooms.length + ' open room' + (rooms.length !== 1 ? 's' : '') + ' · updates live';
+
+  listEl.innerHTML = '';
+  listEl.appendChild(panel);
+
+  rooms.forEach(r => {
+    const isFull = r.playerCount >= r.maxPlayers;
+    const isMyRoom = r.hostUid === myId;
+    const ageMs = Date.now() - (r.createdAt || Date.now());
+    const ageStr = ageMs < 60000 ? 'just now'
+      : ageMs < 3600000 ? Math.floor(ageMs/60000) + 'm ago'
+      : Math.floor(ageMs/3600000) + 'h ago';
+
+    const icons = ['🌲','🏚️','🌕','🦇','🐺','🔮','🗡️','🕯️'];
+    const icon = icons[Math.abs(r.code?.charCodeAt(0)||0) % icons.length];
+
+    const card = document.createElement('div');
+    card.className = 'pr-card';
+    card.innerHTML = `
+      <div class="pr-card-icon">${icon}</div>
+      <div class="pr-card-info">
+        <div class="pr-card-name">${_escHtml(r.name || 'Game Room')}</div>
+        <div class="pr-card-host">Host: ${_escHtml(r.host || 'Unknown')} · Code: <span style="color:var(--moon);font-family:'Creepster',cursive;letter-spacing:.08em">${r.code}</span></div>
+        <div class="pr-card-meta">
+          <span class="pr-card-players ${isFull ? 'full' : 'open'}">
+            ${isFull ? '🔴' : '🟢'} ${r.playerCount||1}/${r.maxPlayers} players
+          </span>
+          <span class="pr-card-age">${ageStr}</span>
+          ${isMyRoom ? '<span style="font-size:.68rem;color:var(--moon);opacity:.7">your room</span>' : ''}
+        </div>
+      </div>
+      <button class="pr-join-btn" ${isFull && !isMyRoom ? 'disabled' : ''}
+        onclick="prJoinRoom('${r.code}','${_escHtml(r.host||'')}')">
+        ${isMyRoom ? 'Enter' : isFull ? 'Full' : 'Join'}
+      </button>
+    `;
+    listEl.appendChild(card);
+  });
+}
+
+function _escHtml(str){
+  return String(str).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function prJoinRoom(code, hostName){
+  _prJoinTarget = code;
+  const name = mmGetName();
+  if(!name){
+    // Show inline name panel
+    const panel = document.getElementById('prJoinPanel');
+    panel.classList.add('open');
+    document.getElementById('prJoinName').focus();
+    // scroll panel into view
+    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+    return;
+  }
+  _prDoJoin(code, name);
+}
+
+function prConfirmJoin(){
+  const name = document.getElementById('prJoinName').value.trim();
+  if(!name){ _showToast('Enter your name first'); return; }
+  // persist to main menu name input too
+  const mmInput = document.getElementById('mmNameInput');
+  if(mmInput) mmInput.value = name;
+  document.getElementById('prJoinPanel').classList.remove('open');
+  _prDoJoin(_prJoinTarget, name);
+}
+
+function _prDoJoin(code, name){
+  closePublicRooms();
+  hideMainMenu();
+  document.getElementById('inName').value = name;
+  document.getElementById('inCode').value  = code;
+  myId   = (_googleUser?.uid) || ('p_' + Date.now());
+  myName = name;
+  roomCode = code;
+  isLeader = false;
+  initFBWithRetry(()=> enterRoom());
 }
 
 // ════════════════════════════════════════════
@@ -10574,6 +10765,7 @@ function mmGoToLogin(){
 const _origShowGameMM = window.showGame;
 window.showGame = function(){
   hideMainMenu();
+  prStopListener(); // stop public rooms listener if active
   _origShowGameMM();
 };
 
@@ -10654,6 +10846,31 @@ window.addEventListener('load',()=>{
     <div class="lovers-toast-desc" id="ltDesc">Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you dies, the other follows.</div>
     <div class="lovers-toast-rule" id="ltRule">💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.</div>
     <button class="lovers-toast-btn" id="ltBtn" onclick="closeLoversToast()">I understand ❤️</button>
+  </div>
+</div>
+
+<!-- ── PUBLIC ROOMS MODAL ── -->
+<div id="publicRoomsModal" class="hidden">
+  <div class="pr-box">
+    <button class="profile-close" onclick="closePublicRooms()">✕</button>
+    <h2>🌐 Public Rooms</h2>
+    <div class="pr-subtitle" id="prSubtitle">Live open games you can join</div>
+
+    <div class="pr-toolbar">
+      <button class="pr-refresh-btn" id="prRefreshBtn" onclick="prRefresh()">↻ Refresh</button>
+      <button class="pr-create-link" onclick="closePublicRooms();mmDoCreate()">+ Create Room</button>
+    </div>
+
+    <!-- Name prompt (guests need to enter name before joining) -->
+    <div class="pr-join-panel" id="prJoinPanel">
+      <label>Enter your name to join</label>
+      <input id="prJoinName" type="text" maxlength="20" placeholder="Your name…" autocomplete="off">
+      <button onclick="prConfirmJoin()" style="padding:.55rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:700;transition:.2s" onmouseover="this.style.background='var(--blood)'" onmouseout="this.style.background='var(--blood-glow)'">Join →</button>
+    </div>
+
+    <div class="pr-list" id="prList">
+      <div class="pr-loading">Loading rooms…</div>
+    </div>
   </div>
 </div>
 
