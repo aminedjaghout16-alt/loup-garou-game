@@ -88,6 +88,50 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .profile-close:hover{opacity:1}
 .profile-signin-note{text-align:center;color:var(--ghost);opacity:.7;font-size:.85rem;padding:.5rem}
 
+/* ── MAIN MENU SCREEN ── */
+#mainMenuScreen{position:fixed;inset:0;background:var(--void);z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:1.5rem 1rem 2rem}
+#mainMenuScreen.hidden{display:none}
+.mm-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mm-bg-moon{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(212,160,23,.08) 0%,transparent 70%);animation:mmMoonPulse 6s ease-in-out infinite}
+.mm-bg-star{position:absolute;border-radius:50%;background:var(--ghost);opacity:0;animation:mmStarTwinkle var(--d,3s) var(--dl,0s) ease-in-out infinite}
+@keyframes mmMoonPulse{0%,100%{transform:translateX(-50%) scale(1);opacity:.6}50%{transform:translateX(-50%) scale(1.08);opacity:1}}
+@keyframes mmStarTwinkle{0%,100%{opacity:0}50%{opacity:var(--op,.5)}}
+.mm-wrap{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:0}
+.mm-header{text-align:center;margin-bottom:1.4rem;margin-top:.5rem}
+.mm-header h1{font-family:'Cinzel Decorative',cursive;font-size:2rem;color:var(--moon);text-shadow:0 0 30px rgba(212,160,23,.5);letter-spacing:.05em;line-height:1.1}
+.mm-header .mm-tagline{font-size:.78rem;color:var(--ghost);opacity:.5;margin-top:.3rem;letter-spacing:.08em}
+.mm-user-bar{display:flex;align-items:center;gap:.75rem;background:var(--abyss);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:.7rem 1rem;margin-bottom:1.2rem;width:100%}
+.mm-user-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;flex-shrink:0}
+.mm-user-avatar img{width:100%;height:100%;object-fit:cover}
+.mm-user-info{flex:1;min-width:0}
+.mm-user-name{font-size:.9rem;color:var(--moon-pale);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mm-user-role{font-size:.68rem;color:var(--ghost);opacity:.5;margin-top:.1rem}
+.mm-user-coins{display:flex;align-items:center;gap:.3rem;font-family:'Creepster',cursive;font-size:1rem;color:var(--moon)}
+.mm-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;width:100%;margin-bottom:1rem}
+.mm-tile{background:var(--abyss);border:1px solid rgba(212,160,23,.2);border-radius:12px;padding:1.1rem .8rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden}
+.mm-tile::before{content:'';position:absolute;inset:0;background:var(--tile-glow,rgba(212,160,23,.06));opacity:0;transition:.25s}
+.mm-tile:hover::before,.mm-tile:active::before{opacity:1}
+.mm-tile:hover{border-color:var(--moon);transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,160,23,.12)}
+.mm-tile .mm-tile-icon{font-size:1.8rem;line-height:1}
+.mm-tile .mm-tile-label{font-family:'Creepster',cursive;font-size:1rem;color:var(--moon);letter-spacing:.04em}
+.mm-tile .mm-tile-sub{font-size:.65rem;color:var(--ghost);opacity:.5;margin-top:-.2rem}
+.mm-tile.mm-primary{grid-column:span 2;background:linear-gradient(135deg,var(--blood) 0%,#7a0000 100%);border-color:var(--blood-glow);--tile-glow:rgba(185,28,28,.15)}
+.mm-tile.mm-primary .mm-tile-label{font-size:1.25rem;color:#fff}
+.mm-tile.mm-primary:hover{box-shadow:0 8px 30px rgba(185,28,28,.35)}
+.mm-footer-btns{display:flex;gap:.5rem;width:100%}
+.mm-footer-btn{flex:1;padding:.5rem;background:transparent;border:1px solid rgba(232,232,232,.12);color:rgba(232,232,232,.45);border-radius:7px;cursor:pointer;font-family:inherit;font-size:.75rem;transition:.2s}
+.mm-footer-btn:hover{border-color:rgba(212,160,23,.4);color:var(--moon)}
+/* join-code inline panel */
+.mm-join-panel{width:100%;background:var(--abyss);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:1rem;margin-bottom:.65rem;display:none;flex-direction:column;gap:.7rem}
+.mm-join-panel.open{display:flex}
+.mm-join-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1.1rem;text-align:center;letter-spacing:.2em;text-transform:uppercase}
+.mm-join-panel input:focus{outline:none;border-color:var(--moon-pale);box-shadow:0 0 8px rgba(212,160,23,.3)}
+/* name input panel */
+.mm-name-panel{width:100%;background:var(--abyss);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:1rem;margin-bottom:.65rem;display:none;flex-direction:column;gap:.7rem}
+.mm-name-panel.open{display:flex}
+.mm-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
+.mm-name-panel input:focus{outline:none;border-color:var(--moon-pale)}
+
 /* ── LEADERBOARD MODAL ── */
 #leaderboardModal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:310;display:flex;align-items:center;justify-content:center;padding:1rem}
 #leaderboardModal.hidden{display:none}
@@ -4398,6 +4442,90 @@ window.addEventListener('load', () => {
 </head>
 <body>
 
+<!-- ══ MAIN MENU ══ -->
+<div id="mainMenuScreen" class="hidden">
+  <!-- Atmospheric background -->
+  <div class="mm-bg" id="mmBg"></div>
+
+  <div class="mm-wrap">
+    <!-- Header -->
+    <div class="mm-header">
+      <h1>Loup-Garou</h1>
+      <div class="mm-tagline">ONLINE · MULTIPLAYER</div>
+    </div>
+
+    <!-- User bar -->
+    <div class="mm-user-bar">
+      <div class="mm-user-avatar" id="mmUserAvatar">🐺</div>
+      <div class="mm-user-info">
+        <div class="mm-user-name" id="mmUserName">Guest</div>
+        <div class="mm-user-role" id="mmUserRole">Peasant · 0 wins</div>
+      </div>
+      <div class="mm-user-coins" id="mmUserCoins">🪙 <span id="mmCoinsVal">0</span></div>
+    </div>
+
+    <!-- Name input (guests / name change) -->
+    <div class="mm-name-panel" id="mmNamePanel">
+      <label style="font-size:.8rem;color:var(--moon);font-weight:700">Your display name</label>
+      <input id="mmNameInput" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
+    </div>
+
+    <!-- Join code panel (slides open) -->
+    <div class="mm-join-panel" id="mmJoinPanel">
+      <label style="font-size:.8rem;color:var(--moon);font-weight:700">Enter Room Code</label>
+      <input id="mmCodeInput" type="text" maxlength="6" placeholder="ABC123" autocomplete="off">
+      <button onclick="mmDoJoin()" style="width:100%;padding:.65rem;background:var(--blood-glow);color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.95rem;font-weight:700;transition:.2s" onmouseover="this.style.background='var(--blood)'" onmouseout="this.style.background='var(--blood-glow)'">Join Room →</button>
+    </div>
+
+    <!-- Main grid tiles -->
+    <div class="mm-grid">
+      <!-- Create Room — full width primary -->
+      <div class="mm-tile mm-primary" onclick="mmDoCreate()">
+        <div class="mm-tile-icon">⚔️</div>
+        <div class="mm-tile-label">Create Room</div>
+        <div class="mm-tile-sub">Start a new game</div>
+      </div>
+
+      <div class="mm-tile" style="--tile-glow:rgba(120,176,216,.08)" onclick="mmToggleJoin()">
+        <div class="mm-tile-icon">🔑</div>
+        <div class="mm-tile-label">Join by Code</div>
+        <div class="mm-tile-sub">Enter room code</div>
+      </div>
+
+      <div class="mm-tile" style="--tile-glow:rgba(16,185,129,.08)" onclick="mmOpenPublicRooms()">
+        <div class="mm-tile-icon">🌐</div>
+        <div class="mm-tile-label">Public Rooms</div>
+        <div class="mm-tile-sub">Browse open games</div>
+      </div>
+
+      <div class="mm-tile" style="--tile-glow:rgba(212,160,23,.1)" onclick="openLeaderboard()">
+        <div class="mm-tile-icon">🏆</div>
+        <div class="mm-tile-label">Leaderboard</div>
+        <div class="mm-tile-sub">Global rankings</div>
+      </div>
+
+      <div class="mm-tile" style="--tile-glow:rgba(192,122,216,.08)" onclick="openAvatarStore()">
+        <div class="mm-tile-icon">🎭</div>
+        <div class="mm-tile-label">Avatar Shop</div>
+        <div class="mm-tile-sub">Customize your look</div>
+      </div>
+
+      <div class="mm-tile" style="--tile-glow:rgba(212,160,23,.08)" onclick="openProfileModal()">
+        <div class="mm-tile-icon">📊</div>
+        <div class="mm-tile-label">Profile</div>
+        <div class="mm-tile-sub">Stats & history</div>
+      </div>
+    </div>
+
+    <!-- Footer: daily spin + sign out -->
+    <div class="mm-footer-btns">
+      <button class="mm-footer-btn" onclick="openSpinWheel()">🎡 Daily Spin</button>
+      <button class="mm-footer-btn" id="mmSignOutBtn" onclick="mmSignOut()" style="display:none">Sign Out</button>
+      <button class="mm-footer-btn" id="mmSignInBtn" onclick="mmGoToLogin()">Sign In / Register</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ LOGIN ══ -->
 <div id="loginScreen">
   <div class="lang-bar">
@@ -4409,52 +4537,13 @@ window.addEventListener('load', () => {
     <h1 id="t_title">Loup-Garou</h1>
     <p id="t_sub">Join the game of deception and survival</p>
 
-    <!-- Google account bar (shown when signed in) -->
-    <div id="googleUserBar" style="display:none;flex-wrap:wrap;align-items:center;gap:.5rem;background:var(--purple);border:1px solid var(--moon);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem">
-      <img id="googleAvatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--moon);object-fit:cover">
-      <div style="flex:1;text-align:left;min-width:0">
-        <div id="googleDisplayName" style="color:var(--moon-pale);font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-        <div id="googleEmail" style="color:var(--ghost);font-size:.72rem;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-      </div>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-        <button onclick="openProfileModal()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'" id="t_viewstats">📊 Stats</button>
-        <button onclick="openLeaderboard()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🏆 Ranks</button>
-        <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
-      </div>
-    </div>
-
-    
-    <!-- Avatar Store + Daily Spin + Leaderboard -->
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
-      <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
-      <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
-      <button onclick="openLeaderboard()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🏆 Leaderboard</button>
-    </div>
-    <div id="gameEntryWrap" style="display:none">
-    <div class="fg">
-      <label id="t_name">Your Name</label>
-      <input id="inName" type="text" autocomplete="off">
-    </div>
-    <div class="fg" id="joinCodeGroup">
-      <label id="t_code">Room Code</label>
-      <input id="inCode" type="text" maxlength="6" style="text-transform:uppercase;letter-spacing:.15em" autocomplete="off">
-    </div>
-    <button class="btn" style="width:100%" onclick="doJoin()" id="t_join">Join Game</button>
-    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
-    <button class="btn btn-secondary" style="width:100%" onclick="doCreate()" id="t_create">Create Room</button>
-    </div>
-    <div class="room-code-display" id="createdCodeBox">
-      <small id="t_shareCode">Share this code with friends:</small>
-      <div class="code" id="createdCodeVal">——</div>
-    </div>
-    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
-    <!-- Google Sign In button (shown when NOT signed in) -->
+    <!-- Google Sign In button -->
     <button id="googleSignInBtn" onclick="doGoogleSignIn()" style="width:100%;padding:.75rem;background:#fff;color:#3c3c3c;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-size:.92rem;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:.2s" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
       <span id="t_googlebtn">Continue with Google</span>
     </button>
 
-    <!-- Email / Password login (shown when NOT signed in) -->
+    <!-- Email / Password login -->
     <div id="emailLoginWrap" class="email-login-wrap">
       <div class="or-divider" id="t_or">or</div>
       <div class="email-tabs">
@@ -4478,6 +4567,22 @@ window.addEventListener('load', () => {
         <span id="t_emailbtn">Login</span>
       </button>
       <button class="guest-btn" id="guestLoginBtn" onclick="doGuestPlay()" id="t_guestbtn">👤 Play as Guest (no stats)</button>
+    </div>
+
+    <!-- Hidden inputs used by doCreate/doJoin — kept for compatibility -->
+    <div style="display:none">
+      <input id="inName" type="text" autocomplete="off">
+      <input id="inCode" type="text" autocomplete="off">
+      <div id="googleUserBar"></div>
+      <div id="googleAvatar" style="display:none"></div>
+      <div id="googleDisplayName"></div>
+      <div id="googleEmail" style="display:none"></div>
+      <div id="gameEntryWrap"></div>
+      <div id="createdCodeBox"><div id="createdCodeVal"></div></div>
+      <button id="headerStatsBtn"></button>
+      <button id="headerLbBtn"></button>
+      <span id="t_viewstats"></span>
+      <span id="t_signout"></span>
     </div>
 
     <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
@@ -5894,37 +5999,25 @@ function _initGoogleAuth(){
 
 function _updateGoogleUI(user){
   const signInBtn=document.getElementById('googleSignInBtn');
-  const userBar=document.getElementById('googleUserBar');
-  const nameInput=document.getElementById('inName');
+  const emailWrap=document.getElementById('emailLoginWrap');
   const hBtn=document.getElementById('headerStatsBtn');
   const hLbBtn=document.getElementById('headerLbBtn');
-  const emailWrap=document.getElementById('emailLoginWrap');
-  const gameEntry=document.getElementById('gameEntryWrap');
   if(user){
-    // Show profile bar, hide sign-in button + email form, show game entry
     if(signInBtn) signInBtn.style.display='none';
     if(emailWrap) emailWrap.style.display='none';
-    if(userBar) userBar.style.display='flex';
-    if(gameEntry) gameEntry.style.display='block';
     if(hBtn) hBtn.style.display='inline-block';
     if(hLbBtn) hLbBtn.style.display='inline-block';
-    const avatar=document.getElementById('googleAvatar');
-    const displayName=document.getElementById('googleDisplayName');
-    const email=document.getElementById('googleEmail');
-    if(avatar) avatar.src=user.photoURL||'';
-    if(displayName) displayName.textContent=user.displayName||user.email||'';
-    if(email) email.textContent=user.email||'';
-    // Auto-fill name input with Google display name
-    if(nameInput && !nameInput.value && user.displayName){
-      nameInput.value=user.displayName.split(' ')[0]; // first name only
+    // Redirect to main menu
+    const login=document.getElementById('loginScreen');
+    if(login && !login.classList.contains('hidden')){
+      login.classList.add('hidden');
+      showMainMenu();
     }
   } else {
-    // Show sign-in button + email form, hide profile bar + game entry
     if(signInBtn) signInBtn.style.display='flex';
     if(emailWrap) emailWrap.style.display='block';
-    if(userBar) userBar.style.display='none';
-    if(gameEntry) gameEntry.style.display='none';
     if(hBtn) hBtn.style.display='none';
+    if(hLbBtn) hLbBtn.style.display='none';
   }
 }
 
@@ -5958,6 +6051,8 @@ function doGoogleSignOut(){
     _googleUser=null;
     _updateGoogleUI(null);
     document.getElementById('inName').value='';
+    hideMainMenu();
+    document.getElementById('loginScreen').classList.remove('hidden');
   });
 }
 
@@ -6059,14 +6154,8 @@ function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
 
 // ── GUEST PLAY ──
 function doGuestPlay(){
-  // Hide login options, show game entry — no account, no stats
-  const emailWrap = document.getElementById('emailLoginWrap');
-  const googleBtn = document.getElementById('googleSignInBtn');
-  const gameEntry = document.getElementById('gameEntryWrap');
-  if(emailWrap) emailWrap.style.display = 'none';
-  if(googleBtn) googleBtn.style.display = 'none';
-  if(gameEntry) gameEntry.style.display = 'block';
-  // _googleUser stays null → savePlayerStats will return early (no stats for guests)
+  document.getElementById('loginScreen').classList.add('hidden');
+  showMainMenu();
   console.log('👤 Playing as guest — stats disabled');
 }
 
@@ -10126,6 +10215,163 @@ window.recordGameResult = async function(winner){
     });
   } catch(e){ console.warn('Streak save failed', e); }
 };
+// ════════════════════════════════════════════
+// MAIN MENU
+// ════════════════════════════════════════════
+
+function showMainMenu(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('mainMenuScreen').classList.remove('hidden');
+  mmRefreshUserBar();
+  mmSpawnStars();
+}
+
+function hideMainMenu(){
+  document.getElementById('mainMenuScreen').classList.add('hidden');
+}
+
+function mmRefreshUserBar(){
+  const nameEl   = document.getElementById('mmUserName');
+  const roleEl   = document.getElementById('mmUserRole');
+  const avatarEl = document.getElementById('mmUserAvatar');
+  const coinsEl  = document.getElementById('mmCoinsVal');
+  const signOutBtn = document.getElementById('mmSignOutBtn');
+  const signInBtn  = document.getElementById('mmSignInBtn');
+
+  // Name
+  const name = _googleUser?.displayName?.split(' ')[0]
+    || _googleUser?.email?.split('@')[0]
+    || document.getElementById('mmNameInput')?.value?.trim()
+    || 'Guest';
+  if(nameEl) nameEl.textContent = name;
+
+  // Avatar
+  if(avatarEl){
+    if(_googleUser?.photoURL){
+      avatarEl.innerHTML = `<img src="${_googleUser.photoURL}" alt="">`;
+    } else {
+      avatarEl.innerHTML = '🐺';
+    }
+  }
+
+  // Coins
+  if(coinsEl) coinsEl.textContent = (typeof _coinBalance === 'number' ? _coinBalance : 0).toLocaleString();
+
+  // Sign in/out buttons
+  if(signOutBtn) signOutBtn.style.display = _googleUser ? 'block' : 'none';
+  if(signInBtn)  signInBtn.style.display  = _googleUser ? 'none'  : 'block';
+
+  // Show name panel for guests
+  const namePanel = document.getElementById('mmNamePanel');
+  if(namePanel) namePanel.classList.toggle('open', !_googleUser);
+
+  // Load stats badge async
+  if(_googleUser && typeof db !== 'undefined' && db){
+    db.ref(`users/${_googleUser.uid}/stats`).once('value').then(snap => {
+      const s = snap.val() || {};
+      const wins = s.wins || 0;
+      const badge = getRankBadge(wins);
+      if(roleEl) roleEl.textContent = badge.label + ' · ' + wins + ' wins';
+    }).catch(()=>{});
+  } else {
+    if(roleEl) roleEl.textContent = 'Guest · no stats';
+  }
+}
+
+function mmSpawnStars(){
+  const bg = document.getElementById('mmBg');
+  if(!bg || bg.children.length > 5) return;
+  for(let i = 0; i < 40; i++){
+    const s = document.createElement('div');
+    s.className = 'mm-bg-star';
+    const size = Math.random() * 2.5 + 1;
+    s.style.cssText = `
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      --d:${(Math.random()*4+2).toFixed(1)}s;
+      --dl:${(Math.random()*5).toFixed(1)}s;
+      --op:${(Math.random()*.4+.1).toFixed(2)};
+    `;
+    bg.appendChild(s);
+  }
+}
+
+function mmToggleJoin(){
+  const panel = document.getElementById('mmJoinPanel');
+  const isOpen = panel.classList.toggle('open');
+  if(isOpen) setTimeout(() => document.getElementById('mmCodeInput')?.focus(), 50);
+}
+
+function mmGetName(){
+  if(_googleUser) return _googleUser.displayName?.split(' ')[0] || _googleUser.email?.split('@')[0] || 'Player';
+  const v = document.getElementById('mmNameInput')?.value?.trim();
+  return v || '';
+}
+
+function mmDoCreate(){
+  let name = mmGetName();
+  if(!name){
+    document.getElementById('mmNamePanel').classList.add('open');
+    document.getElementById('mmNameInput')?.focus();
+    _showToast('Enter your name first 👆');
+    return;
+  }
+  // Sync name to legacy input so doCreate() works
+  document.getElementById('inName').value = name;
+  document.getElementById('inCode').value = '';
+  hideMainMenu();
+  doCreate();
+}
+
+function mmDoJoin(){
+  let name = mmGetName();
+  const code = document.getElementById('mmCodeInput')?.value?.trim().toUpperCase();
+  if(!name){
+    document.getElementById('mmNamePanel').classList.add('open');
+    document.getElementById('mmNameInput')?.focus();
+    _showToast('Enter your name first 👆');
+    return;
+  }
+  if(!code || code.length < 4){
+    _showToast('Enter a valid room code');
+    return;
+  }
+  document.getElementById('inName').value = name;
+  document.getElementById('inCode').value = code;
+  hideMainMenu();
+  doJoin();
+}
+
+function mmOpenPublicRooms(){
+  // Part 3 — placeholder for now
+  _showToast('Public rooms coming in Part 3! 🌐');
+}
+
+function mmSignOut(){
+  doGoogleSignOut();
+}
+
+function mmGoToLogin(){
+  hideMainMenu();
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// Patch showGame to return to main menu when game ends / leaves room
+// (handled by existing back-to-lobby logic — no change needed)
+
+// _updateGoogleUI redirects to main menu directly
+
+// doGuestPlay already goes to main menu directly
+
+// Patch showGame (called after enterRoom) — hide main menu
+const _origShowGameMM = window.showGame;
+window.showGame = function(){
+  hideMainMenu();
+  _origShowGameMM();
+};
+
+// ════════════════════════════════════════════
 // LOVERS TOAST
 // ════════════════════════════════════════════
 function showLoversToast(name1, name2){
