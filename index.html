@@ -3653,8 +3653,8 @@ async function spendCoins(amount) {
 // ─────────────────────────────────────────────────────────────────
 // GAME-END REWARD — called via showGameOver() patch below
 // ─────────────────────────────────────────────────────────────────
-async function awardGameCoins(winner) {
-  console.log('[Coins] awardGameCoins called with winner:', winner);
+async function awardGameCoins(winner, survivedToEnd) {
+  console.log('[Coins] awardGameCoins called with winner:', winner, '| survivedToEnd:', survivedToEnd);
 
   // ── DEDUP CHECK: only reward each game once ──────────────────
   // Always use the authoritative Firebase startedAt so ALL clients
@@ -3687,17 +3687,21 @@ async function awardGameCoins(winner) {
   }
   // ────────────────────────────────────────────────────────────
 
-  const me = gameState?.players?.[myId];
+  // Try to find player data; also check by id field as fallback if myId key differs
+  let me = gameState?.players?.[myId];
+  if (!me && myId) {
+    me = Object.values(gameState?.players || {}).find(p => p.id === myId || p.uid === myId);
+  }
   if (!me) {
-    console.warn('[Coins] Could not find player data for current user');
+    console.warn('[Coins] Could not find player data for current user — skipping reward');
     return;
   }
 
   const myTeam = (typeof ROLES_DEF !== 'undefined' && ROLES_DEF[me.role]?.team) || 'village';
   let won = false;
   if (winner === 'werewolf') won = (myTeam === 'werewolf');
-  else if (winner === 'village') won = (myTeam === 'village');
-  else won = (me.role === winner);
+  else if (winner === 'village') won = (myTeam !== 'werewolf'); // all non-wolf teams win with village
+  else won = (me.role === winner);                              // solo role wins
 
   let total = 0;
   const parts = [];
@@ -3721,8 +3725,10 @@ async function awardGameCoins(winner) {
     );
   }
 
-  // Survival bonus
-  if (me.alive) {
+  // Survival bonus — use pre-captured flag (me.alive may be stale by the time
+  // this async function runs if Firebase has already updated player state)
+  const aliveAtEnd = (typeof survivedToEnd === 'boolean') ? survivedToEnd : me.alive;
+  if (aliveAtEnd) {
     total += COIN_REWARDS.survive;
     parts.push(
       lang==='ar' ? `💚 نجاة +${COIN_REWARDS.survive}`
@@ -4130,13 +4136,19 @@ function _showCoinRewardModal(total, parts, won) {
     window.showGameOver = function(result) {
       console.log('[Coins] showGameOver patch called with result:', result.winner);
 
+      // Capture alive state SYNCHRONOUSLY before any async Firebase updates can
+      // overwrite gameState.  This is the source of truth for the survive bonus.
+      const _meAtGameEnd = gameState?.players?.[myId];
+      const _survivedToEnd = _meAtGameEnd ? (_meAtGameEnd.alive === true) : false;
+      console.log('[Coins] survivedToEnd captured synchronously:', _survivedToEnd);
+
       // Call original (handles UI, death anims, overlays)
       _orig.call(this, result);
 
       // Award coins — fire & forget, but log any errors
       (async () => {
         try {
-          await awardGameCoins(result.winner);
+          await awardGameCoins(result.winner, _survivedToEnd);
         } catch(e) {
           console.error('[Coins] awardGameCoins threw error:', e);
         }
