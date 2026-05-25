@@ -3780,7 +3780,7 @@ async function awardGameCoins(winner, survivedToEnd, precomputedNewlyDead) {
     // _previousAlive has already been updated by the time we reach here, making a live
     // recalculation always return 0 and causing the modal to appear too early.
     const newlyDeadCount = (typeof precomputedNewlyDead === 'number') ? precomputedNewlyDead : 0;
-    const modalDelay = (newlyDeadCount * 4200) + 400 + 800 + 600; // +600ms breathing room
+    const modalDelay = (newlyDeadCount * 4200) + 400 + 800 + 1500; // 1500ms: winner overlay entrance is ~2.2s after death anims
     setTimeout(() => _showCoinRewardModal(total, parts, won), modalDelay);
   } else {
     // Increment failed entirely — remove the optimistic dedup mark so a
@@ -3996,7 +3996,7 @@ function _showCoinRewardModal(total, parts, won) {
   const modal = document.createElement('div');
   modal.id = 'coinRewardModal';
   modal.style.cssText = [
-    'position:fixed','inset:0','z-index:9500',
+    'position:fixed','inset:0','z-index:10100',
     'display:flex','align-items:center','justify-content:center',
     'padding:1rem','background:rgba(0,0,0,.72)',
     'animation:coinModalBgIn .4s ease',
