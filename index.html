@@ -6621,7 +6621,7 @@ function renderGame(){
       else msg=winner+' wins!';
       document.getElementById('setupView').style.display='none';
       document.getElementById('playView').style.display='flex';
-      showGameOver({winner,msg}); // handles death anim + winner overlay internally
+      window.showGameOver({winner,msg}); // use window.showGameOver so all patches (coins, audio) are invoked
     }
     renderChat();
     applyTranslations();
