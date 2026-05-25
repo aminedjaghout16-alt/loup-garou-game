@@ -132,6 +132,54 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .mm-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
 .mm-name-panel input:focus{outline:none;border-color:var(--moon-pale)}
 
+/* ── ROOM CREATION MODAL ── */
+#roomCreateModal{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:320;display:flex;align-items:center;justify-content:center;padding:1rem}
+#roomCreateModal.hidden{display:none}
+.rc-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:1.8rem 1.5rem;width:100%;max-width:420px;position:relative;box-shadow:0 0 50px rgba(212,160,23,.18)}
+.rc-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:1.4rem}
+.rc-type-toggle{display:flex;gap:0;border:1px solid var(--moon);border-radius:8px;overflow:hidden;margin-bottom:1.3rem}
+.rc-type-btn{flex:1;padding:.75rem;background:transparent;border:none;color:var(--ghost);cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:.25rem}
+.rc-type-btn span.rc-type-icon{font-size:1.5rem}
+.rc-type-btn span.rc-type-lbl{font-size:.75rem;opacity:.7}
+.rc-type-btn.active{background:var(--moon);color:var(--void)}
+.rc-type-btn.active span.rc-type-lbl{opacity:1}
+.rc-type-btn:first-child{border-right:1px solid var(--moon)}
+.rc-field{margin-bottom:1rem}
+.rc-field label{display:block;margin-bottom:.35rem;color:var(--moon);font-weight:700;font-size:.85rem}
+.rc-field input{width:100%;padding:.72rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:6px;font-family:inherit;font-size:1rem;transition:.2s}
+.rc-field input:focus{outline:none;border-color:var(--moon-pale);box-shadow:0 0 10px rgba(212,160,23,.25)}
+.rc-field textarea{width:100%;padding:.72rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:6px;font-family:inherit;font-size:.9rem;resize:none;height:70px;transition:.2s}
+.rc-field textarea:focus{outline:none;border-color:var(--moon-pale)}
+.rc-field .rc-hint{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.3rem}
+.rc-players-row{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
+.rc-players-row label{color:var(--moon);font-weight:700;font-size:.85rem;flex-shrink:0}
+.rc-stepper{display:flex;align-items:center;gap:.5rem;margin-left:auto}
+.rc-stepper button{width:32px;height:32px;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:5px;cursor:pointer;font-size:1.1rem;font-family:inherit;display:flex;align-items:center;justify-content:center;transition:.2s}
+.rc-stepper button:hover{background:rgba(212,160,23,.15)}
+.rc-stepper span{font-family:'Creepster',cursive;font-size:1.4rem;color:var(--moon-pale);min-width:28px;text-align:center}
+.rc-create-btn{width:100%;padding:.8rem;background:var(--blood-glow);color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:1.05rem;font-weight:700;transition:.25s;letter-spacing:.04em;margin-top:.3rem}
+.rc-create-btn:hover{background:var(--blood);box-shadow:0 0 20px rgba(185,28,28,.4)}
+.rc-create-btn:disabled{opacity:.5;cursor:not-allowed}
+/* Room code reveal screen */
+#roomCodeReveal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:325;display:flex;align-items:center;justify-content:center;padding:1rem}
+#roomCodeReveal.hidden{display:none}
+.rcr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:2rem 1.5rem;width:100%;max-width:380px;text-align:center;box-shadow:0 0 60px rgba(212,160,23,.22)}
+.rcr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.6rem;margin-bottom:.3rem}
+.rcr-box .rcr-sub{font-size:.78rem;color:var(--ghost);opacity:.5;margin-bottom:1.5rem}
+.rcr-code-wrap{background:var(--purple);border:2px solid var(--moon);border-radius:10px;padding:1.2rem;margin-bottom:1.2rem;position:relative;cursor:pointer;transition:.2s}
+.rcr-code-wrap:hover{border-color:var(--moon-pale);background:rgba(26,10,46,.9)}
+.rcr-code{font-family:'Cinzel Decorative',cursive;font-size:2.6rem;color:var(--moon-pale);letter-spacing:.25em;line-height:1}
+.rcr-code-hint{font-size:.7rem;color:var(--ghost);opacity:.45;margin-top:.4rem}
+.rcr-type-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;border-radius:20px;font-size:.75rem;font-weight:700;margin-bottom:1.2rem}
+.rcr-actions{display:flex;flex-direction:column;gap:.6rem}
+.rcr-btn{width:100%;padding:.7rem;border-radius:7px;cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700;transition:.2s;border:none}
+.rcr-btn-primary{background:var(--blood-glow);color:#fff}
+.rcr-btn-primary:hover{background:var(--blood)}
+.rcr-btn-secondary{background:transparent;border:1px solid rgba(212,160,23,.35)!important;color:var(--moon)}
+.rcr-btn-secondary:hover{background:rgba(212,160,23,.1)}
+.rcr-copied{position:absolute;top:.5rem;right:.7rem;font-size:.7rem;color:var(--green);opacity:0;transition:.3s}
+.rcr-copied.show{opacity:1}
+
 /* ── LEADERBOARD MODAL ── */
 #leaderboardModal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:310;display:flex;align-items:center;justify-content:center;padding:1rem}
 #leaderboardModal.hidden{display:none}
@@ -5920,6 +5968,10 @@ function doRestart(){
     upd[`games/${roomCode}/bearSignal`]=null;
     upd[`games/${roomCode}/crowAccused`]=null;
     db.ref().update(upd).then(()=>{
+      // Remove from public rooms listing when game starts
+      if(typeof db !== 'undefined' && db && roomCode){
+        db.ref(`publicRooms/${roomCode}`).remove().catch(()=>{});
+      }
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     }).catch(err=>{
       console.error('Restart error:', err);
@@ -6398,6 +6450,15 @@ async function enterRoom(){
     await ref.child(`players/${myId}`).set(
       {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
     );
+    // Update public room player count
+    if(typeof db !== 'undefined' && db){
+      db.ref(`publicRooms/${roomCode}`).once('value').then(snap=>{
+        if(snap.exists()){
+          const playerCount = Object.keys(gameState?.players||{}).length + 1;
+          db.ref(`publicRooms/${roomCode}/playerCount`).set(playerCount);
+        }
+      }).catch(()=>{});
+    }
     // Clean up on disconnect
     // Graceful disconnect flag — never delete the node mid-game
     ref.child(`players/${myId}`).onDisconnect().update({
@@ -10310,18 +10371,19 @@ function mmGetName(){
 }
 
 function mmDoCreate(){
-  let name = mmGetName();
-  if(!name){
-    document.getElementById('mmNamePanel').classList.add('open');
-    document.getElementById('mmNameInput')?.focus();
-    _showToast('Enter your name first 👆');
-    return;
+  // Pre-fill host name if known
+  const name = mmGetName();
+  const nameEl = document.getElementById('rcHostName');
+  if(nameEl && name) nameEl.value = name;
+  // Pre-fill room name
+  const roomNameEl = document.getElementById('rcRoomName');
+  if(roomNameEl && !roomNameEl.value){
+    const adjectives = ['Dark','Cursed','Haunted','Misty','Ancient','Shadowed','Grim','Silent'];
+    const nouns = ['Forest','Village','Manor','Crypt','Hollow','Moor','Thicket','Ruins'];
+    const rnd = a => a[Math.floor(Math.random()*a.length)];
+    roomNameEl.value = rnd(adjectives)+' '+rnd(nouns);
   }
-  // Sync name to legacy input so doCreate() works
-  document.getElementById('inName').value = name;
-  document.getElementById('inCode').value = '';
-  hideMainMenu();
-  doCreate();
+  document.getElementById('roomCreateModal').classList.remove('hidden');
 }
 
 function mmDoJoin(){
@@ -10339,6 +10401,8 @@ function mmDoJoin(){
   }
   document.getElementById('inName').value = name;
   document.getElementById('inCode').value = code;
+  // Close join panel & hide main menu
+  document.getElementById('mmJoinPanel').classList.remove('open');
   hideMainMenu();
   doJoin();
 }
@@ -10346,6 +10410,148 @@ function mmDoJoin(){
 function mmOpenPublicRooms(){
   // Part 3 — placeholder for now
   _showToast('Public rooms coming in Part 3! 🌐');
+}
+
+// ════════════════════════════════════════════
+// PART 2 — ROOM CREATION
+// ════════════════════════════════════════════
+let _rcType = 'public';
+let _rcMaxPlayers = 8;
+let _rcPendingCode = null;
+
+function rcSetType(type){
+  _rcType = type;
+  document.getElementById('rcTypePublic').classList.toggle('active', type === 'public');
+  document.getElementById('rcTypePrivate').classList.toggle('active', type === 'private');
+  document.getElementById('rcNameField').style.display = type === 'public' ? 'block' : 'none';
+}
+
+function rcAdjustPlayers(delta){
+  _rcMaxPlayers = Math.max(4, Math.min(20, _rcMaxPlayers + delta));
+  document.getElementById('rcPlayersVal').textContent = _rcMaxPlayers;
+}
+
+function closeRoomCreate(){
+  document.getElementById('roomCreateModal').classList.add('hidden');
+}
+
+async function rcConfirmCreate(){
+  const hostName = document.getElementById('rcHostName').value.trim()
+    || mmGetName();
+  const roomName = _rcType === 'public'
+    ? (document.getElementById('rcRoomName').value.trim() || 'Game Room')
+    : null;
+
+  if(!hostName){
+    document.getElementById('rcHostName').focus();
+    _showToast('Enter your name first');
+    return;
+  }
+
+  const btn = document.getElementById('rcCreateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  // Set globals for doCreate compatibility
+  const code = genCode();
+  myId   = (_googleUser?.uid) || ('p_' + Date.now());
+  myName = hostName;
+  roomCode = code;
+  isLeader = true;
+
+  // Sync to legacy hidden inputs
+  document.getElementById('inName').value = hostName;
+  document.getElementById('inCode').value  = '';
+
+  // Save max players & room type to config
+  if(typeof cfg !== 'undefined'){
+    cfg.maxPlayers = _rcMaxPlayers;
+    cfg.isPublic   = _rcType === 'public';
+    cfg.roomName   = roomName;
+  }
+
+  _rcPendingCode = code;
+
+  // Close creation modal, show code reveal
+  closeRoomCreate();
+  _showRoomCodeReveal(code, _rcType, roomName);
+
+  btn.disabled = false;
+  btn.textContent = 'Create Room →';
+}
+
+function _showRoomCodeReveal(code, type, roomName){
+  document.getElementById('rcrCode').textContent = code;
+
+  const badge = document.getElementById('rcrTypeBadge');
+  if(type === 'public'){
+    badge.style.background = 'rgba(16,185,129,.15)';
+    badge.style.color = '#10b981';
+    badge.style.border = '1px solid rgba(16,185,129,.3)';
+    badge.textContent = '🌐 Public Room' + (roomName ? ' · ' + roomName : '');
+  } else {
+    badge.style.background = 'rgba(212,160,23,.12)';
+    badge.style.color = 'var(--moon)';
+    badge.style.border = '1px solid rgba(212,160,23,.3)';
+    badge.textContent = '🔒 Private Room';
+  }
+
+  document.getElementById('roomCodeReveal').classList.remove('hidden');
+}
+
+function rcrCopyCode(){
+  const code = document.getElementById('rcrCode').textContent;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(()=>{
+      const el = document.getElementById('rcrCopied');
+      el.classList.add('show');
+      setTimeout(()=>el.classList.remove('show'), 2000);
+    });
+  }
+}
+
+function rcrShare(){
+  const code = document.getElementById('rcrCode').textContent;
+  const text = `Join my Loup-Garou game! Room code: ${code} 🐺\nhttps://loup-garou-game-beta.vercel.app/`;
+  if(navigator.share){
+    navigator.share({ title: 'Loup-Garou Room', text });
+  } else {
+    navigator.clipboard?.writeText(text);
+    _showToast('Link copied to clipboard!');
+  }
+}
+
+async function rcrEnterRoom(){
+  document.getElementById('roomCodeReveal').classList.add('hidden');
+  hideMainMenu();
+
+  // Write public room listing to Firebase if public
+  if(_rcType === 'public' && typeof db !== 'undefined' && db){
+    initFBWithRetry(async ()=>{
+      const roomName = document.getElementById('rcRoomName')?.value?.trim() || 'Game Room';
+      await db.ref(`publicRooms/${roomCode}`).set({
+        code: roomCode,
+        name: roomName,
+        host: myName,
+        hostUid: myId,
+        maxPlayers: _rcMaxPlayers,
+        playerCount: 1,
+        status: 'waiting',
+        createdAt: Date.now()
+      });
+      // Remove listing when host disconnects or game starts
+      db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
+      enterRoom();
+    });
+  } else {
+    initFBWithRetry(()=>enterRoom());
+  }
+}
+
+function rcrCancel(){
+  document.getElementById('roomCodeReveal').classList.add('hidden');
+  _rcPendingCode = null;
+  showMainMenu();
 }
 
 function mmSignOut(){
@@ -10448,6 +10654,75 @@ window.addEventListener('load',()=>{
     <div class="lovers-toast-desc" id="ltDesc">Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you dies, the other follows.</div>
     <div class="lovers-toast-rule" id="ltRule">💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.</div>
     <button class="lovers-toast-btn" id="ltBtn" onclick="closeLoversToast()">I understand ❤️</button>
+  </div>
+</div>
+
+<!-- ── ROOM CREATION MODAL ── -->
+<div id="roomCreateModal" class="hidden">
+  <div class="rc-box">
+    <button class="profile-close" onclick="closeRoomCreate()">✕</button>
+    <h2>⚔️ Create Room</h2>
+
+    <!-- Public / Private toggle -->
+    <div class="rc-type-toggle">
+      <button class="rc-type-btn active" id="rcTypePublic" onclick="rcSetType('public')">
+        <span class="rc-type-icon">🌐</span>
+        <span class="rc-type-lbl">Public Room</span>
+      </button>
+      <button class="rc-type-btn" id="rcTypePrivate" onclick="rcSetType('private')">
+        <span class="rc-type-icon">🔒</span>
+        <span class="rc-type-lbl">Private Room</span>
+      </button>
+    </div>
+
+    <!-- Room name (public only) -->
+    <div class="rc-field" id="rcNameField">
+      <label>Room Name</label>
+      <input id="rcRoomName" type="text" maxlength="30" placeholder="The Dark Forest…" autocomplete="off">
+      <div class="rc-hint">Shown in public rooms list</div>
+    </div>
+
+    <!-- Host name -->
+    <div class="rc-field">
+      <label>Your Name</label>
+      <input id="rcHostName" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
+    </div>
+
+    <!-- Max players -->
+    <div class="rc-players-row">
+      <label>Max Players</label>
+      <div class="rc-stepper">
+        <button onclick="rcAdjustPlayers(-1)">−</button>
+        <span id="rcPlayersVal">8</span>
+        <button onclick="rcAdjustPlayers(+1)">+</button>
+      </div>
+    </div>
+
+    <button class="rc-create-btn" id="rcCreateBtn" onclick="rcConfirmCreate()">
+      Create Room →
+    </button>
+  </div>
+</div>
+
+<!-- ── ROOM CODE REVEAL ── -->
+<div id="roomCodeReveal" class="hidden">
+  <div class="rcr-box">
+    <h2>Room Created! 🎉</h2>
+    <div class="rcr-sub">Share this code with your friends</div>
+
+    <div id="rcrTypeBadge" class="rcr-type-badge"></div>
+
+    <div class="rcr-code-wrap" onclick="rcrCopyCode()" title="Click to copy">
+      <div class="rcr-code" id="rcrCode">——</div>
+      <div class="rcr-code-hint">Tap to copy</div>
+      <span class="rcr-copied" id="rcrCopied">✓ Copied!</span>
+    </div>
+
+    <div class="rcr-actions">
+      <button class="rcr-btn rcr-btn-primary" onclick="rcrEnterRoom()">Enter Waiting Room →</button>
+      <button class="rcr-btn rcr-btn-secondary" onclick="rcrShare()">📤 Share Code</button>
+      <button class="rcr-btn rcr-btn-secondary" onclick="rcrCancel()">← Back to Menu</button>
+    </div>
   </div>
 </div>
 
