@@ -3495,27 +3495,6 @@ if (typeof module !== 'undefined' && module.exports) {
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised)
 // Drop this entire block into index.html just before 
-<!-- ══ SPIN WHEEL MODAL ══ -->
-<div id="spinModal" class="hidden">
-  <div class="spin-box">
-    <button class="spin-close" onclick="closeSpinWheel()">✕</button>
-    <div class="spin-title">🎡 Daily Spin</div>
-    <div class="spin-sub">One free spin every 24 hours</div>
-    <div class="spin-wheel-wrap">
-      <div class="spin-pointer"></div>
-      <canvas id="spinCanvas" width="300" height="300"></canvas>
-      <div class="spin-hub">🐺</div>
-    </div>
-    <div id="spinResult" class="spin-result">
-      <div class="spin-result-icon" id="spinResultIcon">🪙</div>
-      <div class="spin-result-label" id="spinResultLabel"></div>
-      <div class="spin-result-sub" id="spinResultSub"></div>
-    </div>
-    <button class="spin-btn" id="spinBtn" onclick="doSpin()" disabled>Loading…</button>
-    <div class="spin-timer" id="spinTimer"></div>
-    <div class="spin-legend" id="spinLegend"></div>
-  </div>
-</div>
 </body>,
 // after all other scripts (Firebase, avatars.js, avatar-store.js,
 // spin-wheel.js, avatar-animations.js).
@@ -4061,7 +4040,7 @@ window.addEventListener('load', () => {
 
     
     <!-- Avatar Store + Daily Spin buttons — shown when signed in -->
-    <div id="avatarSystemBtns" style="display:none;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+    <div id="avatarSystemBtns" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
       <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
       <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
     </div>
@@ -4219,6 +4198,10 @@ window.addEventListener('load', () => {
         <div class="pmb-row"><span class="pmb-label" id="t_lphase2">Phase:</span><span class="pmb-val" id="hPhase2">—</span></div>
         <div class="pmb-row"><span class="pmb-label" id="t_lplayers2">Players:</span><span class="pmb-val" id="hPlayers2">0</span></div>
         <button class="pmb-leave" onclick="doLeave()" id="t_leave2">Leave Game</button>
+        <div style="display:flex;gap:.3rem;margin-top:.3rem">
+          <button onclick="openAvatarStore()" style="flex:1;padding:.3rem .4rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.72rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🎭 Store</button>
+          <button onclick="openSpinWheel()" style="flex:1;padding:.3rem .4rem;background:transparent;border:1px solid rgba(185,28,28,.35);color:var(--blood-glow);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.72rem;transition:.2s" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='transparent'">🎡 Spin</button>
+        </div>
       </div>
       <h3 id="t_linfo">Game Info</h3>
       <div class="irow"><strong id="t_lalive">Alive:</strong><span id="iAlive">0</span></div>
