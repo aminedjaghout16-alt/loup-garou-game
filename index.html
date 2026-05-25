@@ -194,7 +194,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .player-circle::before{content:'';position:absolute;inset:20%;border-radius:50%;border:1px solid rgba(212,160,23,.08)}
 .pc-node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:.25rem;transform:translate(-50%,-50%);z-index:2;transition:.3s}
 .pc-node:hover{transform:translate(-50%,-50%) scale(1.1);z-index:5}
-.pc-avatar-wrap{position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;border:none;transition:.3s;background:var(--purple)}
+.pc-avatar-wrap{position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid var(--moon);box-shadow:0 0 12px rgba(212,160,23,.25);transition:.3s;background:var(--purple)}
 .pc-node:hover .pc-avatar-wrap{box-shadow:0 0 20px rgba(212,160,23,.3)}
 .pc-node.is-me .pc-avatar-wrap{box-shadow:0 0 18px rgba(212,160,23,.45)}
 .pc-node.is-dead .pc-avatar-wrap{border-color:var(--red);filter:grayscale(.8);opacity:.5;box-shadow:0 0 10px rgba(239,68,68,.3)}
@@ -6452,7 +6452,7 @@ function renderGame(){
   }
   renderChat();
   applyTranslations();
-  if(typeof _injectCircleAvatars==='function') _injectCircleAvatars();
+  if(typeof _animateCircleAvatars==='function') _animateCircleAvatars(); if(typeof _refreshCircleAvatars==='function' && !window._avatarsLoading){ window._avatarsLoading=true; _refreshCircleAvatars().then(()=>{ window._avatarsLoading=false; }); }
 }
 
 function renderStats(players){
@@ -6623,7 +6623,10 @@ function renderPlayerList(players){
       }
     }
 
-    html+=`<div class="pc-av-inner" id="pcav_${p.id}" style="width:100%;height:100%;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--purple)">${_getCircleAvatarHTML(p.id)}</div>`;
+    const _avHtml = _getCircleAvatarHTML(p.id);
+    html+=_avHtml
+      ? `<div class="pc-av-inner" id="pcav_${p.id}" style="width:100%;height:100%;border-radius:50%;overflow:hidden">${_avHtml}</div>`
+      : `<img class="pc-avatar" src="${p.photo||''}" onerror="this.style.opacity=0" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     }
     html+=`<div class="pc-status-dot ${p.alive?'alive':'dead'}"></div>`;
     if(voteCount>0) html+=`<div class="pc-vote-count">${voteCount}</div>`;
@@ -9583,100 +9586,102 @@ window.addEventListener('load',()=>{
 <script>
 // ══ PART 7 — WIRING HELPERS ══════════════════════════════
 
-// Fast sync map: uid → avatarId, populated from Firebase on load
+// Fast sync map: uid → avatarId, populated from Firebase
 const _equippedAvatarMap = {};
 
-// Called inline in renderPlayerCircle template — must be sync
+// ── Called inline in circle template (sync) ──────────────
+// Returns SVG html if player has an equipped avatar, else empty string.
+// If empty string: the original yellow-circle photo stays intact.
 function _getCircleAvatarHTML(playerId) {
   const avatarId = _equippedAvatarMap[playerId];
-  if (!avatarId || typeof AVATARS === 'undefined') {
-    // Fallback: neutral dark circle
-    return '<div style="width:100%;height:100%;background:var(--purple)"></div>';
-  }
+  if (!avatarId || typeof AVATARS === 'undefined') return '';
   const av = AVATARS.find(a => a.id === avatarId);
-  if (!av) return '<div style="width:100%;height:100%;background:var(--purple)"></div>';
-  // Return SVG scaled to fill the circle
-  return av.svg.replace('<svg ', '<svg data-av="1" data-rarity="'+av.rarity+'" style="width:100%;height:100%;display:block;" ');
+  if (!av) return '';
+  return av.svg.replace('<svg ', '<svg data-av="1" data-rarity="'+av.rarity+'" style="width:100%;height:100%;display:block;border-radius:50%;" ');
 }
 
-// Fetch all players equipped avatars from Firebase and populate the map
+// ── Populate avatar map from Firebase (async, background) ─
 async function _loadAllPlayerAvatars() {
   if (!gameState || !gameState.players) return;
   const players = Object.values(gameState.players);
   await Promise.all(players.map(async p => {
-    if (_equippedAvatarMap[p.id]) return; // already cached
-    // Own player: use local store
+    if (_equippedAvatarMap[p.id] !== undefined) return;
     if (p.id === myId) {
-      _equippedAvatarMap[p.id] = (typeof getEquippedAvatar === 'function') ? getEquippedAvatar() : null;
+      _equippedAvatarMap[p.id] = (typeof getEquippedAvatar === 'function') ? (getEquippedAvatar() || null) : null;
       return;
     }
     if (!fbOk || !db) return;
     try {
       const snap = await db.ref('users/' + p.id + '/equippedAvatar').once('value');
       _equippedAvatarMap[p.id] = snap.val() || null;
-    } catch(e) {}
+    } catch(e) { _equippedAvatarMap[p.id] = null; }
   }));
 }
 
-// Called after renderGame() re-renders the circle
-// Animates all freshly rendered avatar SVGs
-function _injectCircleAvatars() {
-  if (typeof initAvatarAnimations !== 'function') return;
-  // Animate each avatar SVG in the circle
+// ── Animate all avatar SVGs in the circle ─────────────────
+function _animateCircleAvatars() {
+  if (typeof animateAvatar !== 'function') return;
   document.querySelectorAll('.pc-av-inner svg[data-av]').forEach(svg => {
     if (svg.dataset.avDone) return;
-    const rarity = svg.dataset.rarity || 'common';
-    animateAvatar(svg, rarity);
+    animateAvatar(svg, svg.dataset.rarity || 'common');
   });
 }
 
-// Pre-load avatars then re-render the circle to apply them
+// ── After Firebase avatars load: re-render circle once ────
 async function _refreshCircleAvatars() {
   await _loadAllPlayerAvatars();
-  if (typeof renderGame === 'function') renderGame();
+  // Only re-render if game is active
+  if (typeof renderGame === 'function' && gameState) renderGame();
 }
 
-// Update the Google profile pic in the user bar with the equipped avatar
+// ── Profile pic: replace googleAvatar img with equipped SVG ─
 function _updateProfilePicWithAvatar() {
   const avatarId = (typeof getEquippedAvatar === 'function') ? getEquippedAvatar() : null;
   if (!avatarId || typeof AVATARS === 'undefined') return;
   const av = AVATARS.find(a => a.id === avatarId);
   if (!av) return;
+  // Target: the <img id="googleAvatar"> in the user bar
   const imgEl = document.getElementById('googleAvatar');
   if (!imgEl) return;
-  // Replace <img> with an inline SVG wrapper
+  // Don't replace if already replaced
+  if (imgEl.dataset.avReplaced) return;
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--moon)';
+  wrap.id = 'googleAvatar'; // keep id so _updateGoogleUI still sets src
+  wrap.dataset.avReplaced = '1';
+  wrap.style.cssText = 'width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--moon);background:var(--purple)';
   wrap.innerHTML = av.svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
   imgEl.replaceWith(wrap);
-  // Animate it
   const svg = wrap.querySelector('svg');
   if (svg && typeof animateAvatar === 'function') animateAvatar(svg, av.rarity);
 }
 
-// Hook into avatar store equip action to update profile pic live
+// ── Hook: when player equips a new avatar, refresh everything ─
 const _origEquipAvatar = window.equipAvatar;
-if (_origEquipAvatar) {
+if (typeof _origEquipAvatar === 'function') {
   window.equipAvatar = function(id) {
     _origEquipAvatar.call(this, id);
-    setTimeout(_updateProfilePicWithAvatar, 100);
-    // Also clear the cache and refresh circle
+    // Reset the replaced flag so _updateProfilePicWithAvatar can re-replace
+    const old = document.getElementById('googleAvatar');
+    if (old) delete old.dataset.avReplaced;
     delete _equippedAvatarMap[myId];
-    if (typeof renderGame === 'function') renderGame();
+    setTimeout(_updateProfilePicWithAvatar, 100);
+    if (typeof renderGame === 'function' && gameState) renderGame();
   };
 }
 
-// On game state loaded: pre-fetch all avatars then render
-const _origRenderGame = window.renderGame;
-window.renderGame = async function() {
-  await _loadAllPlayerAvatars();
-  if (_origRenderGame) _origRenderGame();
-  _injectCircleAvatars();
+// ── Hook into _updateGoogleUI to show avatar after sign-in ─
+const _orig_updateGoogleUI = window._updateGoogleUI;
+// We rely on the existing _updateGoogleUI patch that already runs.
+// After it sets googleAvatar src, we swap the element.
+const _origUpdateGoogleUIFull = _updateGoogleUI;
+window._updateGoogleUI = function(user) {
+  _origUpdateGoogleUIFull(user);
+  if (user) setTimeout(_updateProfilePicWithAvatar, 300);
 };
 
-// On sign-in: update profile pic
+// ── On page load: try to update profile pic ──────────────
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(_updateProfilePicWithAvatar, 1500);
+  setTimeout(_updateProfilePicWithAvatar, 2000);
 });
 </script>
 <script>
