@@ -1518,7 +1518,12 @@ function _injectCSS() {
 //   5. Inject shimmer overlay div into the svg's parent
 
 function animateAvatar(svgEl, rarity) {
-  if (!svgEl || svgEl.dataset.avDone) return;
+  if (!svgEl) return;
+  // Always ensure CSS keyframes are injected before animating
+  _injectCSS();
+  // If already animated, remove old wrapper groups so we can re-animate
+  // (needed when SVG is reused across rerenders — e.g. store preview swap)
+  if (svgEl.dataset.avDone) return;
   svgEl.dataset.avDone = '1';
 
   const svgNS = 'http://www.w3.org/2000/svg';
@@ -1560,9 +1565,9 @@ function animateAvatar(svgEl, rarity) {
   }
 
   // ── 3. Eye blink group ──
-  if (rarity !== 'free') {
-    const innerG = rarity === 'free' ? breatheG
-                 : (rarity === 'common' ? breatheG : swayG);
+  // All rarities get blinking (free gets basic blink via breatheG)
+  {
+    const innerG = (rarity === 'rare' || rarity === 'legendary') ? swayG : breatheG;
     _wrapEyes(innerG, svgNS, rarity);
   }
 
@@ -2051,6 +2056,8 @@ function initAvatarStore() {
 
 async function openAvatarStore() {
   if (!_storeInited) initAvatarStore();
+  // Ensure animation CSS keyframes are loaded before rendering animated avatars
+  if (typeof _injectCSS === 'function') _injectCSS();
   document.getElementById('avatarStoreModal').classList.remove('hidden');
   _storeSelected = null;
 
@@ -2179,11 +2186,17 @@ function _renderGrid() {
     }
 
     card.appendChild(svgDiv);
-    card.innerHTML += `
-      <div class="store-card-name">${av.name}</div>
-      <div class="store-card-price">${priceHTML}</div>
-    `;
-    card.prepend(svgDiv); // put SVG first
+    // IMPORTANT: do NOT use innerHTML+= after appendChild — it serialises and
+    // replaces all children, destroying the live svgDiv node and orphaning svgEl.
+    const nameEl = document.createElement('div');
+    nameEl.className = 'store-card-name';
+    nameEl.textContent = av.name;
+    const priceEl = document.createElement('div');
+    priceEl.className = 'store-card-price';
+    priceEl.innerHTML = priceHTML;
+    card.appendChild(nameEl);
+    card.appendChild(priceEl);
+    card.prepend(svgDiv); // put SVG first (moves it, doesn't clone)
 
     card.addEventListener('click', () => _selectCard(av.id));
     grid.appendChild(card);
@@ -6583,7 +6596,15 @@ function renderGame(){
   }
   renderChat();
   applyTranslations();
-  if(typeof _animateCircleAvatars==='function') _animateCircleAvatars(); if(typeof _refreshCircleAvatars==='function' && !window._avatarsLoading){ window._avatarsLoading=true; _refreshCircleAvatars().then(()=>{ window._avatarsLoading=false; }); }
+  // Animate SVGs already in DOM from cached avatar data
+  if(typeof _animateCircleAvatars==='function') _animateCircleAvatars();
+  // Fire async Firebase avatar load only when not already in flight
+  if(typeof _refreshCircleAvatars==='function' && !window._avatarsLoading){
+    window._avatarsLoading=true;
+    _refreshCircleAvatars().then(()=>{
+      window._avatarsLoading=false;
+    }).catch(()=>{ window._avatarsLoading=false; });
+  }
 }
 
 function renderStats(players){
@@ -9752,7 +9773,12 @@ async function _loadAllPlayerAvatars() {
 // ── Animate all avatar SVGs in the circle ─────────────────
 function _animateCircleAvatars() {
   if (typeof animateAvatar !== 'function') return;
+  // Ensure CSS keyframes are present before any animation attempt
+  if (typeof _injectCSS === 'function') _injectCSS();
   document.querySelectorAll('.pc-av-inner svg[data-av]').forEach(svg => {
+    // data-av-done is set by animateAvatar on the DOM node itself.
+    // When renderPlayerList rebuilds via innerHTML, all nodes are NEW —
+    // data-av-done is absent, so we correctly re-animate them.
     if (svg.dataset.avDone) return;
     animateAvatar(svg, svg.dataset.rarity || 'common');
   });
@@ -9761,8 +9787,15 @@ function _animateCircleAvatars() {
 // ── After Firebase avatars load: re-render circle once ────
 async function _refreshCircleAvatars() {
   await _loadAllPlayerAvatars();
-  // Only re-render if game is active
-  if (typeof renderGame === 'function' && gameState) renderGame();
+  // Re-render only the player circle, not the full game state.
+  // Calling full renderGame() here would re-trigger _refreshCircleAvatars
+  // creating a reload loop. We only need to update the circle avatars.
+  if (typeof renderPlayerList === 'function' && gameState && gameState.players) {
+    const players = Object.values(gameState.players).filter(p => p && p.id);
+    renderPlayerList(players);
+    // Now animate the freshly rebuilt SVG nodes
+    if (typeof _animateCircleAvatars === 'function') _animateCircleAvatars();
+  }
 }
 
 // ── Profile pic: replace googleAvatar img with equipped SVG ─
