@@ -3651,145 +3651,191 @@ async function spendCoins(amount) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// GAME-END REWARD — called via showGameOver() patch below
-// ─────────────────────────────────────────────────────────────────
-async function awardGameCoins(winner, survivedToEnd, precomputedNewlyDead) {
-  console.log('[Coins] awardGameCoins called with winner:', winner, '| survivedToEnd:', survivedToEnd, '| newlyDead:', precomputedNewlyDead);
+// ═════════════════════════════════════════════════════════════════
+// GAME-END REWARD FLOW (clean implementation)
+//
+// Flow:
+//   showGameOver fires (inside original showGameOver, after death anims
+//   are queued) → _scheduleRewardPopup is called with a snapshot of the
+//   player's alive/won state captured synchronously at that moment →
+//   after the winner overlay has had time to appear, _showRewardPopup
+//   renders the modal → player clicks "Collect" → coins added + saved.
+//
+// Coins are NOT added until the player clicks Collect, so the balance
+// shown in the modal is the pre-reward balance and the button makes it
+// feel instant and intentional.
+// ═════════════════════════════════════════════════════════════════
 
-  // ── DEDUP CHECK: only reward each game once ──────────────────
-  // Always use the authoritative Firebase startedAt so ALL clients
-  // (including reconnecting players) produce the same gameId.
-  // _gameStartedAt is a local timestamp that varies per client —
-  // never use it for the dedup key.
-  const firebaseStartedAt = gameState?.startedAt || null;
-  const gameId = (gameState?.roomCode || 'unknown') + '_' + (firebaseStartedAt || 'x');
-  if (_rewardedGameIds.has(gameId)) {
-    console.log('[Coins] Already rewarded for this game:', gameId);
-    return;
-  }
-
-  // ── Anti-farm (same guards as savePlayerStats) ──────────────
-  const allPlayers = Object.values(gameState?.players || {});
-  if (allPlayers.length < 3) {
-    console.log('[Coins] Skipped: < 3 players'); return;
-  }
-  // Use Firebase startedAt (authoritative) for elapsed — not the local
-  // _gameStartedAt which is set to Date.now() at reconnect time and
-  // would make reconnecting players always pass the short-game guard.
-  const elapsed = firebaseStartedAt ? Date.now() - firebaseStartedAt : null;
-  if (elapsed !== null && elapsed < 45000) {
-    console.log('[Coins] Skipped: game too short'); return;
-  }
-  const isDup = typeof hasDuplicateFingerprint === 'function'
-    ? await hasDuplicateFingerprint() : false;
-  if (isDup) {
-    console.log('[Coins] Skipped: duplicate fingerprint'); return;
-  }
-  // ────────────────────────────────────────────────────────────
-
-  // Try to find player data; also check by id field as fallback if myId key differs
-  let me = gameState?.players?.[myId];
-  if (!me && myId) {
-    me = Object.values(gameState?.players || {}).find(p => p.id === myId || p.uid === myId);
-  }
-  if (!me) {
-    console.warn('[Coins] Could not find player data for current user — skipping reward');
-    return;
-  }
+// ── Compute reward breakdown for this player ─────────────────────
+function _computeReward(winner, survivedToEnd) {
+  const me = gameState?.players?.[myId]
+    || Object.values(gameState?.players || {}).find(p => p.id === myId || p.uid === myId);
+  if (!me) return null;
 
   const myTeam = (typeof ROLES_DEF !== 'undefined' && ROLES_DEF[me.role]?.team) || 'village';
   let won = false;
-  if (winner === 'werewolf') won = (myTeam === 'werewolf');
-  else if (winner === 'village') won = (myTeam !== 'werewolf'); // all non-wolf teams win with village
-  else won = (me.role === winner);                              // solo role wins
+  if (winner === 'werewolf')     won = (myTeam === 'werewolf');
+  else if (winner === 'village') won = (myTeam !== 'werewolf');
+  else                           won = (me.role === winner);
+
+  const firebaseStartedAt = gameState?.startedAt || null;
+  const elapsed = firebaseStartedAt ? Date.now() - firebaseStartedAt : null;
 
   let total = 0;
   const parts = [];
 
-  // Base win / loss
   if (won) {
-    const isSolo = SOLO_WIN_ROLES.has(me.role) && me.role === winner;
+    const isSolo = (typeof SOLO_WIN_ROLES !== 'undefined') && SOLO_WIN_ROLES.has(me.role) && me.role === winner;
     const base = isSolo ? COIN_REWARDS.soloWin : COIN_REWARDS.win;
     total += base;
-    parts.push(
-      isSolo
-        ? (lang==='ar' ? `🌟 فوز منفرد +${base}` : lang==='fr' ? `🌟 Victoire solo +${base}` : `🌟 Solo win +${base}`)
-        : (lang==='ar' ? `🏆 فوز +${base}`        : lang==='fr' ? `🏆 Victoire +${base}`      : `🏆 Win +${base}`)
-    );
+    parts.push(isSolo
+      ? (lang==='ar'?`🌟 فوز منفرد +${base}`:lang==='fr'?`🌟 Victoire solo +${base}`:`🌟 Solo win +${base}`)
+      : (lang==='ar'?`🏆 فوز +${base}`       :lang==='fr'?`🏆 Victoire +${base}`      :`🏆 Win +${base}`));
   } else {
     total += COIN_REWARDS.loss;
-    parts.push(
-      lang==='ar' ? `💪 مشاركة +${COIN_REWARDS.loss}`
-      : lang==='fr' ? `💪 Participation +${COIN_REWARDS.loss}`
-      : `💪 Participation +${COIN_REWARDS.loss}`
-    );
+    parts.push(lang==='ar'?`💪 مشاركة +${COIN_REWARDS.loss}`:lang==='fr'?`💪 Participation +${COIN_REWARDS.loss}`:`💪 Participation +${COIN_REWARDS.loss}`);
   }
 
-  // Survival bonus — use pre-captured flag (me.alive may be stale by the time
-  // this async function runs if Firebase has already updated player state)
-  const aliveAtEnd = (typeof survivedToEnd === 'boolean') ? survivedToEnd : me.alive;
-  if (aliveAtEnd) {
+  if (survivedToEnd) {
     total += COIN_REWARDS.survive;
-    parts.push(
-      lang==='ar' ? `💚 نجاة +${COIN_REWARDS.survive}`
-      : lang==='fr' ? `💚 Survie +${COIN_REWARDS.survive}`
-      : `💚 Survived +${COIN_REWARDS.survive}`
-    );
+    parts.push(lang==='ar'?`💚 نجاة +${COIN_REWARDS.survive}`:lang==='fr'?`💚 Survie +${COIN_REWARDS.survive}`:`💚 Survived +${COIN_REWARDS.survive}`);
   }
 
-  // Long-game bonus (> 5 min)
   if (elapsed !== null && elapsed >= 300000) {
     total += COIN_REWARDS.longGame;
-    parts.push(
-      lang==='ar' ? `⏳ لعبة طويلة +${COIN_REWARDS.longGame}`
-      : lang==='fr' ? `⏳ Longue partie +${COIN_REWARDS.longGame}`
-      : `⏳ Long game +${COIN_REWARDS.longGame}`
-    );
+    parts.push(lang==='ar'?`⏳ لعبة طويلة +${COIN_REWARDS.longGame}`:lang==='fr'?`⏳ Longue partie +${COIN_REWARDS.longGame}`:`⏳ Long game +${COIN_REWARDS.longGame}`);
   }
 
-  if (total <= 0) {
-    console.log('[Coins] Total reward is 0, skipping');
-    return;
-  }
+  return { total, parts, won, me };
+}
 
-  console.log('[Coins] Awarding', total, 'coins for game', gameId, '| breakdown:', parts);
+// ── Schedule the popup after anims finish ─────────────────────────
+function _scheduleRewardPopup(winner, survivedToEnd, newlyDeadCount) {
+  console.log('[Coins] _scheduleRewardPopup | winner:', winner, '| survived:', survivedToEnd, '| newlyDead:', newlyDeadCount);
 
-  // ── MARK AS REWARDED FIRST (optimistic dedup) ────────────────
-  // We mark the game as rewarded BEFORE the async Firebase write.
-  // This prevents a second call (e.g. re-render race) from issuing
-  // a duplicate reward while the first write is in-flight.
+  // Anti-farm guards
+  const allPlayers = Object.values(gameState?.players || {});
+  if (allPlayers.length < 3) { console.log('[Coins] Skipped: <3 players'); return; }
+
+  const firebaseStartedAt = gameState?.startedAt || null;
+  const elapsed = firebaseStartedAt ? Date.now() - firebaseStartedAt : null;
+  if (elapsed !== null && elapsed < 45000) { console.log('[Coins] Skipped: game too short'); return; }
+
+  // Dedup: only show once per game session
+  const gameId = (gameState?.roomCode || 'x') + '_' + (firebaseStartedAt || 'x');
+  if (_rewardedGameIds.has(gameId)) { console.log('[Coins] Already rewarded:', gameId); return; }
   _rewardedGameIds.add(gameId);
   _saveDedupTracking();
 
-  // ── TRANSACTIONAL INCREMENT ───────────────────────────────────
-  // Use an atomic read-modify-write so each player's Firebase doc is
-  // updated independently.  If player A and player B are in the same
-  // room and both call this at game end, their writes target their
-  // own UID paths and never interfere with each other.
-  // Within a single player's session, the transaction prevents a
-  // double-write race from doubling the reward.
-  const { success: persistSuccess, newBalance } = await _incrementCoinsTransactional(total);
+  const reward = _computeReward(winner, survivedToEnd);
+  if (!reward || reward.total <= 0) { console.log('[Coins] No reward to show'); return; }
 
-  if (persistSuccess) {
-    _coinBalance = newBalance; // sync local cache with confirmed DB value
-    _renderCoinBadge();
-    console.log('[Coins] ✓ Successfully awarded & persisted. New balance:', _coinBalance);
+  // Wait for death anims (4200ms each) + winner overlay entrance (~2700ms)
+  const delay = (newlyDeadCount * 4200) + 2700;
+  console.log('[Coins] Popup scheduled in', delay, 'ms');
+  setTimeout(() => _showRewardPopup(reward, gameId), delay);
+}
 
-    // Delay the reward modal so it appears AFTER death animations + winner overlay.
-    // Use the pre-captured newlyDeadCount (passed in from the showGameOver patch) because
-    // _previousAlive has already been updated by the time we reach here, making a live
-    // recalculation always return 0 and causing the modal to appear too early.
-    const newlyDeadCount = (typeof precomputedNewlyDead === 'number') ? precomputedNewlyDead : 0;
-    const modalDelay = (newlyDeadCount * 4200) + 400 + 800 + 1500; // 1500ms: winner overlay entrance is ~2.2s after death anims
-    setTimeout(() => _showCoinRewardModal(total, parts, won), modalDelay);
-  } else {
-    // Increment failed entirely — remove the optimistic dedup mark so a
-    // future retry can attempt the reward again.
-    _rewardedGameIds.delete(gameId);
-    _saveDedupTracking();
-    console.error('[Coins] ✗ Failed to persist rewards');
-    _showCoinToast(0, lang==='ar'?'خطأ في حفظ المكافأة':lang==='fr'?'Erreur de sauvegarde':'Reward save failed');
+// ── Render the Collect Rewards modal ─────────────────────────────
+function _showRewardPopup(reward, gameId) {
+  // Inject keyframes once
+  if (!document.getElementById('coinModalStyle')) {
+    const st = document.createElement('style');
+    st.id = 'coinModalStyle';
+    st.textContent = `
+      @keyframes coinModalBgIn  { from{opacity:0} to{opacity:1} }
+      @keyframes coinCardIn     { from{opacity:0;transform:scale(.75) translateY(40px)} to{opacity:1;transform:scale(1) translateY(0)} }
+      @keyframes coinRowSlide   { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
+      @keyframes coinGlow       { 0%,100%{filter:drop-shadow(0 0 8px #d4a017)} 50%{filter:drop-shadow(0 0 28px #e8c44a)} }
+      @keyframes collectPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(185,28,28,.5)} 60%{box-shadow:0 0 0 10px rgba(185,28,28,0)} }
+      .coin-reward-row { animation: coinRowSlide .35s ease both; }
+    `;
+    document.head.appendChild(st);
   }
+
+  document.getElementById('coinRewardModal')?.remove();
+
+  const { total, parts, won } = reward;
+  const headerText = won
+    ? (lang==='ar'?'🏆 فزت!':lang==='fr'?'🏆 Victoire !':'🏆 You Won!')
+    : (lang==='ar'?'💪 لعبت جيداً':lang==='fr'?'💪 Bien joué !':'💪 Good Game!');
+  const ctaText = lang==='ar'?'🪙 استلام المكافأة':lang==='fr'?'🪙 Récupérer':'🪙 Collect Reward';
+  const earnedText = lang==='ar'?'ستحصل على':lang==='fr'?'Vous gagnez':'You earn';
+
+  const rowsHTML = parts.map((p, i) => `
+    <div class="coin-reward-row" style="
+      display:flex;align-items:center;padding:.5rem .65rem;border-radius:6px;
+      background:rgba(212,160,23,.07);border:1px solid rgba(212,160,23,.12);
+      font-size:.9rem;color:var(--ghost);animation-delay:${.15 + i * .08}s;
+    ">${p}</div>`).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'coinRewardModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.78);animation:coinModalBgIn .4s ease';
+  modal.innerHTML = `
+    <div style="
+      background:linear-gradient(160deg,var(--abyss) 0%,var(--purple) 100%);
+      border:1px solid rgba(212,160,23,.45);border-radius:16px;
+      padding:1.8rem 1.5rem;width:100%;max-width:360px;
+      box-shadow:0 0 60px rgba(212,160,23,.2),0 20px 60px rgba(0,0,0,.5);
+      animation:coinCardIn .45s cubic-bezier(.34,1.56,.64,1) both;
+    ">
+      <div style="text-align:center;margin-bottom:1.2rem">
+        <div style="font-family:'Creepster',cursive;font-size:1.6rem;color:var(--moon-pale)">${headerText}</div>
+      </div>
+      <div style="text-align:center;margin-bottom:1.2rem">
+        <div style="font-size:2.8rem;animation:coinGlow 2s ease-in-out infinite">🪙</div>
+        <div style="font-family:'Creepster',cursive;font-size:3.4rem;color:var(--moon-pale);line-height:1">+${total.toLocaleString()}</div>
+        <div style="font-size:.8rem;color:var(--moon);opacity:.7;letter-spacing:.1em;text-transform:uppercase">${earnedText}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.2rem">${rowsHTML}</div>
+      <button id="coinCollectBtn" style="
+        width:100%;padding:.85rem;background:var(--blood-glow);color:#fff;
+        border:none;border-radius:8px;cursor:pointer;
+        font-family:'Creepster',cursive;font-size:1.15rem;letter-spacing:.05em;
+        transition:.2s;animation:collectPulse 2s 1s ease-in-out infinite;
+      ">${ctaText}</button>
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  const btn = modal.querySelector('#coinCollectBtn');
+
+  async function _collect() {
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    // Add coins now, on click
+    _coinBalance += total;
+    _renderCoinBadge();
+    console.log('[Coins] Collected', total, '→ new balance:', _coinBalance);
+
+    // Persist to Firebase / localStorage
+    try {
+      if (typeof _googleUser !== 'undefined' && _googleUser && typeof db !== 'undefined' && db) {
+        await db.ref(`users/${_googleUser.uid}/coins`).transaction(cur => (cur || 0) + total);
+        // Sync local cache to confirmed server value
+        const snap = await db.ref(`users/${_googleUser.uid}/coins`).get();
+        _coinBalance = snap.val() ?? _coinBalance;
+      } else {
+        localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+      }
+      localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+    } catch(e) {
+      console.error('[Coins] Persist failed, keeping local balance:', e);
+      localStorage.setItem(COINS_LS_KEY, String(_coinBalance));
+    }
+
+    _renderCoinBadge();
+
+    // Dismiss
+    modal.style.transition = 'opacity .3s';
+    modal.style.opacity = '0';
+    setTimeout(() => modal.remove(), 320);
+  }
+
+  btn.addEventListener('click', _collect);
+  modal.addEventListener('click', e => { if (e.target === modal) _collect(); });
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -4117,7 +4163,7 @@ function _showCoinRewardModal(total, parts, won) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// awardGameCoins is now called directly from the audio showGameOver wrapper below (line ~10313)
+
 
 // ─────────────────────────────────────────────────────────────────
 // PATCH — _grantCoins() in spin-wheel.js
@@ -5251,6 +5297,15 @@ function showGameOver(result){
   // Find the last player(s) who just died (not yet shown as dead in _previousAlive)
   const players=Object.values(gameState?.players||{});
   const newlyDead=players.filter(p=>!p.alive && _previousAlive[p.id]===true);
+
+  // ── Reward popup: capture state NOW before _previousAlive is updated ──
+  const _meNow = gameState?.players?.[myId]
+    || Object.values(gameState?.players||{}).find(p=>p.id===myId||p.uid===myId);
+  const _survivedToEnd = _meNow ? (_meNow.alive===true) : false;
+  if (typeof _scheduleRewardPopup === 'function') {
+    _scheduleRewardPopup(result.winner, _survivedToEnd, newlyDead.length);
+  }
+
   // Update tracking so checkForDeaths won't re-fire
   players.forEach(p=>{ _previousAlive[p.id]=p.alive; });
 
@@ -10261,36 +10316,15 @@ window.doVote = function(targetId){
   return _origDoVote(targetId);
 };
 
-// ── Win / game-over SFX + stop music + coin rewards ─────────────────────
+// ── Win / game-over SFX + stop music ────────────────────────────────────
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
   AUDIO.stopMusic();
-
-  // Capture state BEFORE calling original (which updates _previousAlive and me.alive)
-  const _meNow = gameState?.players?.[myId]
-    || Object.values(gameState?.players || {}).find(p => p.id === myId || p.uid === myId);
-  const _survivedToEnd = _meNow ? (_meNow.alive === true) : false;
-  const _allPlayers = Object.values(gameState?.players || {});
-  const _newlyDeadCount = _allPlayers.filter(
-    p => !p.alive && _previousAlive && _previousAlive[p.id] === true
-  ).length;
-
-  // Audio SFX delay
-  const winDelay = (_newlyDeadCount * 4200) + 600;
+  const players = Object.values(gameState?.players || {});
+  const newlyDeadCount = players.filter(p => !p.alive && _previousAlive && _previousAlive[p.id] === true).length;
+  const winDelay = (newlyDeadCount * 4200) + 600;
   setTimeout(() => AUDIO.sfx('win'), winDelay);
-
-  // Call original (runs death anims, winner overlay, updates _previousAlive)
-  _origShowGameOver(result);
-
-  // Award coins after game ends
-  console.log('[Coins] showGameOver fired — survivedToEnd:', _survivedToEnd, '| newlyDead:', _newlyDeadCount);
-  (async () => {
-    try {
-      await awardGameCoins(result.winner, _survivedToEnd, _newlyDeadCount);
-    } catch(e) {
-      console.error('[Coins] awardGameCoins threw:', e);
-    }
-  })();
+  return _origShowGameOver(result);
 };
 
 // ── Enter game room: stop login ambient, start lobby ─────────────────────
