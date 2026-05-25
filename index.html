@@ -4117,55 +4117,7 @@ function _showCoinRewardModal(total, parts, won) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// PATCH — showGameOver() → also calls awardGameCoins()
-// KEY FIX: showGameOver is declared in a later <script> block, so
-// window.showGameOver is undefined at this point in the parse order.
-// We defer the patch to after all scripts have executed (DOMContentLoaded).
-// ─────────────────────────────────────────────────────────────────
-(function _patchShowGameOver() {
-  // Defer until all scripts are parsed and executed
-  function _applyPatch() {
-    const _orig = window.showGameOver;
-    if (typeof _orig !== 'function') {
-      console.warn('[Coins] showGameOver still not found after load — will retry');
-      setTimeout(_applyPatch, 500);
-      return;
-    }
-    window.showGameOver = function(result) {
-      console.log('[Coins] showGameOver patch called with result:', result.winner);
-
-      // Capture alive state and newly-dead count SYNCHRONOUSLY before _orig is called.
-      // _orig updates _previousAlive, so we must read it first to get the right count.
-      // survivedToEnd must also be read now before async Firebase updates overwrite gameState.
-      const _meAtGameEnd = gameState?.players?.[myId];
-      const _survivedToEnd = _meAtGameEnd ? (_meAtGameEnd.alive === true) : false;
-      const _allPlayers = Object.values(gameState?.players || {});
-      const _newlyDeadCount = _allPlayers.filter(p =>
-        !p.alive && typeof _previousAlive !== 'undefined' && _previousAlive?.[p.id] === true
-      ).length;
-      console.log('[Coins] survivedToEnd:', _survivedToEnd, '| newlyDeadCount:', _newlyDeadCount);
-
-      // Call original (handles UI, death anims, overlays; also updates _previousAlive)
-      _orig.call(this, result);
-
-      // Award coins — fire & forget, but log any errors
-      (async () => {
-        try {
-          await awardGameCoins(result.winner, _survivedToEnd, _newlyDeadCount);
-        } catch(e) {
-          console.error('[Coins] awardGameCoins threw error:', e);
-        }
-      })();
-    };
-    console.log('[Coins] showGameOver patched successfully');
-  }
-  // Use window load (after all scripts) not DOMContentLoaded
-  if (document.readyState === 'complete') {
-    _applyPatch();
-  } else {
-    window.addEventListener('load', _applyPatch);
-  }
-})();
+// awardGameCoins is now called directly from the audio showGameOver wrapper below (line ~10313)
 
 // ─────────────────────────────────────────────────────────────────
 // PATCH — _grantCoins() in spin-wheel.js
@@ -10309,17 +10261,36 @@ window.doVote = function(targetId){
   return _origDoVote(targetId);
 };
 
-// ── Win / game-over SFX + stop music ────────────────────────────────────
+// ── Win / game-over SFX + stop music + coin rewards ─────────────────────
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
   AUDIO.stopMusic();
-  // Delay win SFX to match when _showWinnerOverlay fires:
-  // deathDelay = newlyDead.length * 4200ms, then +400ms before overlay, +200ms buffer
-  const players = Object.values(gameState?.players || {});
-  const newlyDeadCount = players.filter(p => !p.alive && _previousAlive && _previousAlive[p.id] === true).length;
-  const winDelay = (newlyDeadCount * 4200) + 600;
+
+  // Capture state BEFORE calling original (which updates _previousAlive and me.alive)
+  const _meNow = gameState?.players?.[myId]
+    || Object.values(gameState?.players || {}).find(p => p.id === myId || p.uid === myId);
+  const _survivedToEnd = _meNow ? (_meNow.alive === true) : false;
+  const _allPlayers = Object.values(gameState?.players || {});
+  const _newlyDeadCount = _allPlayers.filter(
+    p => !p.alive && _previousAlive && _previousAlive[p.id] === true
+  ).length;
+
+  // Audio SFX delay
+  const winDelay = (_newlyDeadCount * 4200) + 600;
   setTimeout(() => AUDIO.sfx('win'), winDelay);
-  return _origShowGameOver(result);
+
+  // Call original (runs death anims, winner overlay, updates _previousAlive)
+  _origShowGameOver(result);
+
+  // Award coins after game ends
+  console.log('[Coins] showGameOver fired — survivedToEnd:', _survivedToEnd, '| newlyDead:', _newlyDeadCount);
+  (async () => {
+    try {
+      await awardGameCoins(result.winner, _survivedToEnd, _newlyDeadCount);
+    } catch(e) {
+      console.error('[Coins] awardGameCoins threw:', e);
+    }
+  })();
 };
 
 // ── Enter game room: stop login ambient, start lobby ─────────────────────
