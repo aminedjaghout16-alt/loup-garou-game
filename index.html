@@ -9978,7 +9978,12 @@ window.doVote = function(targetId){
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
   AUDIO.stopMusic();
-  setTimeout(()=>AUDIO.sfx('win'), 800);
+  // Delay win SFX to match when _showWinnerOverlay fires:
+  // deathDelay = newlyDead.length * 4200ms, then +400ms before overlay, +200ms buffer
+  const players = Object.values(gameState?.players || {});
+  const newlyDeadCount = players.filter(p => !p.alive && _previousAlive && _previousAlive[p.id] === true).length;
+  const winDelay = (newlyDeadCount * 4200) + 600;
+  setTimeout(() => AUDIO.sfx('win'), winDelay);
   return _origShowGameOver(result);
 };
 
