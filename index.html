@@ -10751,8 +10751,9 @@ function renderLobby(players) {
 
 // ── Avatar helper ─────────────────────────────────────────────────────────
 function _wrGetAvatarHTML(p) {
-  // 1. Custom equipped avatar from map
-  const avatarId = (typeof _equippedAvatarMap !== 'undefined') && _equippedAvatarMap[p.id];
+  // 1. Custom equipped avatar from map (map may be defined later in the file)
+  const map = window._equippedAvatarMap;
+  const avatarId = map && map[p.id];
   if (avatarId && typeof AVATARS !== 'undefined') {
     const av = AVATARS.find(a => a.id === avatarId);
     if (av) return av.svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
@@ -10851,7 +10852,13 @@ renderGame = function(){
     _wrCheckIfKicked();
     // Load avatars for lobby cards (async, re-renders when done)
     if(typeof _loadAllPlayerAvatars==='function'){
-      _loadAllPlayerAvatars().then(()=>{ renderLobby(players); });
+      _loadAllPlayerAvatars().then(()=>{
+        // Re-fetch fresh player list from current gameState
+        const freshPlayers = gameState && gameState.players
+          ? Object.values(gameState.players).filter(p=>!p.disconnected)
+          : [];
+        renderLobby(freshPlayers);
+      });
     }
   }
 };
@@ -10941,7 +10948,9 @@ window.addEventListener('load',()=>{
 // ══ PART 7 — WIRING HELPERS ══════════════════════════════
 
 // Fast sync map: uid → avatarId, populated from Firebase
-const _equippedAvatarMap = {};
+// Stored on window so lobby cards (rendered before this line) can access it
+window._equippedAvatarMap = window._equippedAvatarMap || {};
+const _equippedAvatarMap = window._equippedAvatarMap;
 
 // ── Called inline in circle template (sync) ──────────────
 // Returns SVG html if player has an equipped avatar, else empty string.
