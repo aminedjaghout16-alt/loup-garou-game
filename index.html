@@ -6712,6 +6712,9 @@ function showGame(){
   document.getElementById('gameScreen').classList.remove('hidden');
   document.getElementById('hRoom').textContent=roomCode;
   document.getElementById('hPlayerName').textContent=myName||'';
+  // Immediately show room code in waiting room panel (before Firebase listener fires)
+  const _lcd=document.getElementById('lobbyCodeDisplay');
+  if(_lcd && roomCode) _lcd.textContent=roomCode;
   buildRolesGrid();
   applyTranslations();
   if(typeof initAvatarStore==='function') initAvatarStore();
