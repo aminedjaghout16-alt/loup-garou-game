@@ -6414,6 +6414,8 @@ function changeCount(role,delta){
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
+  if(!cfg.roles) cfg.roles=['werewolf','seer','witch','villager'];
+  if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
   if(!cfg.roleCounts) cfg.roleCounts={};
   if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
   if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
@@ -11031,7 +11033,16 @@ function renderLobby(players){
       el.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
       el.querySelector('.lobby-card-avatar').innerHTML = avatarHtml;
       el.querySelector('.lobby-card-name').textContent = p.name + (isMe ? ' (you)' : '');
-      el.querySelector('.lobby-card-badge').outerHTML = badge;
+      // Use innerHTML instead of outerHTML so the element stays in the DOM
+      const badgeEl = el.querySelector('.lobby-card-badge');
+      if(badgeEl) badgeEl.innerHTML = badge.replace(/<span[^>]*>|<\/span>/g, '') || badge;
+      // Re-render the badge correctly
+      const tmpDiv = document.createElement('div');
+      tmpDiv.innerHTML = badge;
+      if(badgeEl && tmpDiv.firstElementChild) {
+        badgeEl.className = tmpDiv.firstElementChild.className;
+        badgeEl.innerHTML = tmpDiv.firstElementChild.innerHTML;
+      }
       const dcEl = el.querySelector('.lobby-card-dc');
       if(dcEl) dcEl.style.display = isDc ? 'block' : 'none';
     } else {
