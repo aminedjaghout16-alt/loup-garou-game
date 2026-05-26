@@ -11036,15 +11036,14 @@ function renderLobby(players){
       el.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
       el.querySelector('.lobby-card-avatar').innerHTML = avatarHtml;
       el.querySelector('.lobby-card-name').textContent = p.name + (isMe ? ' (you)' : '');
-      // Use innerHTML instead of outerHTML so the element stays in the DOM
-      const badgeEl = el.querySelector('.lobby-card-badge');
-      if(badgeEl) badgeEl.innerHTML = badge.replace(/<span[^>]*>|<\/span>/g, '') || badge;
       // Re-render the badge correctly
+      const badgeEl = el.querySelector('.lobby-card-badge');
       const tmpDiv = document.createElement('div');
       tmpDiv.innerHTML = badge;
-      if(badgeEl && tmpDiv.firstElementChild) {
-        badgeEl.className = tmpDiv.firstElementChild.className;
-        badgeEl.innerHTML = tmpDiv.firstElementChild.innerHTML;
+      const newBadge = tmpDiv.firstElementChild;
+      if(badgeEl && newBadge) {
+        badgeEl.className = newBadge.className;
+        badgeEl.innerHTML = newBadge.innerHTML;
       }
       const dcEl = el.querySelector('.lobby-card-dc');
       if(dcEl) dcEl.style.display = isDc ? 'block' : 'none';
