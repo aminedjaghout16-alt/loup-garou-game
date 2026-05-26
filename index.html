@@ -6414,8 +6414,13 @@ function changeCount(role,delta){
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
-  if(!cfg.roles) cfg.roles=['werewolf','seer','witch','villager'];
-  if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
+  // Robustly normalize cfg.roles to a plain array no matter what Firebase returns
+  if(!cfg.roles || (typeof cfg.roles === 'object' && !Array.isArray(cfg.roles) && Object.keys(cfg.roles).length === 0)) {
+    cfg.roles=['werewolf','seer','witch','villager'];
+  } else if(!Array.isArray(cfg.roles)) {
+    cfg.roles=Object.values(cfg.roles).filter(v => typeof v === 'string');
+  }
+  if(!Array.isArray(cfg.roles) || cfg.roles.length === 0) cfg.roles=['werewolf','seer','witch','villager'];
   if(!cfg.roleCounts) cfg.roleCounts={};
   if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
   if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
@@ -6626,7 +6631,9 @@ async function enterRoom(){
       gameState=snap.val();
       if(gameState?.config) {
         cfg=gameState.config;
-        if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
+        if(!cfg.roles) cfg.roles=['werewolf','seer','witch','villager'];
+        else if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles).filter(v=>typeof v==='string');
+        if(!Array.isArray(cfg.roles)||cfg.roles.length===0) cfg.roles=['werewolf','seer','witch','villager'];
         if(!cfg.roleCounts) cfg.roleCounts={werewolf:1,villager:1};
       }
       // Derive leader status from Firebase data
