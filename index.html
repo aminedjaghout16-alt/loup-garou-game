@@ -6567,18 +6567,22 @@ async function enterRoom(){
     await ref.child(`players/${myId}`).set(
       {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
     );
-    // Clean up on disconnect
-    // Graceful disconnect flag — never delete the node mid-game
-    ref.child(`players/${myId}`).onDisconnect().update({
-      disconnected: true,
-      disconnectedAt: Date.now()
-    });
+    // During setup: remove on disconnect so lobby stays clean.
+    // Switched to flag-only once game starts (see live listener below).
+    ref.child(`players/${myId}`).onDisconnect().remove();
     // Start our own heartbeat
     startHeartbeat();
     // Live listener
     let _prevStatus=null;
+    let _onDisconnectIsRemove=true;
     ref.on('value', snap=>{
       gameState=snap.val();
+      // Switch onDisconnect from remove -> flag when game starts
+      if(_onDisconnectIsRemove && gameState && gameState.status==='playing'){
+        _onDisconnectIsRemove=false;
+        ref.child(`players/${myId}`).onDisconnect().cancel();
+        ref.child(`players/${myId}`).onDisconnect().update({disconnected:true, disconnectedAt:Date.now()});
+      }
       if(gameState?.config) {
         cfg=gameState.config;
         if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
