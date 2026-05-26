@@ -6585,6 +6585,11 @@ function offlineEnter(){
 function showGame(){
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('mainMenuScreen').classList.add('hidden');
+  // Hide all modals that might be open
+  ['roomCreateModal','roomCodeReveal','publicRoomsModal','leaderboardModal','profileModal'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.add('hidden');
+  });
   document.getElementById('gameScreen').classList.remove('hidden');
   document.getElementById('hRoom').textContent=roomCode;
   document.getElementById('hPlayerName').textContent=myName||'';
