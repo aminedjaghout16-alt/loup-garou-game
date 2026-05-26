@@ -6864,9 +6864,9 @@ function doStartGame(){
   const amLeader = isLeader || (gameState?.leader === myId);
   if(!amLeader){ console.warn('Not leader, cannot start'); return; }
 
-  // ── Ready check: all non-host players must be ready ──────────────────────
+  // ── Ready check: all non-host ACTIVE players must be ready ───────────────
   const _allPlayers = gameState?.players ? Object.values(gameState.players) : [];
-  const _nonHostPlayers = _allPlayers.filter(p => p.id !== myId && !p.disconnected);
+  const _nonHostPlayers = _allPlayers.filter(p => p.id !== myId && !p.disconnected && !p.kicked);
   const _readyPlayers = gameState?.readyPlayers || {};
   const _notReady = _nonHostPlayers.filter(p => !_readyPlayers[p.id]);
   if(_notReady.length > 0){
@@ -7112,11 +7112,13 @@ function renderGame(){
       const _sr=_cr.filter(r=>r!=='werewolf'&&r!=='villager');
       let _st=0; _sr.forEach(r=>{ _st+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
       const _total=_wc+_st+_vc;
-      const _conn=players.length;
+      // Only count players who are actually present (not disconnected/left)
+      const _activePlayers=players.filter(p=>!p.disconnected);
+      const _conn=_activePlayers.length;
       const _rolesOk=_total===_conn;
-      // Ready check
+      // Ready check — only among active non-host players
       const _rp=gameState?.readyPlayers||{};
-      const _nonHost=players.filter(p=>p.id!==myId&&!p.disconnected);
+      const _nonHost=_activePlayers.filter(p=>p.id!==myId);
       const _readyCount=_nonHost.filter(p=>!!_rp[p.id]).length;
       const _allReady=_nonHost.length===0||_readyCount===_nonHost.length;
       const _canStart=_rolesOk&&_allReady;
