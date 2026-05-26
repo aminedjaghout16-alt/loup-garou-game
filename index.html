@@ -6626,6 +6626,12 @@ async function enterRoom(){
         checkMaireElection();
       }
       runDisconnectWatcher(); // ← disconnect/reconnect engine
+      // ── Sync playerCount to publicRooms so the server browser stays accurate ──
+      if(gameState && gameState.status === 'setup' && isLeader && typeof db !== 'undefined' && db){
+        const alivePlayers = Object.values(gameState.players || {}).filter(p => !p.disconnected);
+        const count = alivePlayers.length || 1;
+        db.ref(`publicRooms/${roomCode}/playerCount`).set(count).catch(()=>{});
+      }
       renderGame();
     });
     showGame();
