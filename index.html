@@ -4547,6 +4547,16 @@ window.addEventListener('load', () => {
       <div class="mn-label">Profile</div>
       <div class="mn-desc">Stats & history</div>
     </div>
+    <div class="mn-btn" onclick="openAvatarStore()">
+      <div class="mn-icon">🎭</div>
+      <div class="mn-label">Avatar Store</div>
+      <div class="mn-desc">Customize your look</div>
+    </div>
+    <div class="mn-btn" onclick="openSpinWheel()">
+      <div class="mn-icon">🎡</div>
+      <div class="mn-label">Daily Spin</div>
+      <div class="mn-desc">Spin for rewards</div>
+    </div>
   </div>
 
   <!-- Footer -->
@@ -4654,12 +4664,6 @@ window.addEventListener('load', () => {
       <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
     </div>
 
-    
-    <!-- Avatar Store + Daily Spin -->
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
-      <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
-      <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
-    </div>
     <div id="gameEntryWrap" style="display:none">
     <div class="fg">
       <label id="t_name">Your Name</label>
