@@ -10756,7 +10756,21 @@ function _wrGetAvatarHTML(p) {
   const avatarId = map && map[p.id];
   if (avatarId && typeof AVATARS !== 'undefined') {
     const av = AVATARS.find(a => a.id === avatarId);
-    if (av) return av.svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
+    if (av) {
+      // Inject a circular clipPath that overrides the hex shape.
+      // We use a unique id per avatar to avoid clipPath id collisions.
+      const uid = 'wr-circ-' + p.id.replace(/[^a-z0-9]/gi,'');
+      const circleClip = `<defs><clipPath id="${uid}"><circle cx="50" cy="51" r="44"/></clipPath></defs>`;
+      // Replace existing <defs>...</defs> block (which contains the hex clipPath)
+      let svg = av.svg;
+      svg = svg.replace(/<defs>[\s\S]*?<\/defs>/, circleClip);
+      // Make every clip-path reference point to our circle
+      svg = svg.replace(/clip-path="url\(#[^)]+\)"/g, `clip-path="url(#${uid})"`);
+      // Remove the hex border polygon (first <polygon .../>)
+      svg = svg.replace(/<polygon[^/]*\/>/, '');
+      svg = svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
+      return svg;
+    }
   }
   // 2. Google photo (own player)
   if (p.id === myId && typeof _googleUser !== 'undefined' && _googleUser?.photoURL) {
@@ -10968,7 +10982,8 @@ async function _loadAllPlayerAvatars() {
   if (!gameState || !gameState.players) return;
   const players = Object.values(gameState.players);
   await Promise.all(players.map(async p => {
-    if (_equippedAvatarMap[p.id] !== undefined) return;
+    // Only skip if we have a real avatar id cached — retry nulls (failed/no avatar)
+    if (_equippedAvatarMap[p.id]) return;
     if (p.id === myId) {
       _equippedAvatarMap[p.id] = (typeof getEquippedAvatar === 'function') ? (getEquippedAvatar() || null) : null;
       return;
