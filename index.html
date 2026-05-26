@@ -150,6 +150,9 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .lobby-card-badge.waiting{background:rgba(212,160,23,.1);color:var(--moon);border:1px solid rgba(212,160,23,.2);opacity:.7}
 .lobby-card-badge.host{background:rgba(212,160,23,.15);color:var(--moon);border:1px solid rgba(212,160,23,.35)}
 .lobby-card-dc{position:absolute;top:.3rem;right:.3rem;font-size:.6rem;color:var(--blood-glow);opacity:.7}
+.lobby-kick-btn{position:absolute;bottom:.3rem;right:.3rem;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:4px;cursor:pointer;font-size:.6rem;padding:.1rem .35rem;font-family:inherit;font-weight:700;transition:.2s;line-height:1.4;display:none}
+.lobby-kick-btn:hover{background:rgba(239,68,68,.35)}
+.lobby-card:hover .lobby-kick-btn{display:block}
 
 /* ── PUBLIC ROOMS SCREEN ── */
 #publicRoomsModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:315;display:flex;align-items:center;justify-content:center;padding:1rem}
@@ -6568,16 +6571,32 @@ async function enterRoom(){
       }
       console.log('✅ Room joined',roomCode);
     }
+    // ── Max players check before joining ───────────────────────────────────
+    if(!isLeader){
+      const existingSnap = await db.ref(`games/${roomCode}/players`).once('value');
+      const existingPlayers = existingSnap.val() ? Object.values(existingSnap.val()) : [];
+      const activePlayers = existingPlayers.filter(p => !p.disconnected);
+      const roomCfgSnap = await db.ref(`games/${roomCode}/config/maxPlayers`).once('value');
+      const maxP = roomCfgSnap.val() || 20;
+      if(activePlayers.length >= maxP){
+        alert(lang==='ar'?'❌ الغرفة ممتلئة!':lang==='fr'?'❌ La salle est pleine !':'❌ Room is full!');
+        showMainMenu();
+        return;
+      }
+    }
     // Add self
     await ref.child(`players/${myId}`).set(
       {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
     );
-    // Update public room player count
+    // Update public room player count using actual player count from Firebase
     if(typeof db !== 'undefined' && db){
-      db.ref(`publicRooms/${roomCode}`).once('value').then(snap=>{
-        if(snap.exists()){
-          const playerCount = Object.keys(gameState?.players||{}).length + 1;
-          db.ref(`publicRooms/${roomCode}/playerCount`).set(playerCount);
+      db.ref(`publicRooms/${roomCode}`).once('value').then(prSnap=>{
+        if(prSnap.exists()){
+          db.ref(`games/${roomCode}/players`).once('value').then(pSnap=>{
+            const allPlayers = pSnap.val() ? Object.values(pSnap.val()) : [];
+            const activeCount = allPlayers.filter(p => !p.disconnected).length;
+            db.ref(`publicRooms/${roomCode}/playerCount`).set(activeCount);
+          }).catch(()=>{});
         }
       }).catch(()=>{});
     }
@@ -6589,6 +6608,16 @@ async function enterRoom(){
     });
     // Start our own heartbeat
     startHeartbeat();
+    // ── Listen for kick ───────────────────────────────────────────────────
+    if(!isLeader){
+      db.ref(`games/${roomCode}/kicked/${myId}`).on('value', kickSnap => {
+        if(kickSnap.exists()){
+          db.ref(`games/${roomCode}/kicked/${myId}`).off();
+          alert(lang==='ar'?'🚪 لقد تم طردك من الغرفة من قبل المضيف.':lang==='fr'?'🚪 Vous avez été expulsé par l’hôte.':'🚪 You have been kicked from the room by the host.');
+          window.location.reload();
+        }
+      });
+    }
     // Live listener
     let _prevStatus=null;
     ref.on('value', snap=>{
@@ -6791,7 +6820,18 @@ function doLeave(){
   stopHeartbeat();
   if(fbOk&&db&&roomCode&&myId){
     // Flag as disconnected; don't delete — the node must persist for game integrity
-    db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()});
+    db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()}).then(()=>{
+      // Update public room player count
+      db.ref(`publicRooms/${roomCode}`).once('value').then(prSnap=>{
+        if(prSnap.exists()){
+          db.ref(`games/${roomCode}/players`).once('value').then(pSnap=>{
+            const allPlayers = pSnap.val() ? Object.values(pSnap.val()) : [];
+            const activeCount = allPlayers.filter(p => !p.disconnected).length;
+            db.ref(`publicRooms/${roomCode}/playerCount`).set(activeCount);
+          }).catch(()=>{});
+        }
+      }).catch(()=>{});
+    }).catch(()=>{});
   }
   window.location.reload();
 }
@@ -6814,6 +6854,22 @@ function doStartGame(){
   // Robust leader check: use both local flag and Firebase data
   const amLeader = isLeader || (gameState?.leader === myId);
   if(!amLeader){ console.warn('Not leader, cannot start'); return; }
+
+  // ── Ready check: all non-host players must be ready ──────────────────────
+  const _allPlayers = gameState?.players ? Object.values(gameState.players) : [];
+  const _nonHostPlayers = _allPlayers.filter(p => p.id !== myId && !p.disconnected);
+  const _readyPlayers = gameState?.readyPlayers || {};
+  const _notReady = _nonHostPlayers.filter(p => !_readyPlayers[p.id]);
+  if(_notReady.length > 0){
+    const _names = _notReady.map(p=>p.name).join(', ');
+    const _msg = lang==='ar'
+      ? `انتظر حتى يكون جميع اللاعبين جاهزين:\n${_names}`
+      : lang==='fr'
+      ? `Attends que tous les joueurs soient prêts :\n${_names}`
+      : `Waiting for players to be ready:\n${_names}`;
+    alert('⏳ ' + _msg);
+    return;
+  }
 
   // If Firebase is available, always fetch fresh player data to avoid
   // race conditions where gameState hasn't synced yet
@@ -7032,8 +7088,9 @@ function renderGame(){
     buildRolesGrid();
     renderStats(players);
     renderLobby(players);
-    // Helper message: show role total vs connected players
+    // Helper message: role total vs connected players + ready status
     const _helperEl=document.getElementById('startHelperMsg');
+    const _startBtn=document.getElementById('t_start');
     if(_helperEl && isLeader){
       if(!cfg.roleCounts) cfg.roleCounts={};
       const _wc=cfg.roleCounts.werewolf??1;
@@ -7043,13 +7100,27 @@ function renderGame(){
       let _st=0; _sr.forEach(r=>{ _st+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
       const _total=_wc+_st+_vc;
       const _conn=players.length;
-      const _ok=_total===_conn;
-      _helperEl.style.background=_ok?'rgba(16,185,129,.15)':'rgba(212,160,23,.12)';
-      _helperEl.style.border=_ok?'1px solid var(--green)':'1px solid var(--moon)';
-      _helperEl.style.color=_ok?'var(--green)':'var(--moon-pale)';
-      _helperEl.innerHTML=_ok
-        ?`✅ ${_conn} ${lang==='ar'?'لاعبين — جاهز للبدء!':lang==='fr'?'joueurs — prêt à démarrer !':'players ready — good to go!'}`
-        :`${lang==='ar'?'إجمالي الأدوار':lang==='fr'?'Total rôles':'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang==='ar'?'متصلون':lang==='fr'?'Connectés':'Connected'}: <strong>${_conn}</strong>`;
+      const _rolesOk=_total===_conn;
+      // Ready check
+      const _rp=gameState?.readyPlayers||{};
+      const _nonHost=players.filter(p=>p.id!==myId&&!p.disconnected);
+      const _readyCount=_nonHost.filter(p=>!!_rp[p.id]).length;
+      const _allReady=_nonHost.length===0||_readyCount===_nonHost.length;
+      const _canStart=_rolesOk&&_allReady;
+      _helperEl.style.background=_canStart?'rgba(16,185,129,.15)':'rgba(212,160,23,.12)';
+      _helperEl.style.border=_canStart?'1px solid var(--green)':'1px solid var(--moon)';
+      _helperEl.style.color=_canStart?'var(--green)':'var(--moon-pale)';
+      if(_canStart){
+        _helperEl.innerHTML=`✅ ${_conn} ${lang==='ar'?'لاعبين — جميعهم جاهزون!':lang==='fr'?'joueurs — tous prêts !':'players — everyone is ready!'}`;
+      } else if(!_rolesOk){
+        _helperEl.innerHTML=`${lang==='ar'?'إجمالي الأدوار':lang==='fr'?'Total rôles':'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang==='ar'?'متصلون':lang==='fr'?'Connectés':'Connected'}: <strong>${_conn}</strong>`;
+      } else {
+        _helperEl.innerHTML=`⏳ ${lang==='ar'?'ينتظر':lang==='fr'?'En attente':'Waiting'}: <strong>${_readyCount}/${_nonHost.length}</strong> ${lang==='ar'?'جاهزون':lang==='fr'?'prêts':'ready'}`;
+      }
+      if(_startBtn){
+        _startBtn.style.opacity=_canStart?'1':'0.45';
+        _startBtn.title=_canStart?'':(lang==='ar'?'انتظر حتى يكون جميع اللاعبين جاهزين':lang==='fr'?'Attends que tous les joueurs soient prêts':'Waiting for all players to be ready');
+      }
     }
   } else if(gameState.status==='playing'){
     document.getElementById('setupView').style.display='none';
@@ -10677,7 +10748,20 @@ function prJoinRoom(code, hostName){
     panel.scrollIntoView({behavior:'smooth', block:'nearest'});
     return;
   }
-  _prDoJoin(code, name);
+  // Live full check before joining
+  if(typeof db !== 'undefined' && db){
+    db.ref(`publicRooms/${code}`).once('value').then(snap=>{
+      const room = snap.val();
+      if(room && room.playerCount >= room.maxPlayers){
+        _showToast(lang==='ar'?'❌ الغرفة ممتلئة':lang==='fr'?'❌ La salle est pleine':'❌ Room is full');
+        prRefresh();
+        return;
+      }
+      _prDoJoin(code, name);
+    }).catch(()=>{ _prDoJoin(code, name); });
+  } else {
+    _prDoJoin(code, name);
+  }
 }
 
 function prConfirmJoin(){
@@ -10832,6 +10916,8 @@ async function rcrEnterRoom(){
           status: 'waiting',
           createdAt: Date.now()
         });
+        // Also persist maxPlayers into game config so join-side can enforce it
+        await db.ref(`games/${roomCode}/config/maxPlayers`).set(_rcMaxPlayers).catch(()=>{});
         // Remove listing when host disconnects or game starts
         db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
       } catch(err) {
@@ -10942,6 +11028,7 @@ function renderLobby(players){
         <div class="lobby-card-name">${p.name}${isMe ? ' (you)' : ''}</div>
         ${badge}
         <div class="lobby-card-dc" style="display:${isDc ? 'block' : 'none'}">⚠️ dc</div>
+        ${amLeader && !isMe && !isHost ? `<button class="lobby-kick-btn" onclick="event.stopPropagation();kickPlayer('${p.id}','${p.name.replace(/'/g,"\'")}')" title="Kick player">✕ Kick</button>` : ''}
       `;
       grid.appendChild(card);
     }
@@ -10994,6 +11081,34 @@ function lobbyShareCode(){
   const text = `Join my Loup-Garou game! 🐺\nRoom code: ${code}\nhttps://loup-garou-game-beta.vercel.app/`;
   if(navigator.share){ navigator.share({ title: 'Join my Loup-Garou game!', text }); }
   else { navigator.clipboard?.writeText(text); _showToast('Invite link copied!'); }
+}
+
+// ── KICK PLAYER (host only) ──────────────────────────────────────────────────
+function kickPlayer(targetId, targetName){
+  if(!isLeader) return;
+  const confirm_msg = lang==='ar'
+    ? `هل تريد طرد ${targetName}؟`
+    : lang==='fr'
+    ? `Expulser ${targetName} ?`
+    : `Kick ${targetName} from the room?`;
+  if(!confirm(confirm_msg)) return;
+  if(fbOk && db && roomCode){
+    // Write a kick flag the player listens for
+    db.ref(`games/${roomCode}/kicked/${targetId}`).set({by:myId, ts:Date.now(), name:targetName});
+    // Mark them disconnected so they're removed from the lobby
+    db.ref(`games/${roomCode}/players/${targetId}`).update({disconnected:true, disconnectedAt:Date.now(), kicked:true});
+    // Update public room player count
+    db.ref(`publicRooms/${roomCode}`).once('value').then(prSnap=>{
+      if(prSnap.exists()){
+        db.ref(`games/${roomCode}/players`).once('value').then(pSnap=>{
+          const allPlayers = pSnap.val() ? Object.values(pSnap.val()) : [];
+          const activeCount = allPlayers.filter(p => !p.disconnected).length;
+          db.ref(`publicRooms/${roomCode}/playerCount`).set(activeCount);
+        }).catch(()=>{});
+      }
+    }).catch(()=>{});
+    _showToast((lang==='ar'?`تم طرد ${targetName}`:lang==='fr'?`${targetName} a été expulsé`:`${targetName} was kicked`));
+  }
 }
 
 // ════════════════════════════════════════════
