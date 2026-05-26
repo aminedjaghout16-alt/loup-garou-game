@@ -69,6 +69,134 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
 
 /* ── PROFILE MODAL ── */
+/* ══ MAIN MENU ══ */
+#mainMenu{position:fixed;inset:0;z-index:200;background:var(--void);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
+#mainMenu.hidden{display:none!important}
+.mn-title{font-family:'Cinzel Decorative',cursive;font-size:2rem;color:var(--moon);text-shadow:0 0 30px rgba(212,160,23,.4);text-align:center;margin-bottom:.2rem}
+.mn-sub{font-size:.72rem;color:var(--ghost);opacity:.4;letter-spacing:.1em;text-align:center;margin-bottom:1.4rem}
+.mn-userbar{display:flex;align-items:center;gap:.75rem;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:.7rem 1rem;margin-bottom:1.2rem;width:100%;max-width:400px}
+.mn-avatar{width:42px;height:42px;border-radius:50%;border:2px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;flex-shrink:0}
+.mn-avatar img{width:100%;height:100%;object-fit:cover}
+.mn-uname{font-size:.88rem;color:var(--moon-pale);font-weight:700}
+.mn-urole{font-size:.68rem;color:var(--ghost);opacity:.5}
+.mn-coins{margin-left:auto;font-family:'Creepster',cursive;font-size:1rem;color:var(--moon)}
+.mn-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;width:100%;max-width:400px;margin-bottom:.8rem}
+.mn-btn{background:rgba(26,10,46,.7);border:1px solid rgba(212,160,23,.2);border-radius:11px;padding:1rem .8rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;cursor:pointer;transition:all .2s;text-align:center}
+.mn-btn:hover{border-color:var(--moon);background:rgba(212,160,23,.08);transform:translateY(-2px)}
+.mn-btn.primary{grid-column:span 2;border-color:rgba(185,28,28,.6);background:linear-gradient(135deg,rgba(185,28,28,.3),rgba(120,0,0,.3))}
+.mn-btn.primary:hover{border-color:var(--blood-glow);box-shadow:0 6px 20px rgba(185,28,28,.3)}
+.mn-icon{font-size:1.7rem}
+.mn-label{font-family:'Creepster',cursive;font-size:1rem;color:var(--moon)}
+.mn-desc{font-size:.62rem;color:var(--ghost);opacity:.5}
+.mn-footer{display:flex;gap:.5rem;width:100%;max-width:400px}
+.mn-foot-btn{flex:1;padding:.45rem;background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.73rem;transition:.2s}
+.mn-foot-btn:hover{border-color:rgba(212,160,23,.4);color:var(--moon)}
+/* join panel inside main menu */
+.mn-join-panel{width:100%;max-width:400px;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:.9rem;margin-bottom:.6rem;display:none;flex-direction:column;gap:.6rem}
+.mn-join-panel.open{display:flex}
+.mn-join-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1.1rem;text-align:center;letter-spacing:.2em;text-transform:uppercase}
+.mn-join-panel input:focus{outline:none;box-shadow:0 0 8px rgba(212,160,23,.3)}
+/* guest name panel */
+.mn-name-panel{width:100%;max-width:400px;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:.9rem;margin-bottom:.6rem;display:none;flex-direction:column;gap:.6rem}
+.mn-name-panel.open{display:flex}
+.mn-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
+.mn-name-panel input:focus{outline:none;box-shadow:0 0 8px rgba(212,160,23,.3)}
+/* ══ ROOM CREATE MODAL ══ */
+#roomCreateModal{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:1rem}
+#roomCreateModal.hidden{display:none!important}
+.rc-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.8rem 1.5rem;width:100%;max-width:420px;position:relative;box-shadow:0 0 40px rgba(212,160,23,.15)}
+.rc-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.7rem;text-align:center;margin-bottom:1.2rem}
+.rc-toggle{display:flex;border:1px solid var(--moon);border-radius:7px;overflow:hidden;margin-bottom:1.1rem}
+.rc-toggle-btn{flex:1;padding:.65rem;background:transparent;border:none;color:var(--ghost);cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:700;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.4rem}
+.rc-toggle-btn.active{background:var(--moon);color:var(--void)}
+.rc-toggle-btn:first-child{border-right:1px solid var(--moon)}
+.rc-field{margin-bottom:.9rem}
+.rc-field label{display:block;font-size:.82rem;color:var(--moon);font-weight:700;margin-bottom:.3rem}
+.rc-field input{width:100%;padding:.68rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:.95rem}
+.rc-field input:focus{outline:none;box-shadow:0 0 8px rgba(212,160,23,.25)}
+.rc-field .hint{font-size:.68rem;color:var(--ghost);opacity:.45;margin-top:.25rem}
+.rc-players{display:flex;align-items:center;margin-bottom:.9rem}
+.rc-players label{font-size:.82rem;color:var(--moon);font-weight:700}
+.rc-stepper{display:flex;align-items:center;gap:.5rem;margin-left:auto}
+.rc-stepper button{width:30px;height:30px;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:4px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:.15s}
+.rc-stepper button:hover{background:rgba(212,160,23,.15)}
+.rc-stepper span{font-family:'Creepster',cursive;font-size:1.4rem;color:var(--moon-pale);min-width:26px;text-align:center}
+.rc-submit{width:100%;padding:.8rem;background:var(--blood-glow);border:none;color:#fff;border-radius:7px;cursor:pointer;font-family:inherit;font-size:1rem;font-weight:700;transition:.2s;margin-top:.2rem}
+.rc-submit:hover{background:var(--blood);box-shadow:0 0 18px rgba(185,28,28,.4)}
+/* ══ CODE REVEAL ══ */
+#codeReveal{position:fixed;inset:0;z-index:215;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:1rem}
+#codeReveal.hidden{display:none!important}
+.cr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:2rem 1.5rem;width:100%;max-width:360px;text-align:center;box-shadow:0 0 50px rgba(212,160,23,.2)}
+.cr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.5rem;margin-bottom:.2rem}
+.cr-sub{font-size:.75rem;color:var(--ghost);opacity:.45;margin-bottom:1.2rem}
+.cr-code{font-family:'Cinzel Decorative',cursive;font-size:2.8rem;color:var(--moon-pale);letter-spacing:.25em;background:var(--purple);border:2px solid var(--moon);border-radius:9px;padding:1rem;margin-bottom:.5rem;cursor:pointer;transition:.2s;position:relative}
+.cr-code:hover{border-color:var(--moon-pale)}
+.cr-copy-hint{font-size:.68rem;color:var(--ghost);opacity:.4;margin-bottom:1.2rem}
+.cr-copied{color:#10b981;opacity:0;transition:.3s;font-size:.75rem;margin-bottom:.5rem;display:block}
+.cr-copied.show{opacity:1}
+.cr-type{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border-radius:20px;font-size:.73rem;font-weight:700;margin-bottom:1.2rem}
+.cr-actions{display:flex;flex-direction:column;gap:.5rem}
+.cr-btn{width:100%;padding:.68rem;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:700;transition:.2s;border:none}
+.cr-btn-go{background:var(--blood-glow);color:#fff}
+.cr-btn-go:hover{background:var(--blood)}
+.cr-btn-share{background:transparent;border:1px solid rgba(212,160,23,.35)!important;color:var(--moon)}
+.cr-btn-share:hover{background:rgba(212,160,23,.1)}
+.cr-btn-back{background:transparent;border:1px solid rgba(255,255,255,.12)!important;color:rgba(255,255,255,.4)}
+.cr-btn-back:hover{border-color:rgba(212,160,23,.3)!important;color:var(--moon)}
+/* ══ PUBLIC ROOMS ══ */
+#publicRoomsModal{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:1rem}
+#publicRoomsModal.hidden{display:none!important}
+.pr-wrap{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.5rem 1.3rem;width:100%;max-width:460px;max-height:86vh;display:flex;flex-direction:column;position:relative;box-shadow:0 0 40px rgba(212,160,23,.14)}
+.pr-wrap h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.7rem;text-align:center;margin-bottom:.25rem}
+.pr-subtitle{text-align:center;font-size:.72rem;color:var(--ghost);opacity:.4;margin-bottom:.9rem}
+.pr-toolbar{display:flex;gap:.45rem;margin-bottom:.8rem}
+.pr-rfbtn{padding:.4rem .8rem;background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:5px;cursor:pointer;font-family:inherit;font-size:.77rem;transition:.2s}
+.pr-rfbtn:hover{background:rgba(212,160,23,.08)}
+.pr-newbtn{padding:.4rem .8rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.77rem;font-weight:700;margin-left:auto;transition:.2s}
+.pr-newbtn:hover{background:var(--blood)}
+.pr-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.5rem}
+.pr-card{background:var(--purple);border:1px solid rgba(212,160,23,.18);border-radius:9px;padding:.8rem .9rem;display:flex;align-items:center;gap:.7rem;transition:.15s}
+.pr-card:hover{border-color:rgba(212,160,23,.45)}
+.pr-card-info{flex:1;min-width:0}
+.pr-card-name{font-size:.88rem;font-weight:700;color:var(--ghost);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-card-meta{font-size:.68rem;color:var(--ghost);opacity:.5;margin-top:.15rem}
+.pr-card-pip{font-size:.72rem;font-weight:700;padding:.15rem .45rem;border-radius:4px}
+.pr-card-pip.open{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.28)}
+.pr-card-pip.full{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.22)}
+.pr-join-btn{padding:.42rem .85rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;transition:.2s;flex-shrink:0}
+.pr-join-btn:hover{background:var(--blood)}
+.pr-join-btn:disabled{opacity:.35;cursor:not-allowed}
+.pr-empty{text-align:center;padding:2.5rem 1rem;color:var(--ghost);opacity:.35;font-size:.85rem}
+.pr-loading{text-align:center;padding:2rem;color:var(--ghost);opacity:.45;font-size:.83rem}
+.pr-name-panel{background:var(--purple);border:1px solid rgba(212,160,23,.3);border-radius:7px;padding:.8rem;margin-bottom:.6rem;display:none;flex-direction:column;gap:.5rem}
+.pr-name-panel.open{display:flex}
+.pr-name-panel input{width:100%;padding:.6rem;background:var(--abyss);border:1px solid var(--moon);color:var(--ghost);border-radius:4px;font-family:inherit;font-size:.9rem}
+.pr-name-panel input:focus{outline:none}
+/* ══ WAITING ROOM LOBBY ══ */
+.lobby-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:.55rem;margin-bottom:.85rem}
+.lobby-card{background:var(--abyss);border:1.5px solid rgba(212,160,23,.18);border-radius:9px;padding:.65rem .45rem;display:flex;flex-direction:column;align-items:center;gap:.3rem;animation:lcIn .3s cubic-bezier(.17,.67,.1,1.3) both}
+@keyframes lcIn{from{opacity:0;transform:scale(.65)}to{opacity:1;transform:scale(1)}}
+.lobby-card.lc-host{border-color:var(--moon)}
+.lobby-card.lc-ready{border-color:#10b981;box-shadow:0 0 10px rgba(16,185,129,.18)}
+.lc-avatar{width:48px;height:48px;border-radius:50%;border:2px solid rgba(212,160,23,.35);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.3rem;overflow:hidden;position:relative}
+.lc-avatar img{width:100%;height:100%;object-fit:cover}
+.lobby-card.lc-host .lc-avatar{border-color:var(--moon)}
+.lobby-card.lc-ready .lc-avatar{border-color:#10b981}
+.lc-name{font-size:.72rem;font-weight:700;color:var(--ghost);text-align:center;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc-badge{font-size:.6rem;padding:.1rem .38rem;border-radius:3px;font-weight:700}
+.lc-badge.host{background:rgba(212,160,23,.15);color:var(--moon);border:1px solid rgba(212,160,23,.3)}
+.lc-badge.ready{background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.25)}
+.lc-badge.waiting{background:rgba(255,255,255,.04);color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.08)}
+.lobby-code-bar{text-align:center;margin-bottom:.9rem}
+.lobby-code-inner{display:inline-flex;align-items:center;gap:.5rem;background:var(--abyss);border:1.5px solid var(--moon);border-radius:7px;padding:.4rem 1rem;cursor:pointer;transition:.15s}
+.lobby-code-inner:hover{border-color:var(--moon-pale)}
+.lci-label{font-size:.62rem;color:var(--ghost);opacity:.4;letter-spacing:.06em}
+.lci-code{font-family:'Cinzel Decorative',cursive;font-size:1.2rem;color:var(--moon-pale);letter-spacing:.2em}
+.lci-copied{font-size:.62rem;color:#10b981;opacity:0;transition:.3s}
+.lci-copied.show{opacity:1}
+.lobby-ready-btn{width:100%;padding:.68rem;border-radius:7px;font-family:inherit;font-size:.92rem;font-weight:700;cursor:pointer;transition:.25s;border:2px solid var(--moon);background:transparent;color:var(--moon);margin-bottom:.7rem}
+.lobby-ready-btn.is-ready{border-color:#10b981;background:rgba(16,185,129,.1);color:#10b981}
+
 #profileModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem}
 #profileModal.hidden{display:none}
 .profile-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.8rem;width:100%;max-width:420px;box-shadow:0 0 40px rgba(212,160,23,.2);position:relative}
@@ -87,198 +215,6 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .profile-close{position:absolute;top:.7rem;right:.9rem;background:transparent;border:none;color:var(--ghost);font-size:1.3rem;cursor:pointer;opacity:.6;font-family:inherit}
 .profile-close:hover{opacity:1}
 .profile-signin-note{text-align:center;color:var(--ghost);opacity:.7;font-size:.85rem;padding:.5rem}
-
-/* ── MAIN MENU SCREEN ── */
-#mainMenuScreen{position:fixed;inset:0;background:var(--void);z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:1.5rem 1rem 2rem}
-#mainMenuScreen.hidden{display:none}
-.mm-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.mm-bg-moon{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(212,160,23,.08) 0%,transparent 70%);animation:mmMoonPulse 6s ease-in-out infinite}
-.mm-bg-star{position:absolute;border-radius:50%;background:var(--ghost);opacity:0;animation:mmStarTwinkle var(--d,3s) var(--dl,0s) ease-in-out infinite}
-@keyframes mmMoonPulse{0%,100%{transform:translateX(-50%) scale(1);opacity:.6}50%{transform:translateX(-50%) scale(1.08);opacity:1}}
-@keyframes mmStarTwinkle{0%,100%{opacity:0}50%{opacity:var(--op,.5)}}
-.mm-wrap{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:0}
-.mm-header{text-align:center;margin-bottom:1.4rem;margin-top:.5rem}
-.mm-header h1{font-family:'Cinzel Decorative',cursive;font-size:2rem;color:var(--moon);text-shadow:0 0 30px rgba(212,160,23,.5);letter-spacing:.05em;line-height:1.1}
-.mm-header .mm-tagline{font-size:.78rem;color:var(--ghost);opacity:.5;margin-top:.3rem;letter-spacing:.08em}
-.mm-user-bar{display:flex;align-items:center;gap:.75rem;background:var(--abyss);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:.7rem 1rem;margin-bottom:1.2rem;width:100%}
-.mm-user-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;flex-shrink:0}
-.mm-user-avatar img{width:100%;height:100%;object-fit:cover}
-.mm-user-info{flex:1;min-width:0}
-.mm-user-name{font-size:.9rem;color:var(--moon-pale);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mm-user-role{font-size:.68rem;color:var(--ghost);opacity:.5;margin-top:.1rem}
-.mm-user-coins{display:flex;align-items:center;gap:.3rem;font-family:'Creepster',cursive;font-size:1rem;color:var(--moon)}
-.mm-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;width:100%;margin-bottom:1rem}
-.mm-tile{background:var(--abyss);border:1px solid rgba(212,160,23,.2);border-radius:12px;padding:1.1rem .8rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden}
-.mm-tile::before{content:'';position:absolute;inset:0;background:var(--tile-glow,rgba(212,160,23,.06));opacity:0;transition:.25s}
-.mm-tile:hover::before,.mm-tile:active::before{opacity:1}
-.mm-tile:hover{border-color:var(--moon);transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,160,23,.12)}
-.mm-tile .mm-tile-icon{font-size:1.8rem;line-height:1}
-.mm-tile .mm-tile-label{font-family:'Creepster',cursive;font-size:1rem;color:var(--moon);letter-spacing:.04em}
-.mm-tile .mm-tile-sub{font-size:.65rem;color:var(--ghost);opacity:.5;margin-top:-.2rem}
-.mm-tile.mm-primary{grid-column:span 2;background:linear-gradient(135deg,var(--blood) 0%,#7a0000 100%);border-color:var(--blood-glow);--tile-glow:rgba(185,28,28,.15)}
-.mm-tile.mm-primary .mm-tile-label{font-size:1.25rem;color:#fff}
-.mm-tile.mm-primary:hover{box-shadow:0 8px 30px rgba(185,28,28,.35)}
-.mm-footer-btns{display:flex;gap:.5rem;width:100%}
-.mm-footer-btn{flex:1;padding:.5rem;background:transparent;border:1px solid rgba(232,232,232,.12);color:rgba(232,232,232,.45);border-radius:7px;cursor:pointer;font-family:inherit;font-size:.75rem;transition:.2s}
-.mm-footer-btn:hover{border-color:rgba(212,160,23,.4);color:var(--moon)}
-/* join-code inline panel */
-.mm-join-panel{width:100%;background:var(--abyss);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:1rem;margin-bottom:.65rem;display:none;flex-direction:column;gap:.7rem}
-.mm-join-panel.open{display:flex}
-.mm-join-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1.1rem;text-align:center;letter-spacing:.2em;text-transform:uppercase}
-.mm-join-panel input:focus{outline:none;border-color:var(--moon-pale);box-shadow:0 0 8px rgba(212,160,23,.3)}
-/* name input panel */
-.mm-name-panel{width:100%;background:var(--abyss);border:1px solid rgba(212,160,23,.25);border-radius:10px;padding:1rem;margin-bottom:.65rem;display:none;flex-direction:column;gap:.7rem}
-.mm-name-panel.open{display:flex}
-.mm-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
-.mm-name-panel input:focus{outline:none;border-color:var(--moon-pale)}
-
-/* ── LOBBY PLAYER CARDS ── */
-.lobby-card{background:var(--abyss);border:1.5px solid rgba(212,160,23,.2);border-radius:10px;padding:.7rem .5rem;display:flex;flex-direction:column;align-items:center;gap:.35rem;position:relative;transition:all .3s;animation:lobbyCardIn .35s cubic-bezier(.17,.67,.1,1.3) both}
-@keyframes lobbyCardIn{from{opacity:0;transform:scale(.6) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.lobby-card.leaving{animation:lobbyCardOut .3s ease forwards}
-@keyframes lobbyCardOut{to{opacity:0;transform:scale(.7) translateY(-8px)}}
-.lobby-card.ready{border-color:#10b981;box-shadow:0 0 12px rgba(16,185,129,.2)}
-.lobby-card.host{border-color:var(--moon)}
-.lobby-card-avatar{width:52px;height:52px;border-radius:50%;border:2px solid rgba(212,160,23,.4);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;flex-shrink:0;position:relative}
-.lobby-card-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.lobby-card.ready .lobby-card-avatar{border-color:#10b981}
-.lobby-card.host .lobby-card-avatar{border-color:var(--moon)}
-.lobby-card-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.85rem;line-height:1}
-.lobby-card-name{font-size:.75rem;color:var(--ghost);font-weight:700;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}
-.lobby-card-badge{font-size:.62rem;padding:.1rem .4rem;border-radius:4px;font-weight:700;text-align:center}
-.lobby-card-badge.ready{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
-.lobby-card-badge.waiting{background:rgba(212,160,23,.1);color:var(--moon);border:1px solid rgba(212,160,23,.2);opacity:.7}
-.lobby-card-badge.host{background:rgba(212,160,23,.15);color:var(--moon);border:1px solid rgba(212,160,23,.35)}
-.lobby-card-dc{position:absolute;top:.3rem;right:.3rem;font-size:.6rem;color:var(--blood-glow);opacity:.7}
-.lobby-kick-btn{position:absolute;bottom:.3rem;right:.3rem;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:4px;cursor:pointer;font-size:.6rem;padding:.1rem .35rem;font-family:inherit;font-weight:700;transition:.2s;line-height:1.4;display:none}
-.lobby-kick-btn:hover{background:rgba(239,68,68,.35)}
-.lobby-card:hover .lobby-kick-btn{display:block}
-
-/* ── PUBLIC ROOMS SCREEN ── */
-#publicRoomsModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:315;display:flex;align-items:center;justify-content:center;padding:1rem}
-#publicRoomsModal.hidden{display:none}
-.pr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:1.6rem 1.4rem;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;position:relative;box-shadow:0 0 50px rgba(212,160,23,.16)}
-.pr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:.3rem}
-.pr-subtitle{text-align:center;font-size:.75rem;color:var(--ghost);opacity:.45;margin-bottom:1rem}
-.pr-toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center}
-.pr-refresh-btn{padding:.4rem .9rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s;white-space:nowrap}
-.pr-refresh-btn:hover{background:rgba(212,160,23,.1)}
-.pr-refresh-btn.spinning{animation:prSpin .7s linear infinite}
-@keyframes prSpin{to{transform:rotate(360deg)}}
-.pr-create-link{padding:.4rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;transition:.2s;white-space:nowrap;margin-left:auto}
-.pr-create-link:hover{background:var(--blood)}
-.pr-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.6rem;padding-right:.2rem}
-.pr-list::-webkit-scrollbar{width:4px}
-.pr-list::-webkit-scrollbar-thumb{background:var(--moon);border-radius:2px}
-.pr-card{background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem;transition:.2s;cursor:default}
-.pr-card:hover{border-color:rgba(212,160,23,.5);background:rgba(26,10,46,.85)}
-.pr-card-icon{font-size:1.6rem;flex-shrink:0;width:40px;text-align:center}
-.pr-card-info{flex:1;min-width:0}
-.pr-card-name{font-size:.92rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pr-card-host{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.15rem}
-.pr-card-meta{display:flex;align-items:center;gap:.5rem;margin-top:.35rem;flex-wrap:wrap}
-.pr-card-players{font-size:.72rem;padding:.15rem .5rem;border-radius:4px;font-weight:700}
-.pr-card-players.open{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
-.pr-card-players.full{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25)}
-.pr-card-age{font-size:.68rem;color:var(--ghost);opacity:.4}
-.pr-join-btn{padding:.45rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:700;transition:.2s;flex-shrink:0}
-.pr-join-btn:hover{background:var(--blood);box-shadow:0 0 12px rgba(185,28,28,.4)}
-.pr-join-btn:disabled{opacity:.4;cursor:not-allowed}
-.pr-empty{text-align:center;padding:2.5rem 1rem;color:var(--ghost);opacity:.4}
-.pr-empty .pr-empty-icon{font-size:2.5rem;margin-bottom:.5rem}
-.pr-empty p{font-size:.85rem}
-.pr-loading{text-align:center;padding:2rem;color:var(--ghost);opacity:.5;font-size:.85rem}
-/* join name panel inside public rooms */
-.pr-join-panel{background:var(--purple);border:1px solid rgba(212,160,23,.3);border-radius:8px;padding:.9rem;margin-top:.8rem;display:none;flex-direction:column;gap:.6rem}
-.pr-join-panel.open{display:flex}
-.pr-join-panel label{font-size:.8rem;color:var(--moon);font-weight:700}
-.pr-join-panel input{width:100%;padding:.6rem;background:var(--abyss);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:.95rem}
-.pr-join-panel input:focus{outline:none;border-color:var(--moon-pale)}
-
-/* ── ROOM CREATION MODAL ── */
-#roomCreateModal{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:320;display:flex;align-items:center;justify-content:center;padding:1rem}
-#roomCreateModal.hidden{display:none}
-.rc-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:1.8rem 1.5rem;width:100%;max-width:420px;position:relative;box-shadow:0 0 50px rgba(212,160,23,.18)}
-.rc-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:1.4rem}
-.rc-type-toggle{display:flex;gap:0;border:1px solid var(--moon);border-radius:8px;overflow:hidden;margin-bottom:1.3rem}
-.rc-type-btn{flex:1;padding:.75rem;background:transparent;border:none;color:var(--ghost);cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:.25rem}
-.rc-type-btn span.rc-type-icon{font-size:1.5rem}
-.rc-type-btn span.rc-type-lbl{font-size:.75rem;opacity:.7}
-.rc-type-btn.active{background:var(--moon);color:var(--void)}
-.rc-type-btn.active span.rc-type-lbl{opacity:1}
-.rc-type-btn:first-child{border-right:1px solid var(--moon)}
-.rc-field{margin-bottom:1rem}
-.rc-field label{display:block;margin-bottom:.35rem;color:var(--moon);font-weight:700;font-size:.85rem}
-.rc-field input{width:100%;padding:.72rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:6px;font-family:inherit;font-size:1rem;transition:.2s}
-.rc-field input:focus{outline:none;border-color:var(--moon-pale);box-shadow:0 0 10px rgba(212,160,23,.25)}
-.rc-field textarea{width:100%;padding:.72rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:6px;font-family:inherit;font-size:.9rem;resize:none;height:70px;transition:.2s}
-.rc-field textarea:focus{outline:none;border-color:var(--moon-pale)}
-.rc-field .rc-hint{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.3rem}
-.rc-players-row{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
-.rc-players-row label{color:var(--moon);font-weight:700;font-size:.85rem;flex-shrink:0}
-.rc-stepper{display:flex;align-items:center;gap:.5rem;margin-left:auto}
-.rc-stepper button{width:32px;height:32px;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:5px;cursor:pointer;font-size:1.1rem;font-family:inherit;display:flex;align-items:center;justify-content:center;transition:.2s}
-.rc-stepper button:hover{background:rgba(212,160,23,.15)}
-.rc-stepper span{font-family:'Creepster',cursive;font-size:1.4rem;color:var(--moon-pale);min-width:28px;text-align:center}
-.rc-create-btn{width:100%;padding:.8rem;background:var(--blood-glow);color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:1.05rem;font-weight:700;transition:.25s;letter-spacing:.04em;margin-top:.3rem}
-.rc-create-btn:hover{background:var(--blood);box-shadow:0 0 20px rgba(185,28,28,.4)}
-.rc-create-btn:disabled{opacity:.5;cursor:not-allowed}
-/* Room code reveal screen */
-#roomCodeReveal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:325;display:flex;align-items:center;justify-content:center;padding:1rem}
-#roomCodeReveal.hidden{display:none}
-.rcr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:2rem 1.5rem;width:100%;max-width:380px;text-align:center;box-shadow:0 0 60px rgba(212,160,23,.22)}
-.rcr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.6rem;margin-bottom:.3rem}
-.rcr-box .rcr-sub{font-size:.78rem;color:var(--ghost);opacity:.5;margin-bottom:1.5rem}
-.rcr-code-wrap{background:var(--purple);border:2px solid var(--moon);border-radius:10px;padding:1.2rem;margin-bottom:1.2rem;position:relative;cursor:pointer;transition:.2s}
-.rcr-code-wrap:hover{border-color:var(--moon-pale);background:rgba(26,10,46,.9)}
-.rcr-code{font-family:'Cinzel Decorative',cursive;font-size:2.6rem;color:var(--moon-pale);letter-spacing:.25em;line-height:1}
-.rcr-code-hint{font-size:.7rem;color:var(--ghost);opacity:.45;margin-top:.4rem}
-.rcr-type-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;border-radius:20px;font-size:.75rem;font-weight:700;margin-bottom:1.2rem}
-.rcr-actions{display:flex;flex-direction:column;gap:.6rem}
-.rcr-btn{width:100%;padding:.7rem;border-radius:7px;cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700;transition:.2s;border:none}
-.rcr-btn-primary{background:var(--blood-glow);color:#fff}
-.rcr-btn-primary:hover{background:var(--blood)}
-.rcr-btn-secondary{background:transparent;border:1px solid rgba(212,160,23,.35)!important;color:var(--moon)}
-.rcr-btn-secondary:hover{background:rgba(212,160,23,.1)}
-.rcr-copied{position:absolute;top:.5rem;right:.7rem;font-size:.7rem;color:var(--green);opacity:0;transition:.3s}
-.rcr-copied.show{opacity:1}
-
-/* ── LEADERBOARD MODAL ── */
-#leaderboardModal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:310;display:flex;align-items:center;justify-content:center;padding:1rem}
-#leaderboardModal.hidden{display:none}
-.lb-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.6rem 1.4rem;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;position:relative;box-shadow:0 0 50px rgba(212,160,23,.18)}
-.lb-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.9rem;text-align:center;margin-bottom:.3rem}
-.lb-subtitle{text-align:center;font-size:.78rem;color:var(--ghost);opacity:.5;margin-bottom:1.1rem}
-.lb-tabs{display:flex;gap:.35rem;margin-bottom:1rem}
-.lb-tab{flex:1;padding:.4rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s;text-align:center}
-.lb-tab.active{background:var(--moon);color:var(--void);font-weight:700}
-.lb-podium{display:flex;align-items:flex-end;justify-content:center;gap:.7rem;margin-bottom:1.2rem}
-.lb-podium-slot{display:flex;flex-direction:column;align-items:center;gap:.3rem}
-.lb-podium-avatar{border-radius:50%;border:2px solid var(--moon);display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:var(--purple);overflow:hidden;flex-shrink:0}
-.lb-podium-avatar img{width:100%;height:100%;object-fit:cover}
-.lb-podium-name{font-size:.7rem;color:var(--ghost);max-width:70px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lb-podium-val{font-family:'Creepster',cursive;color:var(--moon);font-size:1rem}
-.lb-podium-rank{font-size:.65rem;color:var(--ghost);opacity:.6}
-.lb-podium-block{border-radius:6px 6px 0 0;width:52px;display:flex;align-items:center;justify-content:center;font-family:'Creepster',cursive;font-size:1.1rem;background:var(--purple);border:1px solid rgba(212,160,23,.3)}
-.lb-row{display:flex;align-items:center;gap:.7rem;padding:.6rem .5rem;border-radius:7px;transition:.15s}
-.lb-row:hover{background:rgba(212,160,23,.06)}
-.lb-row.lb-me{background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3)}
-.lb-rank-num{font-family:'Creepster',cursive;font-size:1.1rem;color:var(--ghost);opacity:.5;width:24px;text-align:center;flex-shrink:0}
-.lb-avatar-sm{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;overflow:hidden}
-.lb-avatar-sm img{width:100%;height:100%;object-fit:cover}
-.lb-info{flex:1;min-width:0}
-.lb-info-name{font-size:.88rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lb-info-sub{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.1rem}
-.lb-badge{padding:.18rem .5rem;border-radius:4px;font-size:.68rem;font-weight:700;flex-shrink:0}
-.lb-stat-val{font-family:'Creepster',cursive;font-size:1.15rem;color:var(--moon);min-width:36px;text-align:right;flex-shrink:0}
-.lb-empty{text-align:center;color:var(--ghost);opacity:.4;font-size:.85rem;padding:2rem 0}
-.lb-loading{text-align:center;color:var(--ghost);opacity:.5;font-size:.85rem;padding:1.5rem 0}
-.lb-my-rank-bar{background:var(--purple);border:1px solid rgba(212,160,23,.25);border-radius:8px;padding:.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.7rem}
-.lb-my-rank-bar .lmr-rank{font-family:'Creepster',cursive;font-size:1.6rem;color:var(--moon)}
-.lb-my-rank-bar .lmr-label{font-size:.72rem;color:var(--ghost);opacity:.6}
-.lb-my-rank-bar .lmr-stat{margin-left:auto;text-align:right}
-.lb-my-rank-bar .lmr-sv{font-family:'Creepster',cursive;font-size:1.2rem;color:var(--moon-pale)}
-.lb-my-rank-bar .lmr-sl{font-size:.68rem;color:var(--ghost);opacity:.5}
 /* Profile button in login */
 .profile-btn{margin-top:.8rem;width:100%;padding:.6rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:5px;cursor:pointer;font-family:inherit;font-size:.85rem;transition:.2s}
 .profile-btn:hover{background:rgba(212,160,23,.1);border-color:var(--moon)}
@@ -754,38 +690,6 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .audio-slider::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--moon);cursor:pointer;box-shadow:0 0 4px rgba(212,160,23,.5)}
 .audio-mute{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:4px;padding:0 .35rem;font-size:.75rem;cursor:pointer;height:20px;line-height:1;font-family:inherit;transition:.15s}
 .audio-mute:hover{background:rgba(212,160,23,.15)}
-#publicRoomsModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:315;display:flex;align-items:center;justify-content:center;padding:1rem}
-#publicRoomsModal.hidden{display:none}
-.pr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:1.6rem 1.4rem;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;position:relative;box-shadow:0 0 50px rgba(212,160,23,.16)}
-.pr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:.3rem}
-.pr-subtitle{text-align:center;font-size:.75rem;color:var(--ghost);opacity:.45;margin-bottom:1rem}
-.pr-toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center}
-.pr-refresh-btn{padding:.4rem .9rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s;white-space:nowrap}
-.pr-refresh-btn:hover{background:rgba(212,160,23,.1)}
-.pr-refresh-btn.spinning{animation:prSpin .7s linear infinite}
-@keyframes prSpin{to{transform:rotate(360deg)}}
-.pr-create-link{padding:.4rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;transition:.2s;white-space:nowrap;margin-left:auto}
-.pr-create-link:hover{background:var(--blood)}
-.pr-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.6rem;padding-right:.2rem}
-.pr-list::-webkit-scrollbar{width:4px}
-.pr-list::-webkit-scrollbar-thumb{background:var(--moon);border-radius:2px}
-.pr-card{background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem;transition:.2s;cursor:default}
-.pr-card:hover{border-color:rgba(212,160,23,.5);background:rgba(26,10,46,.85)}
-.pr-card-icon{font-size:1.6rem;flex-shrink:0;width:40px;text-align:center}
-.pr-card-info{flex:1;min-width:0}
-.pr-card-name{font-size:.92rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pr-card-host{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.15rem}
-.pr-card-meta{display:flex;align-items:center;gap:.5rem;margin-top:.35rem;flex-wrap:wrap}
-.pr-card-players{font-size:.72rem;padding:.15rem .5rem;border-radius:4px;font-weight:700}
-.pr-card-players.open{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
-.pr-card-players.full{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25)}
-.pr-card-age{font-size:.68rem;color:var(--ghost);opacity:.4}
-.pr-join-btn{padding:.45rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:700;transition:.2s;flex-shrink:0}
-.pr-join-btn:hover{background:var(--blood);box-shadow:0 0 12px rgba(185,28,28,.4)}
-.pr-join-btn:disabled{opacity:.4;cursor:not-allowed}
-.pr-empty{text-align:center;padding:2.5rem 1rem;color:var(--ghost);opacity:.4}
-.pr-empty .pr-empty-icon{font-size:2.5rem;margin-bottom:.5rem}
-.pr-empty p{font-size:.85rem}
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -4585,91 +4489,156 @@ window.addEventListener('load', () => {
 </head>
 <body>
 
-<!-- ══ MAIN MENU ══ -->
-<div id="mainMenuScreen" class="hidden">
-  <!-- Atmospheric background -->
-  <div class="mm-bg" id="mmBg"></div>
+<!-- ══ LOGIN ══ -->
+<!-- ══════════════════════════════════════
+     MAIN MENU
+════════════════════════════════════════ -->
+<div id="mainMenu" class="hidden">
+  <div class="mn-title">Loup-Garou</div>
+  <div class="mn-sub">ONLINE · MULTIPLAYER</div>
 
-  <div class="mm-wrap">
-    <!-- Header -->
-    <div class="mm-header">
-      <h1>Loup-Garou</h1>
-      <div class="mm-tagline">ONLINE · MULTIPLAYER</div>
+  <!-- User bar -->
+  <div class="mn-userbar">
+    <div class="mn-avatar" id="mnAvatar">🐺</div>
+    <div>
+      <div class="mn-uname" id="mnName">Guest</div>
+      <div class="mn-urole" id="mnRole">—</div>
+    </div>
+    <div class="mn-coins" id="mnCoins">🪙 0</div>
+  </div>
+
+  <!-- Guest name input (hidden for signed-in users) -->
+  <div class="mn-name-panel" id="mnNamePanel">
+    <label style="font-size:.8rem;color:var(--moon);font-weight:700">Your display name</label>
+    <input id="mnNameInput" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
+  </div>
+
+  <!-- Join code panel (slides open) -->
+  <div class="mn-join-panel" id="mnJoinPanel">
+    <label style="font-size:.8rem;color:var(--moon);font-weight:700">Enter Room Code</label>
+    <input id="mnCodeInput" type="text" maxlength="6" placeholder="ABC123" autocomplete="off">
+    <button onclick="mnConfirmJoin()" style="padding:.65rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700">Join Room →</button>
+  </div>
+
+  <!-- Grid -->
+  <div class="mn-grid">
+    <div class="mn-btn primary" onclick="mnOpenCreate()">
+      <div class="mn-icon">⚔️</div>
+      <div class="mn-label">Create Room</div>
+      <div class="mn-desc">Start a new game</div>
+    </div>
+    <div class="mn-btn" onclick="mnToggleJoin()">
+      <div class="mn-icon">🔑</div>
+      <div class="mn-label">Join by Code</div>
+      <div class="mn-desc">Enter room code</div>
+    </div>
+    <div class="mn-btn" onclick="mnOpenPublicRooms()">
+      <div class="mn-icon">🌐</div>
+      <div class="mn-label">Public Rooms</div>
+      <div class="mn-desc">Browse open games</div>
+    </div>
+    <div class="mn-btn" onclick="openLeaderboard()">
+      <div class="mn-icon">🏆</div>
+      <div class="mn-label">Leaderboard</div>
+      <div class="mn-desc">Global rankings</div>
+    </div>
+    <div class="mn-btn" onclick="openAvatarStore()">
+      <div class="mn-icon">🎭</div>
+      <div class="mn-label">Avatar Shop</div>
+      <div class="mn-desc">Customize look</div>
+    </div>
+    <div class="mn-btn" onclick="openProfileModal()">
+      <div class="mn-icon">📊</div>
+      <div class="mn-label">Profile</div>
+      <div class="mn-desc">Stats & history</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="mn-footer">
+    <button class="mn-foot-btn" onclick="openSpinWheel()">🎡 Daily Spin</button>
+    <button class="mn-foot-btn" id="mnSignOutBtn" onclick="mnSignOut()" style="display:none">Sign Out</button>
+    <button class="mn-foot-btn" id="mnSignInBtn" onclick="mnGoLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ROOM CREATE MODAL
+════════════════════════════════════════ -->
+<div id="roomCreateModal" class="hidden">
+  <div class="rc-box">
+    <button class="profile-close" onclick="mnCloseCreate()">✕</button>
+    <h2>⚔️ Create Room</h2>
+
+    <div class="rc-toggle">
+      <button class="rc-toggle-btn active" id="rcBtnPublic" onclick="rcSetType('public')">🌐 Public</button>
+      <button class="rc-toggle-btn" id="rcBtnPrivate" onclick="rcSetType('private')">🔒 Private</button>
     </div>
 
-    <!-- User bar -->
-    <div class="mm-user-bar">
-      <div class="mm-user-avatar" id="mmUserAvatar">🐺</div>
-      <div class="mm-user-info">
-        <div class="mm-user-name" id="mmUserName">Guest</div>
-        <div class="mm-user-role" id="mmUserRole">Peasant · 0 wins</div>
-      </div>
-      <div class="mm-user-coins" id="mmUserCoins">🪙 <span id="mmCoinsVal">0</span></div>
+    <div class="rc-field" id="rcRoomNameField">
+      <label>Room Name</label>
+      <input id="rcRoomName" type="text" maxlength="30" placeholder="Dark Forest…" autocomplete="off">
+      <div class="hint">Shown in public rooms list</div>
     </div>
 
-    <!-- Name input (guests / name change) -->
-    <div class="mm-name-panel" id="mmNamePanel">
-      <label style="font-size:.8rem;color:var(--moon);font-weight:700">Your display name</label>
-      <input id="mmNameInput" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
+    <div class="rc-field">
+      <label>Your Name</label>
+      <input id="rcHostName" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
     </div>
 
-    <!-- Join code panel (slides open) -->
-    <div class="mm-join-panel" id="mmJoinPanel">
-      <label style="font-size:.8rem;color:var(--moon);font-weight:700">Enter Room Code</label>
-      <input id="mmCodeInput" type="text" maxlength="6" placeholder="ABC123" autocomplete="off">
-      <button onclick="mmDoJoin()" style="width:100%;padding:.65rem;background:var(--blood-glow);color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.95rem;font-weight:700;transition:.2s" onmouseover="this.style.background='var(--blood)'" onmouseout="this.style.background='var(--blood-glow)'">Join Room →</button>
-    </div>
-
-    <!-- Main grid tiles -->
-    <div class="mm-grid">
-      <!-- Create Room — full width primary -->
-      <div class="mm-tile mm-primary" onclick="mmDoCreate()">
-        <div class="mm-tile-icon">⚔️</div>
-        <div class="mm-tile-label">Create Room</div>
-        <div class="mm-tile-sub">Start a new game</div>
-      </div>
-
-      <div class="mm-tile" style="--tile-glow:rgba(120,176,216,.08)" onclick="mmToggleJoin()">
-        <div class="mm-tile-icon">🔑</div>
-        <div class="mm-tile-label">Join by Code</div>
-        <div class="mm-tile-sub">Enter room code</div>
-      </div>
-
-      <div class="mm-tile" style="--tile-glow:rgba(16,185,129,.08)" onclick="mmOpenPublicRooms()">
-        <div class="mm-tile-icon">🌐</div>
-        <div class="mm-tile-label">Public Rooms</div>
-        <div class="mm-tile-sub">Browse open games</div>
-      </div>
-
-      <div class="mm-tile" style="--tile-glow:rgba(212,160,23,.1)" onclick="openLeaderboard()">
-        <div class="mm-tile-icon">🏆</div>
-        <div class="mm-tile-label">Leaderboard</div>
-        <div class="mm-tile-sub">Global rankings</div>
-      </div>
-
-      <div class="mm-tile" style="--tile-glow:rgba(192,122,216,.08)" onclick="openAvatarStore()">
-        <div class="mm-tile-icon">🎭</div>
-        <div class="mm-tile-label">Avatar Shop</div>
-        <div class="mm-tile-sub">Customize your look</div>
-      </div>
-
-      <div class="mm-tile" style="--tile-glow:rgba(212,160,23,.08)" onclick="openProfileModal()">
-        <div class="mm-tile-icon">📊</div>
-        <div class="mm-tile-label">Profile</div>
-        <div class="mm-tile-sub">Stats & history</div>
+    <div class="rc-players">
+      <label>Max Players</label>
+      <div class="rc-stepper">
+        <button onclick="rcAdj(-1)">−</button>
+        <span id="rcPlayers">8</span>
+        <button onclick="rcAdj(+1)">+</button>
       </div>
     </div>
 
-    <!-- Footer: daily spin + sign out -->
-    <div class="mm-footer-btns">
-      <button class="mm-footer-btn" onclick="openSpinWheel()">🎡 Daily Spin</button>
-      <button class="mm-footer-btn" id="mmSignOutBtn" onclick="mmSignOut()" style="display:none">Sign Out</button>
-      <button class="mm-footer-btn" id="mmSignInBtn" onclick="mmGoToLogin()">Sign In / Register</button>
+    <button class="rc-submit" onclick="rcCreate()">Create Room →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     CODE REVEAL
+════════════════════════════════════════ -->
+<div id="codeReveal" class="hidden">
+  <div class="cr-box">
+    <h2>Room Created! 🎉</h2>
+    <div class="cr-sub">Share this code with your friends</div>
+    <div id="crTypeBadge" class="cr-type"></div>
+    <div class="cr-code" id="crCode" onclick="crCopy()">——</div>
+    <div class="cr-copy-hint">tap code to copy</div>
+    <span class="cr-copied" id="crCopied">✓ Copied!</span>
+    <div class="cr-actions">
+      <button class="cr-btn cr-btn-go" onclick="crEnter()">Enter Waiting Room →</button>
+      <button class="cr-btn cr-btn-share" onclick="crShare()">📤 Share Invite</button>
+      <button class="cr-btn cr-btn-back" onclick="crBack()">← Back to Menu</button>
     </div>
   </div>
 </div>
 
-<!-- ══ LOGIN ══ -->
+<!-- ══════════════════════════════════════
+     PUBLIC ROOMS
+════════════════════════════════════════ -->
+<div id="publicRoomsModal" class="hidden">
+  <div class="pr-wrap">
+    <button class="profile-close" onclick="mnClosePublicRooms()">✕</button>
+    <h2>🌐 Public Rooms</h2>
+    <div class="pr-subtitle" id="prSubtitle">Live open games</div>
+    <div class="pr-toolbar">
+      <button class="pr-rfbtn" onclick="prRefresh()">↻ Refresh</button>
+      <button class="pr-newbtn" onclick="mnClosePublicRooms();mnOpenCreate()">+ Create</button>
+    </div>
+    <div class="pr-name-panel" id="prNamePanel">
+      <label style="font-size:.78rem;color:var(--moon);font-weight:700">Your name to join</label>
+      <input id="prJoinName" type="text" maxlength="20" placeholder="Your name…" autocomplete="off">
+      <button onclick="prConfirmJoin()" style="padding:.5rem;background:var(--blood-glow);border:none;color:#fff;border-radius:4px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:700">Join →</button>
+    </div>
+    <div class="pr-list" id="prList"><div class="pr-loading">Loading…</div></div>
+  </div>
+</div>
+
 <div id="loginScreen">
   <div class="lang-bar">
     <button class="lb" data-l="en" onclick="setLang('en')">EN</button>
@@ -4680,13 +4649,48 @@ window.addEventListener('load', () => {
     <h1 id="t_title">Loup-Garou</h1>
     <p id="t_sub">Join the game of deception and survival</p>
 
-    <!-- Google Sign In button -->
+    <!-- Google account bar (shown when signed in) -->
+    <div id="googleUserBar" style="display:none;align-items:center;gap:.7rem;background:var(--purple);border:1px solid var(--moon);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem">
+      <img id="googleAvatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--moon);object-fit:cover">
+      <div style="flex:1;text-align:left;min-width:0">
+        <div id="googleDisplayName" style="color:var(--moon-pale);font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="googleEmail" style="color:var(--ghost);font-size:.72rem;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      </div>
+      <button onclick="openProfileModal()" style="background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'" id="t_viewstats">📊 Stats</button>
+      <button onclick="doGoogleSignOut()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:4px;padding:.25rem .55rem;cursor:pointer;font-family:inherit;font-size:.72rem;white-space:nowrap;transition:.2s" onmouseover="this.style.borderColor='var(--blood-glow)';this.style.color='var(--blood-glow)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.5)'" id="t_signout">Sign out</button>
+    </div>
+
+    
+    <!-- Avatar Store + Daily Spin -->
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+      <button onclick="openAvatarStore()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='var(--purple)'">🎭 Avatar Store</button>
+      <button onclick="openSpinWheel()" style="flex:1;padding:.55rem .8rem;background:var(--purple);border:1px solid var(--blood-glow);color:var(--blood-glow);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='var(--purple)'">🎡 Daily Spin</button>
+    </div>
+    <div id="gameEntryWrap" style="display:none">
+    <div class="fg">
+      <label id="t_name">Your Name</label>
+      <input id="inName" type="text" autocomplete="off">
+    </div>
+    <div class="fg" id="joinCodeGroup">
+      <label id="t_code">Room Code</label>
+      <input id="inCode" type="text" maxlength="6" style="text-transform:uppercase;letter-spacing:.15em" autocomplete="off">
+    </div>
+    <button class="btn" style="width:100%" onclick="doJoin()" id="t_join">Join Game</button>
+    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
+    <button class="btn btn-secondary" style="width:100%" onclick="doCreate()" id="t_create">Create Room</button>
+    </div>
+    <div class="room-code-display" id="createdCodeBox">
+      <small id="t_shareCode">Share this code with friends:</small>
+      <div class="code" id="createdCodeVal">——</div>
+    </div>
+    <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
+    <!-- Google Sign In button (shown when NOT signed in) -->
     <button id="googleSignInBtn" onclick="doGoogleSignIn()" style="width:100%;padding:.75rem;background:#fff;color:#3c3c3c;border:none;border-radius:5px;cursor:pointer;font-weight:700;font-size:.92rem;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:.2s" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
       <span id="t_googlebtn">Continue with Google</span>
     </button>
 
-    <!-- Email / Password login -->
+    <!-- Email / Password login (shown when NOT signed in) -->
     <div id="emailLoginWrap" class="email-login-wrap">
       <div class="or-divider" id="t_or">or</div>
       <div class="email-tabs">
@@ -4710,22 +4714,6 @@ window.addEventListener('load', () => {
         <span id="t_emailbtn">Login</span>
       </button>
       <button class="guest-btn" id="guestLoginBtn" onclick="doGuestPlay()" id="t_guestbtn">👤 Play as Guest (no stats)</button>
-    </div>
-
-    <!-- Hidden inputs used by doCreate/doJoin — kept for compatibility -->
-    <div style="display:none">
-      <input id="inName" type="text" autocomplete="off">
-      <input id="inCode" type="text" autocomplete="off">
-      <div id="googleUserBar"></div>
-      <div id="googleAvatar" style="display:none"></div>
-      <div id="googleDisplayName"></div>
-      <div id="googleEmail" style="display:none"></div>
-      <div id="gameEntryWrap"></div>
-      <div id="createdCodeBox"><div id="createdCodeVal"></div></div>
-      <button id="headerStatsBtn"></button>
-      <button id="headerLbBtn"></button>
-      <span id="t_viewstats"></span>
-      <span id="t_signout"></span>
     </div>
 
     <hr style="margin:1.1rem 0;border-color:var(--moon);opacity:.2">
@@ -4819,7 +4807,6 @@ window.addEventListener('load', () => {
     </div>
     <button class="leave-btn" onclick="doLeave()" id="t_leave">Leave</button>
     <button id="headerStatsBtn" onclick="openProfileModal()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">📊</button>
-    <button id="headerLbBtn" onclick="openLeaderboard()" style="display:none;background:transparent;border:1px solid rgba(212,160,23,.4);color:var(--moon);border-radius:4px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🏆</button>
   </div>
 
   <div class="g-content">
@@ -4854,39 +4841,36 @@ window.addEventListener('load', () => {
       <!-- Setup / Lobby -->
       <div class="setup-wrap" id="setupView">
 
-        <!-- LOBBY HEADER: room code + share -->
-        <div style="text-align:center;margin-bottom:1.1rem">
-          <div style="font-family:'Creepster',cursive;font-size:1.4rem;color:var(--moon);margin-bottom:.4rem">🐺 Waiting Room</div>
-          <div onclick="lobbyCopyCode()" title="Click to copy" style="display:inline-flex;align-items:center;gap:.55rem;background:var(--abyss);border:1.5px solid var(--moon);border-radius:8px;padding:.45rem 1.1rem;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='var(--moon-pale)'" onmouseout="this.style.borderColor='var(--moon)'">
-            <span style="font-size:.65rem;color:var(--ghost);opacity:.5;letter-spacing:.06em">ROOM</span>
-            <span id="lobbyCodeDisplay" style="font-family:'Cinzel Decorative',cursive;font-size:1.25rem;color:var(--moon-pale);letter-spacing:.22em">——</span>
-            <span id="lobbyCopiedHint" style="font-size:.65rem;color:#10b981;opacity:0;transition:.4s">✓ Copied</span>
+        <!-- Room code bar -->
+        <div class="lobby-code-bar">
+          <div class="lobby-code-inner" onclick="lobbyCopy()">
+            <span class="lci-label">ROOM</span>
+            <span class="lci-code" id="lobbyCode">——</span>
+            <span class="lci-copied" id="lobbyCopied">✓</span>
           </div>
-          <div style="margin-top:.35rem">
-            <button onclick="lobbyShareCode()" style="background:transparent;border:none;color:var(--ghost);opacity:.45;cursor:pointer;font-size:.72rem;font-family:inherit;transition:.2s" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.45'">📤 Share invite link</button>
+          <div style="margin-top:.3rem">
+            <button onclick="lobbyShare()" style="background:transparent;border:none;color:var(--ghost);opacity:.4;cursor:pointer;font-size:.7rem;font-family:inherit">📤 Share invite</button>
           </div>
         </div>
 
-        <!-- PLAYER AVATAR CARDS -->
-        <div id="lobbyPlayerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.55rem;margin-bottom:.9rem"></div>
+        <!-- Player cards -->
+        <div class="lobby-grid" id="lobbyGrid"></div>
 
-        <!-- READY BUTTON (non-hosts) -->
-        <div id="lobbyReadyWrap" style="display:none;margin-bottom:.7rem">
-          <button id="lobbyReadyBtn" onclick="lobbyToggleReady()" style="width:100%;padding:.7rem;border-radius:8px;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:.25s;border:2px solid var(--moon);background:transparent;color:var(--moon)">
-            ✋ Mark as Ready
-          </button>
+        <!-- Ready button (non-hosts) -->
+        <div id="lobbyReadyWrap" style="display:none">
+          <button class="lobby-ready-btn" id="lobbyReadyBtn" onclick="lobbyToggleReady()">✋ Mark as Ready</button>
         </div>
 
-        <!-- HOST CONTROLS -->
+        <!-- Host controls -->
         <div id="hostStart" style="display:none">
-          <details style="margin-bottom:.65rem">
-            <summary style="cursor:pointer;color:var(--moon);font-size:.82rem;font-weight:700;padding:.5rem;background:var(--abyss);border:1px solid rgba(212,160,23,.2);border-radius:7px;list-style:none">⚙️ Game Settings ▾</summary>
-            <div style="background:var(--abyss);border:1px solid rgba(212,160,23,.15);border-top:none;border-radius:0 0 7px 7px;padding:.8rem">
+          <details style="margin-bottom:.6rem">
+            <summary style="cursor:pointer;color:var(--moon);font-size:.8rem;font-weight:700;padding:.45rem .7rem;background:rgba(26,10,46,.6);border:1px solid rgba(212,160,23,.2);border-radius:6px;list-style:none">⚙️ Game Settings ▾</summary>
+            <div style="border:1px solid rgba(212,160,23,.15);border-top:none;border-radius:0 0 6px 6px;padding:.7rem">
               <div class="s-section">
-                <h4 id="t_roles" style="font-size:.78rem;margin-bottom:.4rem">Select Roles</h4>
+                <h4 id="t_roles" style="font-size:.78rem">Select Roles</h4>
                 <div class="roles-grid" id="rolesGrid"></div>
               </div>
-              <div class="s-section timer-row" style="margin-top:.6rem">
+              <div class="s-section timer-row" style="margin-top:.5rem">
                 <div><h4 id="t_dayt" style="font-size:.72rem">Day Timer (s)</h4><input type="number" id="cfgDay" min="10" max="600" value="60" onchange="cfgChanged()"></div>
                 <div><h4 id="t_nightt" style="font-size:.72rem">Night Timer (s)</h4><input type="number" id="cfgNight" min="10" max="600" value="45" onchange="cfgChanged()"></div>
               </div>
@@ -4896,7 +4880,7 @@ window.addEventListener('load', () => {
           <button class="btn" style="width:100%;padding:1rem;font-size:1.05rem" onclick="doStartGame()" id="t_start">⚔️ Start Game</button>
         </div>
 
-        <div id="guestWait" class="waiting-msg" style="display:none" id="t_wait">Waiting for host to start…</div>
+        <div id="guestWait" class="waiting-msg" style="display:none">Waiting for host to start…</div>
       </div>
       <!-- Gameplay -->
       <div class="play-wrap" id="playView" style="display:none">
@@ -6093,10 +6077,6 @@ function doRestart(){
     upd[`games/${roomCode}/bearSignal`]=null;
     upd[`games/${roomCode}/crowAccused`]=null;
     db.ref().update(upd).then(()=>{
-      // Remove from public rooms listing when game starts
-      if(typeof db !== 'undefined' && db && roomCode){
-        db.ref(`publicRooms/${roomCode}`).remove().catch(()=>{});
-      }
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     }).catch(err=>{
       console.error('Restart error:', err);
@@ -6176,25 +6156,35 @@ function _initGoogleAuth(){
 
 function _updateGoogleUI(user){
   const signInBtn=document.getElementById('googleSignInBtn');
-  const emailWrap=document.getElementById('emailLoginWrap');
+  const userBar=document.getElementById('googleUserBar');
+  const nameInput=document.getElementById('inName');
   const hBtn=document.getElementById('headerStatsBtn');
-  const hLbBtn=document.getElementById('headerLbBtn');
+  const emailWrap=document.getElementById('emailLoginWrap');
+  const gameEntry=document.getElementById('gameEntryWrap');
   if(user){
+    // Show profile bar, hide sign-in button + email form, show game entry
     if(signInBtn) signInBtn.style.display='none';
     if(emailWrap) emailWrap.style.display='none';
+    if(userBar) userBar.style.display='flex';
+    if(gameEntry) gameEntry.style.display='block';
     if(hBtn) hBtn.style.display='inline-block';
-    if(hLbBtn) hLbBtn.style.display='inline-block';
-    // Redirect to main menu
-    const login=document.getElementById('loginScreen');
-    if(login && !login.classList.contains('hidden')){
-      login.classList.add('hidden');
-      showMainMenu();
+    const avatar=document.getElementById('googleAvatar');
+    const displayName=document.getElementById('googleDisplayName');
+    const email=document.getElementById('googleEmail');
+    if(avatar) avatar.src=user.photoURL||'';
+    if(displayName) displayName.textContent=user.displayName||user.email||'';
+    if(email) email.textContent=user.email||'';
+    // Auto-fill name input with Google display name
+    if(nameInput && !nameInput.value && user.displayName){
+      nameInput.value=user.displayName.split(' ')[0]; // first name only
     }
   } else {
+    // Show sign-in button + email form, hide profile bar + game entry
     if(signInBtn) signInBtn.style.display='flex';
     if(emailWrap) emailWrap.style.display='block';
+    if(userBar) userBar.style.display='none';
+    if(gameEntry) gameEntry.style.display='none';
     if(hBtn) hBtn.style.display='none';
-    if(hLbBtn) hLbBtn.style.display='none';
   }
 }
 
@@ -6228,8 +6218,6 @@ function doGoogleSignOut(){
     _googleUser=null;
     _updateGoogleUI(null);
     document.getElementById('inName').value='';
-    hideMainMenu();
-    document.getElementById('loginScreen').classList.remove('hidden');
   });
 }
 
@@ -6331,8 +6319,14 @@ function getVisibleRole(targetPlayerId, myPlayerId, myRole, gameState){
 
 // ── GUEST PLAY ──
 function doGuestPlay(){
-  document.getElementById('loginScreen').classList.add('hidden');
-  showMainMenu();
+  // Hide login options, show game entry — no account, no stats
+  const emailWrap = document.getElementById('emailLoginWrap');
+  const googleBtn = document.getElementById('googleSignInBtn');
+  const gameEntry = document.getElementById('gameEntryWrap');
+  if(emailWrap) emailWrap.style.display = 'none';
+  if(googleBtn) googleBtn.style.display = 'none';
+  if(gameEntry) gameEntry.style.display = 'block';
+  // _googleUser stays null → savePlayerStats will return early (no stats for guests)
   console.log('👤 Playing as guest — stats disabled');
 }
 
@@ -6414,9 +6408,6 @@ function changeCount(role,delta){
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
-  if(!cfg.roles || (!Array.isArray(cfg.roles) && typeof cfg.roles==='object' && !Object.keys(cfg.roles).length)) cfg.roles=['werewolf','seer','witch','villager'];
-  if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles).filter(v=>typeof v==='string');
-  if(!cfg.roles.length) cfg.roles=['werewolf','seer','witch','villager'];
   if(!cfg.roleCounts) cfg.roleCounts={};
   if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
   if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
@@ -6574,35 +6565,10 @@ async function enterRoom(){
       }
       console.log('✅ Room joined',roomCode);
     }
-    // ── Max players check before joining ───────────────────────────────────
-    if(!isLeader){
-      const existingSnap = await db.ref(`games/${roomCode}/players`).once('value');
-      const existingPlayers = existingSnap.val() ? Object.values(existingSnap.val()) : [];
-      const activePlayers = existingPlayers.filter(p => !p.disconnected);
-      const roomCfgSnap = await db.ref(`games/${roomCode}/config/maxPlayers`).once('value');
-      const maxP = roomCfgSnap.val() || 20;
-      if(activePlayers.length >= maxP){
-        alert(lang==='ar'?'❌ الغرفة ممتلئة!':lang==='fr'?'❌ La salle est pleine !':'❌ Room is full!');
-        showMainMenu();
-        return;
-      }
-    }
     // Add self
     await ref.child(`players/${myId}`).set(
       {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
     );
-    // Update public room player count using actual player count from Firebase
-    if(typeof db !== 'undefined' && db){
-      db.ref(`publicRooms/${roomCode}`).once('value').then(prSnap=>{
-        if(prSnap.exists()){
-          db.ref(`games/${roomCode}/players`).once('value').then(pSnap=>{
-            const allPlayers = pSnap.val() ? Object.values(pSnap.val()) : [];
-            const activeCount = allPlayers.filter(p => !p.disconnected).length;
-            db.ref(`publicRooms/${roomCode}/playerCount`).set(activeCount);
-          }).catch(()=>{});
-        }
-      }).catch(()=>{});
-    }
     // Clean up on disconnect
     // Graceful disconnect flag — never delete the node mid-game
     ref.child(`players/${myId}`).onDisconnect().update({
@@ -6611,16 +6577,6 @@ async function enterRoom(){
     });
     // Start our own heartbeat
     startHeartbeat();
-    // ── Listen for kick ───────────────────────────────────────────────────
-    if(!isLeader){
-      db.ref(`games/${roomCode}/kicked/${myId}`).on('value', kickSnap => {
-        if(kickSnap.exists()){
-          db.ref(`games/${roomCode}/kicked/${myId}`).off();
-          alert(lang==='ar'?'🚪 لقد تم طردك من الغرفة من قبل المضيف.':lang==='fr'?'🚪 Vous avez été expulsé par l’hôte.':'🚪 You have been kicked from the room by the host.');
-          window.location.reload();
-        }
-      });
-    }
     // Live listener
     let _prevStatus=null;
     ref.on('value', snap=>{
@@ -6675,13 +6631,6 @@ async function enterRoom(){
       renderGame();
     });
     showGame();
-    // Fallback: if gameState isn't set within 2 seconds, render anyway or fallback to offline
-    setTimeout(()=>{
-      if(!gameState){
-        console.warn('gameState not set after 2s, calling offlineEnter as fallback');
-        offlineEnter();
-      }
-    }, 2000);
   }catch(ex){
     console.error(ex);
     // Silently fall back to offline mode instead of showing a scary error
@@ -6697,25 +6646,15 @@ function offlineEnter(){
     players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}},
     config:cfg, chat:[], createdAt:Date.now()
   };
-  document.getElementById('mainMenuScreen').classList.add('hidden');
   showGame();
   renderGame();
 }
 
 function showGame(){
   document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('mainMenuScreen').classList.add('hidden');
-  // Hide all modals that might be open
-  ['roomCreateModal','roomCodeReveal','publicRoomsModal','leaderboardModal','profileModal'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.classList.add('hidden');
-  });
   document.getElementById('gameScreen').classList.remove('hidden');
   document.getElementById('hRoom').textContent=roomCode;
   document.getElementById('hPlayerName').textContent=myName||'';
-  // Immediately show room code in waiting room panel (before Firebase listener fires)
-  const _lcd=document.getElementById('lobbyCodeDisplay');
-  if(_lcd && roomCode) _lcd.textContent=roomCode;
   buildRolesGrid();
   applyTranslations();
   if(typeof initAvatarStore==='function') initAvatarStore();
@@ -6822,31 +6761,11 @@ function runDisconnectWatcher(){
 }
 
 function doLeave(){
+  // Remove self from Firebase before reloading so presence is cleaned up instantly
   stopHeartbeat();
   if(fbOk&&db&&roomCode&&myId){
-    const inLobby = !gameState || gameState.status === 'setup';
-    if(inLobby){
-      // In lobby: fully remove player so slot is freed for new joiners
-      db.ref(`games/${roomCode}/players/${myId}`).remove().then(()=>{
-        // Update public room player count
-        db.ref(`publicRooms/${roomCode}`).once('value').then(prSnap=>{
-          if(prSnap.exists()){
-            db.ref(`games/${roomCode}/players`).once('value').then(pSnap=>{
-              const allPlayers = pSnap.val() ? Object.values(pSnap.val()) : [];
-              const activeCount = allPlayers.filter(p => !p.disconnected).length;
-              db.ref(`publicRooms/${roomCode}/playerCount`).set(activeCount);
-            }).catch(()=>{});
-          }
-        }).catch(()=>{});
-      }).catch(()=>{});
-      // Also remove host's public room listing if host leaves lobby
-      if(isLeader){
-        db.ref(`publicRooms/${roomCode}`).remove().catch(()=>{});
-      }
-    } else {
-      // In-game: flag as disconnected so game integrity is preserved
-      db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()}).catch(()=>{});
-    }
+    // Flag as disconnected; don't delete — the node must persist for game integrity
+    db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()});
   }
   window.location.reload();
 }
@@ -6869,22 +6788,6 @@ function doStartGame(){
   // Robust leader check: use both local flag and Firebase data
   const amLeader = isLeader || (gameState?.leader === myId);
   if(!amLeader){ console.warn('Not leader, cannot start'); return; }
-
-  // ── Ready check: all non-host ACTIVE players must be ready ───────────────
-  const _allPlayers = gameState?.players ? Object.values(gameState.players) : [];
-  const _nonHostPlayers = _allPlayers.filter(p => p.id !== myId && !p.disconnected && !p.kicked);
-  const _readyPlayers = gameState?.readyPlayers || {};
-  const _notReady = _nonHostPlayers.filter(p => !_readyPlayers[p.id]);
-  if(_notReady.length > 0){
-    const _names = _notReady.map(p=>p.name).join(', ');
-    const _msg = lang==='ar'
-      ? `انتظر حتى يكون جميع اللاعبين جاهزين:\n${_names}`
-      : lang==='fr'
-      ? `Attends que tous les joueurs soient prêts :\n${_names}`
-      : `Waiting for players to be ready:\n${_names}`;
-    alert('⏳ ' + _msg);
-    return;
-  }
 
   // If Firebase is available, always fetch fresh player data to avoid
   // race conditions where gameState hasn't synced yet
@@ -7052,11 +6955,7 @@ function assignRoles(n){
 function renderGame(){
   if(!gameState) return;
   const players=gameState.players?Object.values(gameState.players):[];
-  // In lobby, only show active (non-disconnected) player count
-  const _activePlayers = (gameState.status==='setup')
-    ? players.filter(p=>!p.disconnected)
-    : players;
-  document.getElementById('hPlayers').textContent=_activePlayers.length;
+  document.getElementById('hPlayers').textContent=players.length;
   document.getElementById('hRoom').textContent=roomCode||'';
 
   // Handle gameover status written by leader
@@ -7106,12 +7005,8 @@ function renderGame(){
     });
     buildRolesGrid();
     renderStats(players);
-    // Only pass active (non-disconnected) players to the lobby grid
-    const _lobbyActivePlayers = players.filter(p => !p.disconnected);
-    renderLobby(_lobbyActivePlayers);
-    // Helper message: role total vs connected players + ready status
+    // Helper message: show role total vs connected players
     const _helperEl=document.getElementById('startHelperMsg');
-    const _startBtn=document.getElementById('t_start');
     if(_helperEl && isLeader){
       if(!cfg.roleCounts) cfg.roleCounts={};
       const _wc=cfg.roleCounts.werewolf??1;
@@ -7120,30 +7015,14 @@ function renderGame(){
       const _sr=_cr.filter(r=>r!=='werewolf'&&r!=='villager');
       let _st=0; _sr.forEach(r=>{ _st+=(r==='threebrothers'?3:r==='twosisters'?2:1); });
       const _total=_wc+_st+_vc;
-      // Only count players who are actually present (not disconnected/left)
-      const _activePlayers=players.filter(p=>!p.disconnected);
-      const _conn=_activePlayers.length;
-      const _rolesOk=_total===_conn;
-      // Ready check — only among active non-host players
-      const _rp=gameState?.readyPlayers||{};
-      const _nonHost=_activePlayers.filter(p=>p.id!==myId);
-      const _readyCount=_nonHost.filter(p=>!!_rp[p.id]).length;
-      const _allReady=_nonHost.length===0||_readyCount===_nonHost.length;
-      const _canStart=_rolesOk&&_allReady;
-      _helperEl.style.background=_canStart?'rgba(16,185,129,.15)':'rgba(212,160,23,.12)';
-      _helperEl.style.border=_canStart?'1px solid var(--green)':'1px solid var(--moon)';
-      _helperEl.style.color=_canStart?'var(--green)':'var(--moon-pale)';
-      if(_canStart){
-        _helperEl.innerHTML=`✅ ${_conn} ${lang==='ar'?'لاعبين — جميعهم جاهزون!':lang==='fr'?'joueurs — tous prêts !':'players — everyone is ready!'}`;
-      } else if(!_rolesOk){
-        _helperEl.innerHTML=`${lang==='ar'?'إجمالي الأدوار':lang==='fr'?'Total rôles':'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang==='ar'?'متصلون':lang==='fr'?'Connectés':'Connected'}: <strong>${_conn}</strong>`;
-      } else {
-        _helperEl.innerHTML=`⏳ ${lang==='ar'?'ينتظر':lang==='fr'?'En attente':'Waiting'}: <strong>${_readyCount}/${_nonHost.length}</strong> ${lang==='ar'?'جاهزون':lang==='fr'?'prêts':'ready'}`;
-      }
-      if(_startBtn){
-        _startBtn.style.opacity=_canStart?'1':'0.45';
-        _startBtn.title=_canStart?'':(lang==='ar'?'انتظر حتى يكون جميع اللاعبين جاهزين':lang==='fr'?'Attends que tous les joueurs soient prêts':'Waiting for all players to be ready');
-      }
+      const _conn=players.length;
+      const _ok=_total===_conn;
+      _helperEl.style.background=_ok?'rgba(16,185,129,.15)':'rgba(212,160,23,.12)';
+      _helperEl.style.border=_ok?'1px solid var(--green)':'1px solid var(--moon)';
+      _helperEl.style.color=_ok?'var(--green)':'var(--moon-pale)';
+      _helperEl.innerHTML=_ok
+        ?`✅ ${_conn} ${lang==='ar'?'لاعبين — جاهز للبدء!':lang==='fr'?'joueurs — prêt à démarrer !':'players ready — good to go!'}`
+        :`${lang==='ar'?'إجمالي الأدوار':lang==='fr'?'Total rôles':'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang==='ar'?'متصلون':lang==='fr'?'Connectés':'Connected'}: <strong>${_conn}</strong>`;
     }
   } else if(gameState.status==='playing'){
     document.getElementById('setupView').style.display='none';
@@ -10308,828 +10187,6 @@ function closeProfileModal(){
 }
 
 // ════════════════════════════════════════════
-// LEADERBOARD
-// ════════════════════════════════════════════
-const RANK_BADGES = [
-  {min:0,   label:'Peasant',    color:'#888',  bg:'rgba(136,136,136,.15)'},
-  {min:5,   label:'Villager',   color:'#a8c090',bg:'rgba(168,192,144,.15)'},
-  {min:15,  label:'Hunter',     color:'#78b0d8',bg:'rgba(120,176,216,.15)'},
-  {min:30,  label:'Witch',      color:'#c07ad8',bg:'rgba(192,122,216,.15)'},
-  {min:60,  label:'Seer',       color:'#d8c058',bg:'rgba(216,192,88,.15)'},
-  {min:100, label:'Wolf Lord',  color:'#d87858',bg:'rgba(216,120,88,.15)'},
-  {min:200, label:'Alpha Wolf', color:'#d4a017',bg:'rgba(212,160,23,.2)'},
-];
-
-function getRankBadge(wins){
-  let badge = RANK_BADGES[0];
-  for(const b of RANK_BADGES){ if(wins >= b.min) badge = b; }
-  return badge;
-}
-
-let _lbSort = 'wins';
-let _lbCache = null;
-
-function lbSetSort(sort){
-  _lbSort = sort;
-  ['wins','coins','streak','rate'].forEach(s=>{
-    const el = document.getElementById('lbTab'+s.charAt(0).toUpperCase()+s.slice(1));
-    if(el) el.classList.toggle('active', s === sort);
-  });
-  if(_lbCache) _renderLeaderboard(_lbCache);
-}
-
-async function openLeaderboard(){
-  document.getElementById('leaderboardModal').classList.remove('hidden');
-  await lbRefresh();
-}
-
-function closeLeaderboard(){
-  document.getElementById('leaderboardModal').classList.add('hidden');
-}
-
-async function lbRefresh(){
-  const listEl = document.getElementById('lbList');
-  const podiumEl = document.getElementById('lbPodium');
-  listEl.innerHTML = '<div class="lb-loading">Loading rankings…</div>';
-  podiumEl.innerHTML = '';
-  _lbCache = null;
-  if(typeof db === 'undefined' || !db){
-    listEl.innerHTML = '<div class="lb-empty">Firebase not connected.</div>';
-    return;
-  }
-  try{
-    const snap = await db.ref('users').once('value');
-    const raw = snap.val() || {};
-    const players = [];
-    for(const [uid, data] of Object.entries(raw)){
-      if(!data.stats && !data.coins) continue;
-      const s = data.stats || {};
-      const games = s.gamesPlayed || 0;
-      const wins  = s.wins || 0;
-      const losses= s.losses || 0;
-      const coins = typeof data.coins === 'number' ? data.coins : 0;
-      const streak= s.winStreak || 0;
-      const rate  = games >= 3 ? Math.round(wins / games * 100) : 0;
-      const name  = data.displayName || data.name || 'Anonymous';
-      const photo = data.photoURL || null;
-      players.push({uid, name, photo, wins, losses, games, coins, streak, rate});
-    }
-    _lbCache = players;
-    _renderLeaderboard(players);
-  } catch(e){
-    listEl.innerHTML = '<div class="lb-empty">Could not load rankings.</div>';
-    console.warn('Leaderboard fetch error', e);
-  }
-}
-
-function _renderLeaderboard(players){
-  const sort = _lbSort;
-  const sorted = [...players].sort((a,b)=>{
-    if(sort === 'wins')   return b.wins - a.wins;
-    if(sort === 'coins')  return b.coins - a.coins;
-    if(sort === 'streak') return b.streak - a.streak;
-    if(sort === 'rate')   return b.rate - a.rate || b.games - a.games;
-    return 0;
-  }).filter(p => {
-    if(sort === 'wins')   return p.wins > 0 || p.games > 0;
-    if(sort === 'coins')  return p.coins > 0;
-    if(sort === 'streak') return p.streak > 0;
-    if(sort === 'rate')   return p.games >= 3;
-    return true;
-  });
-
-  const statKey = {wins:'wins', coins:'coins', streak:'streak', rate:'rate'}[sort];
-  const statLbl = {wins:'wins', coins:'coins', streak:'win streak', rate:'win rate'}[sort];
-  const statFmt = v => sort === 'rate' ? v + '%' : v.toLocaleString();
-
-  document.getElementById('lbMyStatLbl').textContent = statLbl;
-
-  const uid = (typeof _googleUser !== 'undefined' && _googleUser) ? _googleUser.uid : null;
-  const myIdx = uid ? sorted.findIndex(p => p.uid === uid) : -1;
-  const myData = myIdx >= 0 ? sorted[myIdx] : null;
-
-  // My rank bar
-  const myBar = document.getElementById('lbMyRankBar');
-  if(myData && uid){
-    myBar.style.display = 'flex';
-    document.getElementById('lbMyRankNum').textContent = '#' + (myIdx + 1);
-    document.getElementById('lbMyName').textContent = myData.name;
-    document.getElementById('lbMyStatVal').textContent = statFmt(myData[statKey]);
-    const badge = getRankBadge(myData.wins);
-    document.getElementById('lbMyBadge').textContent = badge.label;
-    const avEl = document.getElementById('lbMyAvatarSm');
-    avEl.innerHTML = myData.photo
-      ? `<img src="${myData.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-      : '🐺';
-  } else {
-    myBar.style.display = 'none';
-  }
-
-  // Podium top 3
-  const podiumEl = document.getElementById('lbPodium');
-  const podiumOrder = [1, 0, 2]; // 2nd, 1st, 3rd
-  const podiumHeights = [52, 72, 40];
-  const podiumColors = ['#888', '#d4a017', '#c87941'];
-  const podiumSizes = [46, 58, 40];
-  podiumEl.innerHTML = '';
-  podiumOrder.forEach((idx, pi) => {
-    const p = sorted[idx];
-    if(!p) return;
-    const isMe = p.uid === uid;
-    const badge = getRankBadge(p.wins);
-    const slot = document.createElement('div');
-    slot.className = 'lb-podium-slot';
-    slot.innerHTML = `
-      <div class="lb-podium-avatar" style="width:${podiumSizes[pi]}px;height:${podiumSizes[pi]}px;border-color:${podiumColors[pi]}">
-        ${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : '🐺'}
-      </div>
-      <div class="lb-podium-name" style="${isMe ? 'color:var(--moon-pale)' : ''}">${p.name}</div>
-      <div class="lb-podium-val">${statFmt(p[statKey])}</div>
-      <div class="lb-podium-block" style="height:${podiumHeights[pi]}px;border-color:${podiumColors[pi]};color:${podiumColors[pi]}">${['🥈','🥇','🥉'][pi]}</div>
-    `;
-    podiumEl.appendChild(slot);
-  });
-
-  // List (rank 4+)
-  const listEl = document.getElementById('lbList');
-  if(sorted.length === 0){
-    listEl.innerHTML = '<div class="lb-empty">No data yet — play some games!</div>';
-    return;
-  }
-  listEl.innerHTML = '';
-  sorted.forEach((p, i) => {
-    if(i < 3) return;
-    const isMe = p.uid === uid;
-    const badge = getRankBadge(p.wins);
-    const row = document.createElement('div');
-    row.className = 'lb-row' + (isMe ? ' lb-me' : '');
-    row.innerHTML = `
-      <div class="lb-rank-num">${i+1}</div>
-      <div class="lb-avatar-sm">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">` : '🐺'}</div>
-      <div class="lb-info">
-        <div class="lb-info-name" style="${isMe ? 'color:var(--moon-pale)' : ''}">${p.name}${isMe ? ' (you)' : ''}</div>
-        <div class="lb-info-sub">${p.games} games · ${p.rate}% win rate</div>
-      </div>
-      <div class="lb-badge" style="background:${badge.bg};color:${badge.color}">${badge.label}</div>
-      <div class="lb-stat-val">${statFmt(p[statKey])}</div>
-    `;
-    listEl.appendChild(row);
-  });
-}
-
-// headerLbBtn visibility handled inside _updateGoogleUI directly
-
-// Patch recordGameResult to also track win streak
-const _origRecordGameResult = window.recordGameResult;
-window.recordGameResult = async function(winner){
-  if(_origRecordGameResult) await _origRecordGameResult(winner);
-  // Streak tracking
-  if(typeof _googleUser === 'undefined' || !_googleUser || typeof db === 'undefined' || !db) return;
-  const uid = _googleUser.uid;
-  const me = gameState?.players?.[myId];
-  if(!me) return;
-  const myTeam = (typeof ROLES_DEF !== 'undefined' && ROLES_DEF[me.role]?.team) || 'village';
-  let won = false;
-  if(winner === 'werewolf') won = (myTeam === 'werewolf');
-  else if(winner === 'village') won = (myTeam === 'village');
-  else won = (me.role === winner);
-  try{
-    await db.ref(`users/${uid}/stats`).transaction(s => {
-      if(!s) return s;
-      s.winStreak = won ? (s.winStreak || 0) + 1 : 0;
-      s.bestStreak = Math.max(s.bestStreak || 0, s.winStreak || 0);
-      return s;
-    });
-    // Also store displayName + photoURL for leaderboard display
-    await db.ref(`users/${uid}`).update({
-      displayName: _googleUser.displayName || _googleUser.email || 'Anonymous',
-      photoURL: _googleUser.photoURL || null,
-    });
-  } catch(e){ console.warn('Streak save failed', e); }
-};
-// ════════════════════════════════════════════
-// MAIN MENU
-// ════════════════════════════════════════════
-
-function showMainMenu(){
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('gameScreen').classList.add('hidden');
-  document.getElementById('mainMenuScreen').classList.remove('hidden');
-  mmRefreshUserBar();
-  mmSpawnStars();
-}
-
-function hideMainMenu(){
-  document.getElementById('mainMenuScreen').classList.add('hidden');
-}
-
-function mmRefreshUserBar(){
-  const nameEl   = document.getElementById('mmUserName');
-  const roleEl   = document.getElementById('mmUserRole');
-  const avatarEl = document.getElementById('mmUserAvatar');
-  const coinsEl  = document.getElementById('mmCoinsVal');
-  const signOutBtn = document.getElementById('mmSignOutBtn');
-  const signInBtn  = document.getElementById('mmSignInBtn');
-
-  // Name
-  const name = _googleUser?.displayName?.split(' ')[0]
-    || _googleUser?.email?.split('@')[0]
-    || document.getElementById('mmNameInput')?.value?.trim()
-    || 'Guest';
-  if(nameEl) nameEl.textContent = name;
-
-  // Avatar
-  if(avatarEl){
-    if(_googleUser?.photoURL){
-      avatarEl.innerHTML = `<img src="${_googleUser.photoURL}" alt="">`;
-    } else {
-      avatarEl.innerHTML = '🐺';
-    }
-  }
-
-  // Coins
-  if(coinsEl) coinsEl.textContent = (typeof _coinBalance === 'number' ? _coinBalance : 0).toLocaleString();
-
-  // Sign in/out buttons
-  if(signOutBtn) signOutBtn.style.display = _googleUser ? 'block' : 'none';
-  if(signInBtn)  signInBtn.style.display  = _googleUser ? 'none'  : 'block';
-
-  // Show name panel for guests
-  const namePanel = document.getElementById('mmNamePanel');
-  if(namePanel) namePanel.classList.toggle('open', !_googleUser);
-
-  // Load stats badge async
-  if(_googleUser && typeof db !== 'undefined' && db){
-    db.ref(`users/${_googleUser.uid}/stats`).once('value').then(snap => {
-      const s = snap.val() || {};
-      const wins = s.wins || 0;
-      const badge = getRankBadge(wins);
-      if(roleEl) roleEl.textContent = badge.label + ' · ' + wins + ' wins';
-    }).catch(()=>{});
-  } else {
-    if(roleEl) roleEl.textContent = 'Guest · no stats';
-  }
-}
-
-function mmSpawnStars(){
-  const bg = document.getElementById('mmBg');
-  if(!bg || bg.children.length > 5) return;
-  for(let i = 0; i < 40; i++){
-    const s = document.createElement('div');
-    s.className = 'mm-bg-star';
-    const size = Math.random() * 2.5 + 1;
-    s.style.cssText = `
-      width:${size}px;height:${size}px;
-      left:${Math.random()*100}%;top:${Math.random()*100}%;
-      --d:${(Math.random()*4+2).toFixed(1)}s;
-      --dl:${(Math.random()*5).toFixed(1)}s;
-      --op:${(Math.random()*.4+.1).toFixed(2)};
-    `;
-    bg.appendChild(s);
-  }
-}
-
-function mmToggleJoin(){
-  const panel = document.getElementById('mmJoinPanel');
-  const isOpen = panel.classList.toggle('open');
-  if(isOpen) setTimeout(() => document.getElementById('mmCodeInput')?.focus(), 50);
-}
-
-function mmGetName(){
-  if(_googleUser) return _googleUser.displayName?.split(' ')[0] || _googleUser.email?.split('@')[0] || 'Player';
-  const v = document.getElementById('mmNameInput')?.value?.trim();
-  return v || '';
-}
-
-function mmDoCreate(){
-  hideMainMenu();
-  // Pre-fill host name if known
-  const name = mmGetName();
-  const nameEl = document.getElementById('rcHostName');
-  if(nameEl && name) nameEl.value = name;
-  // Pre-fill room name
-  const roomNameEl = document.getElementById('rcRoomName');
-  if(roomNameEl && !roomNameEl.value){
-    const adjectives = ['Dark','Cursed','Haunted','Misty','Ancient','Shadowed','Grim','Silent'];
-    const nouns = ['Forest','Village','Manor','Crypt','Hollow','Moor','Thicket','Ruins'];
-    const rnd = a => a[Math.floor(Math.random()*a.length)];
-    roomNameEl.value = rnd(adjectives)+' '+rnd(nouns);
-  }
-  document.getElementById('roomCreateModal').classList.remove('hidden');
-}
-
-function mmDoJoin(){
-  let name = mmGetName();
-  const code = document.getElementById('mmCodeInput')?.value?.trim().toUpperCase();
-  if(!name){
-    document.getElementById('mmNamePanel').classList.add('open');
-    document.getElementById('mmNameInput')?.focus();
-    _showToast('Enter your name first 👆');
-    return;
-  }
-  if(!code || code.length < 4){
-    _showToast('Enter a valid room code');
-    return;
-  }
-  document.getElementById('inName').value = name;
-  document.getElementById('inCode').value = code;
-  // Close join panel & hide main menu
-  document.getElementById('mmJoinPanel').classList.remove('open');
-  hideMainMenu();
-  doJoin();
-}
-
-function mmOpenPublicRooms(){
-  hideMainMenu();
-  document.getElementById('publicRoomsModal').classList.remove('hidden');
-  prStartLiveListener();
-}
-
-// ════════════════════════════════════════════
-// PART 3 — PUBLIC ROOMS LIST
-// ════════════════════════════════════════════
-let _prListener = null;
-let _prJoinTarget = null; // code of room user wants to join
-
-function closePublicRooms(){
-  document.getElementById('publicRoomsModal').classList.add('hidden');
-  prStopListener();
-  showMainMenu();
-}
-
-function prStopListener(){
-  if(_prListener && typeof db !== 'undefined' && db){
-    db.ref('publicRooms').off('value', _prListener);
-    _prListener = null;
-  }
-}
-
-function prStartLiveListener(){
-  prStopListener();
-  const listEl = document.getElementById('prList');
-  listEl.innerHTML = '<div class="pr-loading">Loading rooms…</div>';
-
-  if(typeof db === 'undefined' || !db){
-    initFBWithRetry(()=> prStartLiveListener());
-    return;
-  }
-
-  _prListener = db.ref('publicRooms').orderByChild('createdAt').on('value', snap => {
-    const rooms = [];
-    snap.forEach(child => {
-      const r = child.val();
-      if(r && r.status === 'waiting') rooms.push(r);
-    });
-    // newest first
-    rooms.sort((a,b) => b.createdAt - a.createdAt);
-    prRenderRooms(rooms);
-  }, err => {
-    document.getElementById('prList').innerHTML =
-      '<div class="pr-empty"><div class="pr-empty-icon">⚠️</div><p>Could not load rooms</p></div>';
-  });
-}
-
-function prRefresh(){
-  const btn = document.getElementById('prRefreshBtn');
-  btn.classList.add('spinning');
-  prStopListener();
-  prStartLiveListener();
-  setTimeout(()=> btn.classList.remove('spinning'), 700);
-}
-
-function prRenderRooms(rooms){
-  const listEl = document.getElementById('prList');
-  // keep join panel if open
-  const panel = document.getElementById('prJoinPanel');
-
-  if(rooms.length === 0){
-    listEl.innerHTML = '';
-    listEl.appendChild(panel);
-    const empty = document.createElement('div');
-    empty.className = 'pr-empty';
-    empty.innerHTML = `<div class="pr-empty-icon">🌙</div><p>No open rooms right now.<br>Be the first to create one!</p>`;
-    listEl.appendChild(empty);
-    document.getElementById('prSubtitle').textContent = 'No open rooms right now';
-    return;
-  }
-
-  document.getElementById('prSubtitle').textContent =
-    rooms.length + ' open room' + (rooms.length !== 1 ? 's' : '') + ' · updates live';
-
-  listEl.innerHTML = '';
-  listEl.appendChild(panel);
-
-  rooms.forEach(r => {
-    const isFull = r.playerCount >= r.maxPlayers;
-    const isMyRoom = r.hostUid === myId;
-    const ageMs = Date.now() - (r.createdAt || Date.now());
-    const ageStr = ageMs < 60000 ? 'just now'
-      : ageMs < 3600000 ? Math.floor(ageMs/60000) + 'm ago'
-      : Math.floor(ageMs/3600000) + 'h ago';
-
-    const icons = ['🌲','🏚️','🌕','🦇','🐺','🔮','🗡️','🕯️'];
-    const icon = icons[Math.abs(r.code?.charCodeAt(0)||0) % icons.length];
-
-    const card = document.createElement('div');
-    card.className = 'pr-card';
-    card.innerHTML = `
-      <div class="pr-card-icon">${icon}</div>
-      <div class="pr-card-info">
-        <div class="pr-card-name">${_escHtml(r.name || 'Game Room')}</div>
-        <div class="pr-card-host">Host: ${_escHtml(r.host || 'Unknown')} · Code: <span style="color:var(--moon);font-family:'Creepster',cursive;letter-spacing:.08em">${r.code}</span></div>
-        <div class="pr-card-meta">
-          <span class="pr-card-players ${isFull ? 'full' : 'open'}">
-            ${isFull ? '🔴' : '🟢'} ${r.playerCount||1}/${r.maxPlayers} players
-          </span>
-          <span class="pr-card-age">${ageStr}</span>
-          ${isMyRoom ? '<span style="font-size:.68rem;color:var(--moon);opacity:.7">your room</span>' : ''}
-        </div>
-      </div>
-      <button class="pr-join-btn" ${isFull && !isMyRoom ? 'disabled' : ''}
-        onclick="prJoinRoom('${r.code}','${_escHtml(r.host||'')}')">
-        ${isMyRoom ? 'Enter' : isFull ? 'Full' : 'Join'}
-      </button>
-    `;
-    listEl.appendChild(card);
-  });
-}
-
-function _escHtml(str){
-  return String(str).replace(/[&<>"']/g, c =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function prJoinRoom(code, hostName){
-  _prJoinTarget = code;
-  const name = mmGetName();
-  if(!name){
-    // Show inline name panel
-    const panel = document.getElementById('prJoinPanel');
-    panel.classList.add('open');
-    document.getElementById('prJoinName').focus();
-    // scroll panel into view
-    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
-    return;
-  }
-  // Live full check before joining
-  if(typeof db !== 'undefined' && db){
-    db.ref(`publicRooms/${code}`).once('value').then(snap=>{
-      const room = snap.val();
-      if(room && room.playerCount >= room.maxPlayers){
-        _showToast(lang==='ar'?'❌ الغرفة ممتلئة':lang==='fr'?'❌ La salle est pleine':'❌ Room is full');
-        prRefresh();
-        return;
-      }
-      _prDoJoin(code, name);
-    }).catch(()=>{ _prDoJoin(code, name); });
-  } else {
-    _prDoJoin(code, name);
-  }
-}
-
-function prConfirmJoin(){
-  const name = document.getElementById('prJoinName').value.trim();
-  if(!name){ _showToast('Enter your name first'); return; }
-  // persist to main menu name input too
-  const mmInput = document.getElementById('mmNameInput');
-  if(mmInput) mmInput.value = name;
-  document.getElementById('prJoinPanel').classList.remove('open');
-  _prDoJoin(_prJoinTarget, name);
-}
-
-function _prDoJoin(code, name){
-  closePublicRooms();
-  hideMainMenu();
-  document.getElementById('inName').value = name;
-  document.getElementById('inCode').value  = code;
-  myId   = (_googleUser?.uid) || ('p_' + Date.now());
-  myName = name;
-  roomCode = code;
-  isLeader = false;
-  initFBWithRetry(()=> enterRoom());
-}
-
-// ════════════════════════════════════════════
-
-// PART 2 — ROOM CREATION
-// ════════════════════════════════════════════
-let _rcType = 'public';
-let _rcMaxPlayers = 8;
-let _rcPendingCode = null;
-
-function rcSetType(type){
-  _rcType = type;
-  document.getElementById('rcTypePublic').classList.toggle('active', type === 'public');
-  document.getElementById('rcTypePrivate').classList.toggle('active', type === 'private');
-  document.getElementById('rcNameField').style.display = type === 'public' ? 'block' : 'none';
-}
-
-function rcAdjustPlayers(delta){
-  _rcMaxPlayers = Math.max(4, Math.min(20, _rcMaxPlayers + delta));
-  document.getElementById('rcPlayersVal').textContent = _rcMaxPlayers;
-}
-
-function closeRoomCreate(){
-  document.getElementById('roomCreateModal').classList.add('hidden');
-  showMainMenu();
-}
-
-async function rcConfirmCreate(){
-  const hostName = document.getElementById('rcHostName').value.trim()
-    || mmGetName();
-  const roomName = _rcType === 'public'
-    ? (document.getElementById('rcRoomName').value.trim() || 'Game Room')
-    : null;
-
-  if(!hostName){
-    document.getElementById('rcHostName').focus();
-    _showToast('Enter your name first');
-    return;
-  }
-
-  const btn = document.getElementById('rcCreateBtn');
-  btn.disabled = true;
-  btn.textContent = 'Creating…';
-
-  // Set globals for doCreate compatibility
-  const code = genCode();
-  myId   = (_googleUser?.uid) || ('p_' + Date.now());
-  myName = hostName;
-  roomCode = code;
-  isLeader = true;
-
-  // Sync to legacy hidden inputs
-  document.getElementById('inName').value = hostName;
-  document.getElementById('inCode').value  = '';
-
-  // Save max players & room type to config
-  if(typeof cfg !== 'undefined'){
-    cfg.maxPlayers = _rcMaxPlayers;
-    cfg.isPublic   = _rcType === 'public';
-    cfg.roomName   = roomName;
-  }
-
-  _rcPendingCode = code;
-
-  // Close creation modal, show code reveal
-  closeRoomCreate();
-  _showRoomCodeReveal(code, _rcType, roomName);
-
-  btn.disabled = false;
-  btn.textContent = 'Create Room →';
-}
-
-function _showRoomCodeReveal(code, type, roomName){
-  document.getElementById('rcrCode').textContent = code;
-
-  const badge = document.getElementById('rcrTypeBadge');
-  if(type === 'public'){
-    badge.style.background = 'rgba(16,185,129,.15)';
-    badge.style.color = '#10b981';
-    badge.style.border = '1px solid rgba(16,185,129,.3)';
-    badge.textContent = '🌐 Public Room' + (roomName ? ' · ' + roomName : '');
-  } else {
-    badge.style.background = 'rgba(212,160,23,.12)';
-    badge.style.color = 'var(--moon)';
-    badge.style.border = '1px solid rgba(212,160,23,.3)';
-    badge.textContent = '🔒 Private Room';
-  }
-
-  document.getElementById('roomCodeReveal').classList.remove('hidden');
-}
-
-function rcrCopyCode(){
-  const code = document.getElementById('rcrCode').textContent;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(code).then(()=>{
-      const el = document.getElementById('rcrCopied');
-      el.classList.add('show');
-      setTimeout(()=>el.classList.remove('show'), 2000);
-    });
-  }
-}
-
-function rcrShare(){
-  const code = document.getElementById('rcrCode').textContent;
-  const text = `Join my Loup-Garou game! Room code: ${code} 🐺\nhttps://loup-garou-game-beta.vercel.app/`;
-  if(navigator.share){
-    navigator.share({ title: 'Loup-Garou Room', text });
-  } else {
-    navigator.clipboard?.writeText(text);
-    _showToast('Link copied to clipboard!');
-  }
-}
-
-async function rcrEnterRoom(){
-  document.getElementById('roomCodeReveal').classList.add('hidden');
-  hideMainMenu();
-
-  // Write public room listing to Firebase if public
-  if(_rcType === 'public' && typeof db !== 'undefined' && db){
-    initFBWithRetry(async ()=>{
-      const roomName = document.getElementById('rcRoomName')?.value?.trim() || 'Game Room';
-      try {
-        await db.ref(`publicRooms/${roomCode}`).set({
-          code: roomCode,
-          name: roomName,
-          host: myName,
-          hostUid: myId,
-          maxPlayers: _rcMaxPlayers,
-          playerCount: 1,
-          status: 'waiting',
-          createdAt: Date.now()
-        });
-        // Also persist maxPlayers into game config so join-side can enforce it
-        await db.ref(`games/${roomCode}/config/maxPlayers`).set(_rcMaxPlayers).catch(()=>{});
-        // Remove listing when host disconnects or game starts
-        db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
-      } catch(err) {
-        console.warn('Could not write public room listing (Firebase permissions):', err);
-        // Continue anyway - the game can still work, just won't show in public list
-      }
-      enterRoom();
-    });
-  } else {
-    initFBWithRetry(()=>enterRoom());
-  }
-}
-
-function rcrCancel(){
-  document.getElementById('roomCodeReveal').classList.add('hidden');
-  _rcPendingCode = null;
-  showMainMenu();
-}
-
-function mmSignOut(){
-  doGoogleSignOut();
-}
-
-function mmGoToLogin(){
-  hideMainMenu();
-  document.getElementById('loginScreen').classList.remove('hidden');
-}
-
-// Patch showGame to return to main menu when game ends / leaves room
-// (handled by existing back-to-lobby logic — no change needed)
-
-// _updateGoogleUI redirects to main menu directly
-
-// doGuestPlay already goes to main menu directly
-
-// showGame already hides mainMenuScreen directly — no patch needed
-
-// ════════════════════════════════════════════
-// LOBBY / WAITING ROOM
-// ════════════════════════════════════════════
-let _lobbyReadyState = false;
-
-function renderLobby(players){
-  const codeEl = document.getElementById('lobbyCodeDisplay');
-  if(codeEl) codeEl.textContent = roomCode || '——';
-
-  const grid = document.getElementById('lobbyPlayerGrid');
-  if(!grid) return;
-
-  const amLeader = isLeader || gameState?.leader === myId;
-  const readyPlayers = gameState?.readyPlayers || {};
-  const n = (players || []).length;
-
-  if(n === 0){
-    grid.innerHTML = '<div style="text-align:center;opacity:.4;padding:2rem;font-size:.9rem">Waiting for players...</div>';
-  } else {
-    const radius = Math.max(100, Math.min(150, 70 + n * 14));
-    const cx = radius + 40, cy = radius + 40;
-    const size = (radius + 40) * 2;
-
-    let html = `<div class="player-circle" style="width:${size}px;height:${size}px;margin:0 auto">`;
-    players.forEach((p, i) => {
-      if(!p || !p.id) return;
-      const angle = (2 * Math.PI * i / n) - (Math.PI / 2);
-      const x = cx + radius * Math.cos(angle);
-      const y = cy + radius * Math.sin(angle);
-      const isHost = gameState?.leader === p.id;
-      const isMe = p.id === myId;
-      const isReady = isHost || !!readyPlayers[p.id];
-      const isDc = !!p.disconnected;
-
-      const borderCol = isHost ? 'var(--moon)' : isReady ? '#10b981' : 'rgba(212,160,23,.3)';
-      const glowCol   = isHost ? 'rgba(212,160,23,.45)' : isReady ? 'rgba(16,185,129,.35)' : 'none';
-
-      let avInner = '<span style="font-size:1.4rem">\u{1F43A}</span>';
-      if(isMe && _googleUser && _googleUser.photoURL){
-        avInner = `<img src="${_googleUser.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">`;
-      }
-
-      const badgeText  = isHost ? '\u{1F451} Host' : isReady ? '\u2713 Ready' : '\u2026';
-      const badgeColor = isHost ? 'var(--moon)' : isReady ? '#10b981' : 'rgba(232,232,232,.35)';
-
-      const safeN = (p.name||'?').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      const kickBtn = amLeader && !isMe && !isHost
-        ? `<button onclick="event.stopPropagation();kickPlayer('${p.id}','${safeN}')" title="Kick" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:rgba(239,68,68,.85);border:1px solid #ef4444;color:#fff;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:10;padding:0">\u2715</button>`
-        : '';
-
-      html += `
-        <div class="pc-node${isMe?' is-me':''}" style="left:${x}px;top:${y}px;position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:.25rem;z-index:2">
-          <div style="position:relative">
-            <div class="pc-avatar-wrap" style="border-color:${borderCol};box-shadow:0 0 12px ${glowCol};opacity:${isDc?0.5:1}">
-              ${avInner}
-            </div>
-            ${isHost ? '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:.85rem">\u{1F451}</div>' : ''}
-            ${isDc ? '<div style="position:absolute;bottom:0;right:0;font-size:.6rem;background:rgba(239,68,68,.8);border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center">!</div>' : ''}
-            ${kickBtn}
-          </div>
-          <div class="pc-name-box">
-            <div class="pc-name">${p.name||'?'}</div>
-            ${isMe ? '<div class="pc-you-tag">YOU</div>' : ''}
-          </div>
-          <div style="font-size:.55rem;color:${badgeColor};font-family:'Creepster',cursive;letter-spacing:.03em">${badgeText}</div>
-        </div>`;
-    });
-    html += '</div>';
-    grid.innerHTML = html;
-  }
-
-  const readyWrap = document.getElementById('lobbyReadyWrap');
-  if(readyWrap){
-    readyWrap.style.display = (!amLeader) ? 'block' : 'none';
-    const btn = document.getElementById('lobbyReadyBtn');
-    if(btn){
-      _lobbyReadyState = !!(readyPlayers[myId]);
-      if(_lobbyReadyState){
-        btn.style.background = 'rgba(16,185,129,.15)';
-        btn.style.borderColor = '#10b981';
-        btn.style.color = '#10b981';
-        btn.textContent = '\u2705 Ready! (click to undo)';
-      } else {
-        btn.style.background = 'transparent';
-        btn.style.borderColor = 'var(--moon)';
-        btn.style.color = 'var(--moon)';
-        btn.textContent = '\u270B Mark as Ready';
-      }
-    }
-  }
-}
-function lobbyToggleReady(){
-  if(!fbOk || !db || !roomCode || !myId) return;
-  _lobbyReadyState = !_lobbyReadyState;
-  if(_lobbyReadyState){
-    db.ref(`games/${roomCode}/readyPlayers/${myId}`).set(true);
-  } else {
-    db.ref(`games/${roomCode}/readyPlayers/${myId}`).remove();
-  }
-}
-
-function lobbyCopyCode(){
-  if(!roomCode) return;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(roomCode).then(() => {
-      const hint = document.getElementById('lobbyCopiedHint');
-      if(hint){ hint.style.opacity = '1'; setTimeout(() => hint.style.opacity = '0', 1800); }
-    });
-  }
-}
-
-function lobbyShareCode(){
-  const code = roomCode || '——';
-  const text = `Join my Loup-Garou game! 🐺\nRoom code: ${code}\nhttps://loup-garou-game-beta.vercel.app/`;
-  if(navigator.share){ navigator.share({ title: 'Join my Loup-Garou game!', text }); }
-  else { navigator.clipboard?.writeText(text); _showToast('Invite link copied!'); }
-}
-
-// ── KICK PLAYER (host only) ──────────────────────────────────────────────────
-function kickPlayer(targetId, targetName){
-  if(!isLeader) return;
-  const confirm_msg = lang==='ar'
-    ? `هل تريد طرد ${targetName}؟`
-    : lang==='fr'
-    ? `Expulser ${targetName} ?`
-    : `Kick ${targetName} from the room?`;
-  if(!confirm(confirm_msg)) return;
-  if(fbOk && db && roomCode){
-    // Write a kick flag — the kicked player's listener will catch this and reload
-    db.ref(`games/${roomCode}/kicked/${targetId}`).set({by:myId, ts:Date.now(), name:targetName});
-    // In lobby: fully delete the player node so the slot is freed
-    const inLobby = !gameState || gameState.status === 'setup';
-    if(inLobby){
-      db.ref(`games/${roomCode}/players/${targetId}`).remove().then(()=>{
-        db.ref(`publicRooms/${roomCode}`).once('value').then(prSnap=>{
-          if(prSnap.exists()){
-            db.ref(`games/${roomCode}/players`).once('value').then(pSnap=>{
-              const allPlayers = pSnap.val() ? Object.values(pSnap.val()) : [];
-              const activeCount = allPlayers.filter(p => !p.disconnected).length;
-              db.ref(`publicRooms/${roomCode}/playerCount`).set(activeCount);
-            }).catch(()=>{});
-          }
-        }).catch(()=>{});
-      }).catch(()=>{});
-    } else {
-      db.ref(`games/${roomCode}/players/${targetId}`).update({disconnected:true, disconnectedAt:Date.now(), kicked:true});
-    }
-    _showToast((lang==='ar'?`تم طرد ${targetName}`:lang==='fr'?`${targetName} a été expulsé`:`${targetName} was kicked`));
-  }
-}
-
-// ════════════════════════════════════════════
 // LOVERS TOAST
 // ════════════════════════════════════════════
 function showLoversToast(name1, name2){
@@ -11164,9 +10221,446 @@ function closeLoversToast(){
 // ════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// MAIN MENU + LOBBY SYSTEM
+// ══════════════════════════════════════════════
+
+// ── Helpers ──
+function _hideAll(){
+  ['mainMenu','roomCreateModal','codeReveal','publicRoomsModal'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.add('hidden');
+  });
+}
+
+function showMainMenu(){
+  _hideAll();
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('mainMenu').classList.remove('hidden');
+  _mnRefresh();
+}
+
+// ── Patch showGame to always hide menu ──
+const _origShowGame = showGame;
+showGame = function(){
+  _hideAll();
+  _origShowGame();
+};
+
+// ── Patch _updateGoogleUI: after sign-in go to main menu ──
+const _origUpdateUI = _updateGoogleUI;
+_updateGoogleUI = function(user){
+  _origUpdateUI(user);
+  if(user){
+    const login = document.getElementById('loginScreen');
+    if(login && !login.classList.contains('hidden')){
+      login.classList.add('hidden');
+      showMainMenu();
+    }
+  }
+};
+
+// ── Patch doGuestPlay: go to main menu ──
+const _origGuestPlay = doGuestPlay;
+doGuestPlay = function(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  showMainMenu();
+};
+
+// ── Patch doGoogleSignOut: go to login ──
+const _origSignOut = doGoogleSignOut;
+doGoogleSignOut = function(){
+  _hideAll();
+  _origSignOut();
+};
+
+// ── Main menu refresh ──
+function _mnRefresh(){
+  const nameEl  = document.getElementById('mnName');
+  const roleEl  = document.getElementById('mnRole');
+  const avEl    = document.getElementById('mnAvatar');
+  const coinsEl = document.getElementById('mnCoins');
+  const soBtn   = document.getElementById('mnSignOutBtn');
+  const siBtn   = document.getElementById('mnSignInBtn');
+  const namePanel = document.getElementById('mnNamePanel');
+
+  const name = _googleUser?.displayName?.split(' ')[0]
+    || _googleUser?.email?.split('@')[0]
+    || document.getElementById('mnNameInput')?.value?.trim()
+    || 'Guest';
+
+  if(nameEl) nameEl.textContent = name;
+  if(avEl){
+    avEl.innerHTML = _googleUser?.photoURL
+      ? `<img src="${_googleUser.photoURL}" alt="">`
+      : '🐺';
+  }
+  if(coinsEl) coinsEl.textContent = '🪙 ' + (typeof _coinBalance==='number' ? _coinBalance.toLocaleString() : 0);
+  if(soBtn) soBtn.style.display = _googleUser ? 'block' : 'none';
+  if(siBtn) siBtn.style.display = _googleUser ? 'none' : 'block';
+  if(namePanel) namePanel.classList.toggle('open', !_googleUser);
+
+  // Load rank async
+  if(_googleUser && typeof db!=='undefined' && db){
+    db.ref(`users/${_googleUser.uid}/stats`).once('value').then(s=>{
+      const wins=(s.val()||{}).wins||0;
+      const badges=[
+        {min:200,l:'Alpha Wolf'},{min:100,l:'Wolf Lord'},{min:60,l:'Seer'},
+        {min:30,l:'Witch'},{min:15,l:'Hunter'},{min:5,l:'Villager'},{min:0,l:'Peasant'}
+      ];
+      const badge = badges.find(b=>wins>=b.min)||badges[badges.length-1];
+      if(roleEl) roleEl.textContent = badge.l + ' · ' + wins + ' wins';
+    }).catch(()=>{});
+  } else {
+    if(roleEl) roleEl.textContent = _googleUser ? 'Loading…' : 'Guest · no stats';
+  }
+}
+
+function _mnGetName(){
+  return _googleUser?.displayName?.split(' ')[0]
+    || _googleUser?.email?.split('@')[0]
+    || document.getElementById('mnNameInput')?.value?.trim()
+    || '';
+}
+
+function mnGoLogin(){
+  _hideAll();
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function mnSignOut(){
+  doGoogleSignOut();
+}
+
+// ── Join by code panel ──
+function mnToggleJoin(){
+  const p = document.getElementById('mnJoinPanel');
+  const open = p.classList.toggle('open');
+  if(open) setTimeout(()=>document.getElementById('mnCodeInput')?.focus(),50);
+}
+
+function mnConfirmJoin(){
+  const name = _mnGetName();
+  const code = document.getElementById('mnCodeInput')?.value?.trim().toUpperCase();
+  if(!name){
+    document.getElementById('mnNamePanel').classList.add('open');
+    document.getElementById('mnNameInput')?.focus();
+    _showToast('Enter your name first 👆'); return;
+  }
+  if(!code||code.length<4){ _showToast('Enter a valid room code'); return; }
+  document.getElementById('inName').value = name;
+  document.getElementById('inCode').value  = code;
+  _hideAll();
+  doJoin();
+}
+
+// ── Create Room ──
+let _rcType = 'public';
+let _rcMax  = 8;
+let _rcPendingCode = null;
+
+function mnOpenCreate(){
+  // pre-fill
+  const name = _mnGetName();
+  const hn = document.getElementById('rcHostName');
+  if(hn && name) hn.value = name;
+  const rn = document.getElementById('rcRoomName');
+  if(rn && !rn.value){
+    const adj=['Dark','Cursed','Haunted','Misty','Ancient','Shadowed','Grim','Silent'];
+    const nou=['Forest','Village','Manor','Crypt','Hollow','Moor','Thicket','Ruins'];
+    rn.value = adj[Math.floor(Math.random()*adj.length)]+' '+nou[Math.floor(Math.random()*nou.length)];
+  }
+  _hideAll();
+  document.getElementById('roomCreateModal').classList.remove('hidden');
+}
+
+function mnCloseCreate(){
+  document.getElementById('roomCreateModal').classList.add('hidden');
+  showMainMenu();
+}
+
+function rcSetType(t){
+  _rcType = t;
+  document.getElementById('rcBtnPublic').classList.toggle('active', t==='public');
+  document.getElementById('rcBtnPrivate').classList.toggle('active', t==='private');
+  document.getElementById('rcRoomNameField').style.display = t==='public' ? 'block' : 'none';
+}
+
+function rcAdj(d){
+  _rcMax = Math.max(4, Math.min(20, _rcMax+d));
+  document.getElementById('rcPlayers').textContent = _rcMax;
+}
+
+function rcCreate(){
+  const host = document.getElementById('rcHostName').value.trim() || _mnGetName();
+  if(!host){
+    document.getElementById('rcHostName').focus();
+    _showToast('Enter your name first'); return;
+  }
+  const roomName = _rcType==='public'
+    ? (document.getElementById('rcRoomName').value.trim()||'Game Room')
+    : null;
+
+  // Set globals
+  myId      = (_googleUser?.uid)||('p_'+Date.now());
+  myName    = host;
+  roomCode  = genCode();
+  isLeader  = true;
+  _rcPendingCode = roomCode;
+  if(typeof cfg!=='undefined'){
+    cfg.maxPlayers = _rcMax;
+    cfg.isPublic   = _rcType==='public';
+    cfg.roomName   = roomName;
+  }
+  document.getElementById('inName').value = host;
+  document.getElementById('inCode').value  = '';
+
+  // Show code reveal
+  document.getElementById('roomCreateModal').classList.add('hidden');
+  _showCodeReveal(roomCode, _rcType, roomName);
+}
+
+function _showCodeReveal(code, type, roomName){
+  document.getElementById('crCode').textContent = code;
+  const badge = document.getElementById('crTypeBadge');
+  if(type==='public'){
+    badge.style.cssText='background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.28)';
+    badge.textContent='🌐 Public' + (roomName?' · '+roomName:'');
+  } else {
+    badge.style.cssText='background:rgba(212,160,23,.1);color:var(--moon);border:1px solid rgba(212,160,23,.28)';
+    badge.textContent='🔒 Private Room';
+  }
+  document.getElementById('codeReveal').classList.remove('hidden');
+}
+
+function crCopy(){
+  const code = document.getElementById('crCode').textContent;
+  navigator.clipboard?.writeText(code).then(()=>{
+    const el=document.getElementById('crCopied');
+    el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'),1800);
+  });
+}
+
+function crShare(){
+  const code = document.getElementById('crCode').textContent;
+  const text = `Join my Loup-Garou game! 🐺\nRoom: ${code}\nhttps://loup-garou-game-beta.vercel.app/`;
+  if(navigator.share) navigator.share({title:'Loup-Garou Room',text});
+  else { navigator.clipboard?.writeText(text); _showToast('Link copied!'); }
+}
+
+function crBack(){
+  document.getElementById('codeReveal').classList.add('hidden');
+  _rcPendingCode = null;
+  showMainMenu();
+}
+
+async function crEnter(){
+  document.getElementById('codeReveal').classList.add('hidden');
+  // Write public listing
+  if(_rcType==='public' && typeof db!=='undefined' && db){
+    try{
+      await db.ref(`publicRooms/${roomCode}`).set({
+        code:roomCode, name:document.getElementById('rcRoomName')?.value?.trim()||'Game Room',
+        host:myName, hostUid:myId, maxPlayers:_rcMax,
+        playerCount:1, status:'waiting', createdAt:Date.now()
+      });
+      db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
+    }catch(e){}
+  }
+  initFBWithRetry(()=>enterRoom());
+}
+
+// ── Public Rooms ──
+let _prListener = null;
+let _prJoinCode = null;
+
+function mnOpenPublicRooms(){
+  _hideAll();
+  document.getElementById('publicRoomsModal').classList.remove('hidden');
+  _prStart();
+}
+
+function mnClosePublicRooms(){
+  document.getElementById('publicRoomsModal').classList.add('hidden');
+  _prStop();
+  showMainMenu();
+}
+
+function _prStop(){
+  if(_prListener && typeof db!=='undefined' && db){
+    db.ref('publicRooms').off('value',_prListener);
+    _prListener=null;
+  }
+}
+
+function _prStart(){
+  _prStop();
+  if(typeof db==='undefined'||!db){ initFBWithRetry(_prStart); return; }
+  document.getElementById('prList').innerHTML='<div class="pr-loading">Loading rooms…</div>';
+  _prListener = db.ref('publicRooms').orderByChild('createdAt').on('value', snap=>{
+    const rooms=[];
+    snap.forEach(c=>{ const r=c.val(); if(r&&r.status==='waiting') rooms.push(r); });
+    rooms.sort((a,b)=>b.createdAt-a.createdAt);
+    _prRender(rooms);
+  }, ()=>{
+    document.getElementById('prList').innerHTML='<div class="pr-empty">Could not load rooms</div>';
+  });
+}
+
+function prRefresh(){
+  _prStop(); _prStart();
+}
+
+function _prRender(rooms){
+  const sub = document.getElementById('prSubtitle');
+  const list = document.getElementById('prList');
+  const panel = document.getElementById('prNamePanel');
+  if(sub) sub.textContent = rooms.length ? rooms.length+' open room'+(rooms.length!==1?'s':'')+' · live' : 'No open rooms';
+  list.innerHTML='';
+  list.appendChild(panel);
+  if(!rooms.length){
+    const e=document.createElement('div'); e.className='pr-empty';
+    e.innerHTML='🌙<br>No open rooms right now.<br>Be the first!';
+    list.appendChild(e); return;
+  }
+  rooms.forEach(r=>{
+    const full=r.playerCount>=r.maxPlayers;
+    const isMe=r.hostUid===myId;
+    const ageMs=Date.now()-(r.createdAt||Date.now());
+    const age=ageMs<60000?'just now':ageMs<3600000?Math.floor(ageMs/60000)+'m ago':Math.floor(ageMs/3600000)+'h ago';
+    const card=document.createElement('div');
+    card.className='pr-card';
+    card.innerHTML=`
+      <div class="pr-card-info">
+        <div class="pr-card-name">${r.name||'Game Room'}</div>
+        <div class="pr-card-meta">Host: ${r.host||'?'} · <span style="color:var(--moon);font-family:'Creepster',cursive">${r.code}</span> · ${age}</div>
+      </div>
+      <span class="pr-card-pip ${full?'full':'open'}">${full?'🔴':'🟢'} ${r.playerCount||1}/${r.maxPlayers}</span>
+      <button class="pr-join-btn" ${full&&!isMe?'disabled':''} onclick="_prJoin('${r.code}')">
+        ${isMe?'Enter':full?'Full':'Join'}
+      </button>`;
+    list.appendChild(card);
+  });
+}
+
+function _prJoin(code){
+  _prJoinCode=code;
+  const name=_mnGetName();
+  if(!name){
+    const p=document.getElementById('prNamePanel');
+    p.classList.add('open');
+    document.getElementById('prJoinName')?.focus(); return;
+  }
+  _prDoJoin(code,name);
+}
+
+function prConfirmJoin(){
+  const name=document.getElementById('prJoinName').value.trim();
+  if(!name){ _showToast('Enter your name'); return; }
+  const mnInput=document.getElementById('mnNameInput');
+  if(mnInput) mnInput.value=name;
+  document.getElementById('prNamePanel').classList.remove('open');
+  _prDoJoin(_prJoinCode,name);
+}
+
+function _prDoJoin(code,name){
+  document.getElementById('publicRoomsModal').classList.add('hidden');
+  _prStop();
+  myId=(_googleUser?.uid)||('p_'+Date.now());
+  myName=name; roomCode=code; isLeader=false;
+  document.getElementById('inName').value=name;
+  document.getElementById('inCode').value=code;
+  initFBWithRetry(()=>enterRoom());
+}
+
+// ── Lobby waiting room ──
+let _lobbyReady=false;
+
+function renderLobby(players){
+  const codeEl=document.getElementById('lobbyCode');
+  if(codeEl) codeEl.textContent=roomCode||'——';
+  const grid=document.getElementById('lobbyGrid');
+  if(!grid) return;
+  const amLeader=isLeader||gameState?.leader===myId;
+  const readyPlayers=gameState?.readyPlayers||{};
+  grid.innerHTML='';
+  players.forEach((p,i)=>{
+    const isHost=gameState?.leader===p.id;
+    const isMe=p.id===myId;
+    const isReady=isHost||!!readyPlayers[p.id];
+    const isDc=!!p.disconnected;
+    const cls='lobby-card'+(isHost?' lc-host':isReady?' lc-ready':'');
+    const av=isMe&&_googleUser?.photoURL
+      ?`<img src="${_googleUser.photoURL}" alt="">`:'🐺';
+    const badge=isHost?'<span class="lc-badge host">👑 Host</span>'
+      :isReady?'<span class="lc-badge ready">✓ Ready</span>'
+      :'<span class="lc-badge waiting">Waiting</span>';
+    const card=document.createElement('div');
+    card.className=cls;
+    card.style.animationDelay=(i*.05)+'s';
+    card.innerHTML=`
+      ${isHost?'<div style="font-size:.7rem;text-align:center;color:var(--moon);margin-bottom:-.2rem">👑</div>':''}
+      <div class="lc-avatar">${av}</div>
+      <div class="lc-name">${p.name}${isMe?' (you)':''}</div>
+      ${badge}
+      ${isDc?'<div style="font-size:.58rem;color:var(--blood-glow)">⚠️ dc</div>':''}`;
+    grid.appendChild(card);
+  });
+  // Ready button
+  const rw=document.getElementById('lobbyReadyWrap');
+  const rb=document.getElementById('lobbyReadyBtn');
+  if(rw) rw.style.display=amLeader?'none':'block';
+  if(rb){
+    _lobbyReady=!!readyPlayers[myId];
+    rb.classList.toggle('is-ready',_lobbyReady);
+    rb.textContent=_lobbyReady?'✅ Ready! (tap to undo)':'✋ Mark as Ready';
+  }
+}
+
+function lobbyToggleReady(){
+  if(!fbOk||!db||!roomCode||!myId) return;
+  _lobbyReady=!_lobbyReady;
+  if(_lobbyReady) db.ref(`games/${roomCode}/readyPlayers/${myId}`).set(true);
+  else db.ref(`games/${roomCode}/readyPlayers/${myId}`).remove();
+}
+
+function lobbyCopy(){
+  if(!roomCode) return;
+  navigator.clipboard?.writeText(roomCode).then(()=>{
+    const el=document.getElementById('lobbyCopied');
+    if(el){ el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1800); }
+  });
+}
+
+function lobbyShare(){
+  const text=`Join my Loup-Garou game! 🐺\nRoom: ${roomCode}\nhttps://loup-garou-game-beta.vercel.app/`;
+  if(navigator.share) navigator.share({title:'Join!',text});
+  else { navigator.clipboard?.writeText(text); _showToast('Invite copied!'); }
+}
+
+// Hook renderLobby into renderGame setup phase
+const _origRenderGameLobby = renderGame;
+renderGame = function(){
+  _origRenderGameLobby();
+  if(gameState&&gameState.status==='setup'){
+    const players=gameState.players?Object.values(gameState.players):[];
+    renderLobby(players);
+  }
+};
+
+// Remove public room listing when game starts
+const _origDoStartGame = doStartGame;
+doStartGame = function(){
+  if(typeof db!=='undefined'&&db&&roomCode){
+    db.ref(`publicRooms/${roomCode}`).remove().catch(()=>{});
+  }
+  _origDoStartGame();
+};
+
 window.addEventListener('load',()=>{
   setLang('en');
-  // Pre-warm Firebase in background so it's ready when user clicks Create/Join
   setTimeout(()=>initFB(), 200);
 });
 </script>
@@ -11206,169 +10700,6 @@ window.addEventListener('load',()=>{
     <div class="lovers-toast-desc" id="ltDesc">Cupid has linked your souls. You can see each other's roles — this is intentional. If one of you dies, the other follows.</div>
     <div class="lovers-toast-rule" id="ltRule">💡 You can see this player's role because you are Lovers. Other players do NOT know who the Lovers are.</div>
     <button class="lovers-toast-btn" id="ltBtn" onclick="closeLoversToast()">I understand ❤️</button>
-  </div>
-</div>
-
-<!-- ── PUBLIC ROOMS MODAL ── -->
-<div id="publicRoomsModal" class="hidden">
-  <div class="pr-box">
-    <button class="profile-close" onclick="closePublicRooms()">✕</button>
-    <h2>🌐 Public Rooms</h2>
-    <div class="pr-subtitle" id="prSubtitle">Live open games you can join</div>
-
-    <div class="pr-toolbar">
-      <button class="pr-refresh-btn" id="prRefreshBtn" onclick="prRefresh()">↻ Refresh</button>
-      <button class="pr-create-link" onclick="closePublicRooms();mmDoCreate()">+ Create Room</button>
-    </div>
-
-    <!-- Name prompt (guests need to enter name before joining) -->
-    <div class="pr-join-panel" id="prJoinPanel">
-      <label>Enter your name to join</label>
-      <input id="prJoinName" type="text" maxlength="20" placeholder="Your name…" autocomplete="off">
-      <button onclick="prConfirmJoin()" style="padding:.55rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:700;transition:.2s" onmouseover="this.style.background='var(--blood)'" onmouseout="this.style.background='var(--blood-glow)'">Join →</button>
-    </div>
-
-    <div class="pr-list" id="prList">
-      <div class="pr-loading">Loading rooms…</div>
-    </div>
-  </div>
-</div>
-
-<!-- ── ROOM CREATION MODAL ── -->
-<div id="publicRoomsModal" class="hidden">
-  <div class="pr-box">
-    <button class="profile-close" onclick="closePublicRooms()">✕</button>
-    <h2>🌐 Public Rooms</h2>
-    <div class="pr-subtitle" id="prSubtitle">Live open games you can join</div>
-
-    <div class="pr-toolbar">
-      <button class="pr-refresh-btn" id="prRefreshBtn" onclick="prRefresh()">↻ Refresh</button>
-      <button class="pr-create-link" onclick="closePublicRooms();mmDoCreate()">+ Create Room</button>
-    </div>
-
-    <!-- Name prompt (guests need to enter name before joining) -->
-    <div class="pr-join-panel" id="prJoinPanel">
-      <label>Enter your name to join</label>
-      <input id="prJoinName" type="text" maxlength="20" placeholder="Your name…" autocomplete="off">
-      <button onclick="prConfirmJoin()" style="padding:.55rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:700;transition:.2s" onmouseover="this.style.background='var(--blood)'" onmouseout="this.style.background='var(--blood-glow)'">Join →</button>
-    </div>
-
-    <div class="pr-list" id="prList">
-      <div class="pr-loading">Loading rooms…</div>
-    </div>
-  </div>
-</div>
-
-
-<div id="roomCreateModal" class="hidden">
-  <div class="rc-box">
-    <button class="profile-close" onclick="closeRoomCreate()">✕</button>
-    <h2>⚔️ Create Room</h2>
-
-    <!-- Public / Private toggle -->
-    <div class="rc-type-toggle">
-      <button class="rc-type-btn active" id="rcTypePublic" onclick="rcSetType('public')">
-        <span class="rc-type-icon">🌐</span>
-        <span class="rc-type-lbl">Public Room</span>
-      </button>
-      <button class="rc-type-btn" id="rcTypePrivate" onclick="rcSetType('private')">
-        <span class="rc-type-icon">🔒</span>
-        <span class="rc-type-lbl">Private Room</span>
-      </button>
-    </div>
-
-    <!-- Room name (public only) -->
-    <div class="rc-field" id="rcNameField">
-      <label>Room Name</label>
-      <input id="rcRoomName" type="text" maxlength="30" placeholder="The Dark Forest…" autocomplete="off">
-      <div class="rc-hint">Shown in public rooms list</div>
-    </div>
-
-    <!-- Host name -->
-    <div class="rc-field">
-      <label>Your Name</label>
-      <input id="rcHostName" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
-    </div>
-
-    <!-- Max players -->
-    <div class="rc-players-row">
-      <label>Max Players</label>
-      <div class="rc-stepper">
-        <button onclick="rcAdjustPlayers(-1)">−</button>
-        <span id="rcPlayersVal">8</span>
-        <button onclick="rcAdjustPlayers(+1)">+</button>
-      </div>
-    </div>
-
-    <button class="rc-create-btn" id="rcCreateBtn" onclick="rcConfirmCreate()">
-      Create Room →
-    </button>
-  </div>
-</div>
-
-<!-- ── ROOM CODE REVEAL ── -->
-<div id="roomCodeReveal" class="hidden">
-  <div class="rcr-box">
-    <h2>Room Created! 🎉</h2>
-    <div class="rcr-sub">Share this code with your friends</div>
-
-    <div id="rcrTypeBadge" class="rcr-type-badge"></div>
-
-    <div class="rcr-code-wrap" onclick="rcrCopyCode()" title="Click to copy">
-      <div class="rcr-code" id="rcrCode">——</div>
-      <div class="rcr-code-hint">Tap to copy</div>
-      <span class="rcr-copied" id="rcrCopied">✓ Copied!</span>
-    </div>
-
-    <div class="rcr-actions">
-      <button class="rcr-btn rcr-btn-primary" onclick="rcrEnterRoom()">Enter Waiting Room →</button>
-      <button class="rcr-btn rcr-btn-secondary" onclick="rcrShare()">📤 Share Code</button>
-      <button class="rcr-btn rcr-btn-secondary" onclick="rcrCancel()">← Back to Menu</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── LEADERBOARD MODAL ── -->
-<div id="leaderboardModal" class="hidden">
-  <div class="lb-box">
-    <button class="profile-close" onclick="closeLeaderboard()">✕</button>
-    <h2>🏆 Global Rankings</h2>
-    <div class="lb-subtitle" id="lbSubtitle">Top players worldwide</div>
-
-    <!-- My rank bar (shown when signed in) -->
-    <div class="lb-my-rank-bar" id="lbMyRankBar" style="display:none">
-      <div>
-        <div class="lmr-rank" id="lbMyRankNum">#—</div>
-        <div class="lmr-label">Your rank</div>
-      </div>
-      <div id="lbMyAvatarSm" style="width:38px;height:38px;border-radius:50%;border:2px solid var(--moon);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden;flex-shrink:0"></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.82rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="lbMyName">—</div>
-        <div style="font-size:.68rem;color:var(--ghost);opacity:.5" id="lbMyBadge">—</div>
-      </div>
-      <div class="lmr-stat">
-        <div class="lmr-sv" id="lbMyStatVal">—</div>
-        <div class="lmr-sl" id="lbMyStatLbl">wins</div>
-      </div>
-    </div>
-
-    <!-- Sort tabs -->
-    <div class="lb-tabs">
-      <button class="lb-tab active" id="lbTabWins" onclick="lbSetSort('wins')">🏅 Wins</button>
-      <button class="lb-tab" id="lbTabCoins" onclick="lbSetSort('coins')">🪙 Coins</button>
-      <button class="lb-tab" id="lbTabStreak" onclick="lbSetSort('streak')">🔥 Streak</button>
-      <button class="lb-tab" id="lbTabRate" onclick="lbSetSort('rate')">📈 Win Rate</button>
-    </div>
-
-    <!-- Podium (top 3) -->
-    <div class="lb-podium" id="lbPodium"></div>
-
-    <!-- Full list -->
-    <div id="lbList"></div>
-
-    <div style="text-align:center;margin-top:1rem">
-      <button onclick="lbRefresh()" style="background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:5px;padding:.4rem 1.2rem;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">↻ Refresh</button>
-    </div>
   </div>
 </div>
 
