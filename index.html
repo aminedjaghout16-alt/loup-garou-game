@@ -6414,8 +6414,9 @@ function changeCount(role,delta){
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
-  if(!cfg.roles) cfg.roles=['werewolf','seer','witch','villager'];
-  if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
+  if(!cfg.roles || (typeof cfg.roles==='object' && !Array.isArray(cfg.roles) && Object.keys(cfg.roles).length===0)) cfg.roles=['werewolf','seer','witch','villager'];
+  if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles).filter(v=>typeof v==='string');
+  if(!cfg.roles.length) cfg.roles=['werewolf','seer','witch','villager'];
   if(!cfg.roleCounts) cfg.roleCounts={};
   if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
   if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
@@ -7107,7 +7108,6 @@ function renderGame(){
     renderStats(players);
     // Only pass active (non-disconnected) players to the lobby grid
     const _lobbyActivePlayers = players.filter(p => !p.disconnected);
-    console.log('🔍 renderGame setup: all players=', players.length, 'active=', _lobbyActivePlayers.length, JSON.stringify(players.map(p=>({id:p.id,name:p.name,dc:p.disconnected}))));
     renderLobby(_lobbyActivePlayers);
     // Helper message: role total vs connected players + ready status
     const _helperEl=document.getElementById('startHelperMsg');
@@ -10984,89 +10984,47 @@ function mmGoToLogin(){
 let _lobbyReadyState = false;
 
 function renderLobby(players){
-  console.log('🔍 renderLobby called, players:', players?.length, JSON.stringify(players?.map(p=>({id:p.id,name:p.name,dc:p.disconnected}))));
   // Update room code display
   const codeEl = document.getElementById('lobbyCodeDisplay');
   if(codeEl) codeEl.textContent = roomCode || '——';
 
   const grid = document.getElementById('lobbyPlayerGrid');
-  console.log('🔍 grid found:', !!grid, 'setupView display:', document.getElementById('setupView')?.style?.display);
   if(!grid) return;
 
   const amLeader = isLeader || gameState?.leader === myId;
   const readyPlayers = gameState?.readyPlayers || {};
 
-  // Track existing cards for leave animation
-  const existing = {};
-  grid.querySelectorAll('.lobby-card[data-pid]').forEach(el => {
-    existing[el.dataset.pid] = el;
-  });
-
-  // currentIds — players array is already filtered to active-only before being passed in
-  const currentIds = new Set(players.map(p => p.id));
-
-  // Animate out removed players
-  Object.keys(existing).forEach(pid => {
-    if(!currentIds.has(pid)){
-      const el = existing[pid];
-      el.classList.add('leaving');
-      setTimeout(() => el.remove(), 300);
-    }
-  });
-
-  // Add/update players
-  players.forEach((p, i) => {
+  // Fully rebuild the grid every time — simple and reliable
+  grid.innerHTML = '';
+  (players || []).forEach((p, i) => {
+    if(!p || !p.id) return;
     const isHost = gameState?.leader === p.id;
     const isMe = p.id === myId;
     const isReady = isHost || !!readyPlayers[p.id];
     const isDc = !!p.disconnected;
 
-    // Avatar: use Google photo if available, else emoji
     let avatarHtml = '🐺';
     if(isMe && _googleUser?.photoURL){
       avatarHtml = `<img src="${_googleUser.photoURL}" alt="">`;
     }
 
-    const badge = isHost
-      ? `<span class="lobby-card-badge host">👑 Host</span>`
-      : isReady
-        ? `<span class="lobby-card-badge ready">✓ Ready</span>`
-        : `<span class="lobby-card-badge waiting">Waiting…</span>`;
+    const badgeClass = isHost ? 'host' : isReady ? 'ready' : 'waiting';
+    const badgeText  = isHost ? '👑 Host' : isReady ? '✓ Ready' : 'Waiting…';
+    const cardClass  = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
 
-    if(existing[p.id]){
-      // Update in place
-      const el = existing[p.id];
-      el.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
-      el.querySelector('.lobby-card-avatar').innerHTML = avatarHtml;
-      el.querySelector('.lobby-card-name').textContent = p.name + (isMe ? ' (you)' : '');
-      // Use innerHTML instead of outerHTML so the element stays in the DOM
-      const badgeEl = el.querySelector('.lobby-card-badge');
-      if(badgeEl) badgeEl.innerHTML = badge.replace(/<span[^>]*>|<\/span>/g, '') || badge;
-      // Re-render the badge correctly
-      const tmpDiv = document.createElement('div');
-      tmpDiv.innerHTML = badge;
-      if(badgeEl && tmpDiv.firstElementChild) {
-        badgeEl.className = tmpDiv.firstElementChild.className;
-        badgeEl.innerHTML = tmpDiv.firstElementChild.innerHTML;
-      }
-      const dcEl = el.querySelector('.lobby-card-dc');
-      if(dcEl) dcEl.style.display = isDc ? 'block' : 'none';
-    } else {
-      // Create new card
-      const card = document.createElement('div');
-      card.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
-      card.dataset.pid = p.id;
-      card.style.animationDelay = (i * 0.04) + 's';
-      card.innerHTML = `
-        ${isHost ? '<div class="lobby-card-crown">👑</div>' : ''}
-        <div class="lobby-card-avatar">${avatarHtml}</div>
-        <div class="lobby-card-name">${p.name}${isMe ? ' (you)' : ''}</div>
-        ${badge}
-        <div class="lobby-card-dc" style="display:${isDc ? 'block' : 'none'}">⚠️ dc</div>
-        ${amLeader && !isMe && !isHost ? `<button class="lobby-kick-btn" onclick="event.stopPropagation();kickPlayer('${p.id}','${p.name.replace(/'/g,"\'")}')" title="Kick player">✕ Kick</button>` : ''}
-      `;
-      grid.appendChild(card);
-    }
+    const card = document.createElement('div');
+    card.className = cardClass;
+    card.dataset.pid = p.id;
+    card.style.animationDelay = (i * 0.04) + 's';
+    card.innerHTML = `
+      ${isHost ? '<div class="lobby-card-crown">👑</div>' : ''}
+      <div class="lobby-card-avatar">${avatarHtml}</div>
+      <div class="lobby-card-name">${p.name||'?'}${isMe ? ' (you)' : ''}</div>
+      <span class="lobby-card-badge ${badgeClass}">${badgeText}</span>
+      <div class="lobby-card-dc" style="display:${isDc?'block':'none'}">⚠️ dc</div>
+      ${amLeader && !isMe && !isHost ? `<button class="lobby-kick-btn" onclick="event.stopPropagation();kickPlayer('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')" title="Kick player">✕ Kick</button>` : ''}
+    `;
+    grid.appendChild(card);
   });
 
   // Show/hide ready button for non-hosts
