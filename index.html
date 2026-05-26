@@ -132,6 +132,25 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .mm-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
 .mm-name-panel input:focus{outline:none;border-color:var(--moon-pale)}
 
+/* ── LOBBY PLAYER CARDS ── */
+.lobby-card{background:var(--abyss);border:1.5px solid rgba(212,160,23,.2);border-radius:10px;padding:.7rem .5rem;display:flex;flex-direction:column;align-items:center;gap:.35rem;position:relative;transition:all .3s;animation:lobbyCardIn .35s cubic-bezier(.17,.67,.1,1.3) both}
+@keyframes lobbyCardIn{from{opacity:0;transform:scale(.6) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.lobby-card.leaving{animation:lobbyCardOut .3s ease forwards}
+@keyframes lobbyCardOut{to{opacity:0;transform:scale(.7) translateY(-8px)}}
+.lobby-card.ready{border-color:#10b981;box-shadow:0 0 12px rgba(16,185,129,.2)}
+.lobby-card.host{border-color:var(--moon)}
+.lobby-card-avatar{width:52px;height:52px;border-radius:50%;border:2px solid rgba(212,160,23,.4);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;flex-shrink:0;position:relative}
+.lobby-card-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.lobby-card.ready .lobby-card-avatar{border-color:#10b981}
+.lobby-card.host .lobby-card-avatar{border-color:var(--moon)}
+.lobby-card-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.85rem;line-height:1}
+.lobby-card-name{font-size:.75rem;color:var(--ghost);font-weight:700;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}
+.lobby-card-badge{font-size:.62rem;padding:.1rem .4rem;border-radius:4px;font-weight:700;text-align:center}
+.lobby-card-badge.ready{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
+.lobby-card-badge.waiting{background:rgba(212,160,23,.1);color:var(--moon);border:1px solid rgba(212,160,23,.2);opacity:.7}
+.lobby-card-badge.host{background:rgba(212,160,23,.15);color:var(--moon);border:1px solid rgba(212,160,23,.35)}
+.lobby-card-dc{position:absolute;top:.3rem;right:.3rem;font-size:.6rem;color:var(--blood-glow);opacity:.7}
+
 /* ── PUBLIC ROOMS SCREEN ── */
 #publicRoomsModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:315;display:flex;align-items:center;justify-content:center;padding:1rem}
 #publicRoomsModal.hidden{display:none}
@@ -4797,21 +4816,51 @@ window.addEventListener('load', () => {
 
     <!-- Center -->
     <div class="center-panel">
-      <!-- Setup -->
+      <!-- Setup / Lobby -->
       <div class="setup-wrap" id="setupView">
-        <h2 id="t_setup">Game Setup</h2>
-        <div class="s-section">
-          <h4 id="t_roles">Select Roles</h4>
-          <div class="roles-grid" id="rolesGrid"></div>
+
+        <!-- LOBBY HEADER: room code + share -->
+        <div style="text-align:center;margin-bottom:1.1rem">
+          <div style="font-family:'Creepster',cursive;font-size:1.4rem;color:var(--moon);margin-bottom:.4rem">🐺 Waiting Room</div>
+          <div onclick="lobbyCopyCode()" title="Click to copy" style="display:inline-flex;align-items:center;gap:.55rem;background:var(--abyss);border:1.5px solid var(--moon);border-radius:8px;padding:.45rem 1.1rem;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='var(--moon-pale)'" onmouseout="this.style.borderColor='var(--moon)'">
+            <span style="font-size:.65rem;color:var(--ghost);opacity:.5;letter-spacing:.06em">ROOM</span>
+            <span id="lobbyCodeDisplay" style="font-family:'Cinzel Decorative',cursive;font-size:1.25rem;color:var(--moon-pale);letter-spacing:.22em">——</span>
+            <span id="lobbyCopiedHint" style="font-size:.65rem;color:#10b981;opacity:0;transition:.4s">✓ Copied</span>
+          </div>
+          <div style="margin-top:.35rem">
+            <button onclick="lobbyShareCode()" style="background:transparent;border:none;color:var(--ghost);opacity:.45;cursor:pointer;font-size:.72rem;font-family:inherit;transition:.2s" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.45'">📤 Share invite link</button>
+          </div>
         </div>
-        <div class="s-section timer-row">
-          <div><h4 id="t_dayt">Day Timer (s)</h4><input type="number" id="cfgDay" min="10" max="600" value="60" onchange="cfgChanged()"></div>
-          <div><h4 id="t_nightt">Night Timer (s)</h4><input type="number" id="cfgNight" min="10" max="600" value="45" onchange="cfgChanged()"></div>
+
+        <!-- PLAYER AVATAR CARDS -->
+        <div id="lobbyPlayerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.55rem;margin-bottom:.9rem"></div>
+
+        <!-- READY BUTTON (non-hosts) -->
+        <div id="lobbyReadyWrap" style="display:none;margin-bottom:.7rem">
+          <button id="lobbyReadyBtn" onclick="lobbyToggleReady()" style="width:100%;padding:.7rem;border-radius:8px;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:.25s;border:2px solid var(--moon);background:transparent;color:var(--moon)">
+            ✋ Mark as Ready
+          </button>
         </div>
+
+        <!-- HOST CONTROLS -->
         <div id="hostStart" style="display:none">
+          <details style="margin-bottom:.65rem">
+            <summary style="cursor:pointer;color:var(--moon);font-size:.82rem;font-weight:700;padding:.5rem;background:var(--abyss);border:1px solid rgba(212,160,23,.2);border-radius:7px;list-style:none">⚙️ Game Settings ▾</summary>
+            <div style="background:var(--abyss);border:1px solid rgba(212,160,23,.15);border-top:none;border-radius:0 0 7px 7px;padding:.8rem">
+              <div class="s-section">
+                <h4 id="t_roles" style="font-size:.78rem;margin-bottom:.4rem">Select Roles</h4>
+                <div class="roles-grid" id="rolesGrid"></div>
+              </div>
+              <div class="s-section timer-row" style="margin-top:.6rem">
+                <div><h4 id="t_dayt" style="font-size:.72rem">Day Timer (s)</h4><input type="number" id="cfgDay" min="10" max="600" value="60" onchange="cfgChanged()"></div>
+                <div><h4 id="t_nightt" style="font-size:.72rem">Night Timer (s)</h4><input type="number" id="cfgNight" min="10" max="600" value="45" onchange="cfgChanged()"></div>
+              </div>
+            </div>
+          </details>
           <div id="startHelperMsg" style="font-size:.83rem;text-align:center;margin-bottom:.5rem;padding:.4rem;border-radius:4px"></div>
-          <button class="btn" style="width:100%;padding:1rem;font-size:1.05rem" onclick="doStartGame()" id="t_start">Start Game</button>
+          <button class="btn" style="width:100%;padding:1rem;font-size:1.05rem" onclick="doStartGame()" id="t_start">⚔️ Start Game</button>
         </div>
+
         <div id="guestWait" class="waiting-msg" style="display:none" id="t_wait">Waiting for host to start…</div>
       </div>
       <!-- Gameplay -->
@@ -6943,6 +6992,7 @@ function renderGame(){
     });
     buildRolesGrid();
     renderStats(players);
+    renderLobby(players);
     // Helper message: show role total vs connected players
     const _helperEl=document.getElementById('startHelperMsg');
     if(_helperEl && isLeader){
@@ -10769,6 +10819,133 @@ function mmGoToLogin(){
 // doGuestPlay already goes to main menu directly
 
 // showGame already hides mainMenuScreen directly — no patch needed
+
+// ════════════════════════════════════════════
+// LOBBY / WAITING ROOM
+// ════════════════════════════════════════════
+let _lobbyReadyState = false;
+
+function renderLobby(players){
+  // Update room code display
+  const codeEl = document.getElementById('lobbyCodeDisplay');
+  if(codeEl) codeEl.textContent = roomCode || '——';
+
+  const grid = document.getElementById('lobbyPlayerGrid');
+  if(!grid) return;
+
+  const amLeader = isLeader || gameState?.leader === myId;
+  const readyPlayers = gameState?.readyPlayers || {};
+
+  // Track existing cards for leave animation
+  const existing = {};
+  grid.querySelectorAll('.lobby-card[data-pid]').forEach(el => {
+    existing[el.dataset.pid] = el;
+  });
+
+  const currentIds = new Set(players.map(p => p.id));
+
+  // Animate out removed players
+  Object.keys(existing).forEach(pid => {
+    if(!currentIds.has(pid)){
+      const el = existing[pid];
+      el.classList.add('leaving');
+      setTimeout(() => el.remove(), 300);
+    }
+  });
+
+  // Add/update players
+  players.forEach((p, i) => {
+    const isHost = gameState?.leader === p.id;
+    const isMe = p.id === myId;
+    const isReady = isHost || !!readyPlayers[p.id];
+    const isDc = !!p.disconnected;
+
+    // Avatar: use Google photo if available, else emoji
+    let avatarHtml = '🐺';
+    if(isMe && _googleUser?.photoURL){
+      avatarHtml = `<img src="${_googleUser.photoURL}" alt="">`;
+    }
+
+    const badge = isHost
+      ? `<span class="lobby-card-badge host">👑 Host</span>`
+      : isReady
+        ? `<span class="lobby-card-badge ready">✓ Ready</span>`
+        : `<span class="lobby-card-badge waiting">Waiting…</span>`;
+
+    if(existing[p.id]){
+      // Update in place
+      const el = existing[p.id];
+      el.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
+      el.querySelector('.lobby-card-avatar').innerHTML = avatarHtml;
+      el.querySelector('.lobby-card-name').textContent = p.name + (isMe ? ' (you)' : '');
+      el.querySelector('.lobby-card-badge').outerHTML = badge;
+      const dcEl = el.querySelector('.lobby-card-dc');
+      if(dcEl) dcEl.style.display = isDc ? 'block' : 'none';
+    } else {
+      // Create new card
+      const card = document.createElement('div');
+      card.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
+      card.dataset.pid = p.id;
+      card.style.animationDelay = (i * 0.04) + 's';
+      card.innerHTML = `
+        ${isHost ? '<div class="lobby-card-crown">👑</div>' : ''}
+        <div class="lobby-card-avatar">${avatarHtml}</div>
+        <div class="lobby-card-name">${p.name}${isMe ? ' (you)' : ''}</div>
+        ${badge}
+        <div class="lobby-card-dc" style="display:${isDc ? 'block' : 'none'}">⚠️ dc</div>
+      `;
+      grid.appendChild(card);
+    }
+  });
+
+  // Show/hide ready button for non-hosts
+  const readyWrap = document.getElementById('lobbyReadyWrap');
+  if(readyWrap){
+    readyWrap.style.display = (!amLeader) ? 'block' : 'none';
+    const btn = document.getElementById('lobbyReadyBtn');
+    if(btn){
+      _lobbyReadyState = !!readyPlayers[myId];
+      if(_lobbyReadyState){
+        btn.style.background = 'rgba(16,185,129,.15)';
+        btn.style.borderColor = '#10b981';
+        btn.style.color = '#10b981';
+        btn.textContent = '✅ Ready! (click to undo)';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.borderColor = 'var(--moon)';
+        btn.style.color = 'var(--moon)';
+        btn.textContent = '✋ Mark as Ready';
+      }
+    }
+  }
+}
+
+function lobbyToggleReady(){
+  if(!fbOk || !db || !roomCode || !myId) return;
+  _lobbyReadyState = !_lobbyReadyState;
+  if(_lobbyReadyState){
+    db.ref(`games/${roomCode}/readyPlayers/${myId}`).set(true);
+  } else {
+    db.ref(`games/${roomCode}/readyPlayers/${myId}`).remove();
+  }
+}
+
+function lobbyCopyCode(){
+  if(!roomCode) return;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(roomCode).then(() => {
+      const hint = document.getElementById('lobbyCopiedHint');
+      if(hint){ hint.style.opacity = '1'; setTimeout(() => hint.style.opacity = '0', 1800); }
+    });
+  }
+}
+
+function lobbyShareCode(){
+  const code = roomCode || '——';
+  const text = `Join my Loup-Garou game! 🐺\nRoom code: ${code}\nhttps://loup-garou-game-beta.vercel.app/`;
+  if(navigator.share){ navigator.share({ title: 'Join my Loup-Garou game!', text }); }
+  else { navigator.clipboard?.writeText(text); _showToast('Invite link copied!'); }
+}
 
 // ════════════════════════════════════════════
 // LOVERS TOAST
