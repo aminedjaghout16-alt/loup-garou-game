@@ -6414,7 +6414,7 @@ function changeCount(role,delta){
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
-  if(!cfg.roles || (typeof cfg.roles==='object' && !Array.isArray(cfg.roles) && Object.keys(cfg.roles).length===0)) cfg.roles=['werewolf','seer','witch','villager'];
+  if(!cfg.roles || (!Array.isArray(cfg.roles) && typeof cfg.roles==='object' && !Object.keys(cfg.roles).length)) cfg.roles=['werewolf','seer','witch','villager'];
   if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles).filter(v=>typeof v==='string');
   if(!cfg.roles.length) cfg.roles=['werewolf','seer','witch','villager'];
   if(!cfg.roleCounts) cfg.roleCounts={};
@@ -10984,7 +10984,6 @@ function mmGoToLogin(){
 let _lobbyReadyState = false;
 
 function renderLobby(players){
-  // Update room code display
   const codeEl = document.getElementById('lobbyCodeDisplay');
   if(codeEl) codeEl.textContent = roomCode || '——';
 
@@ -10993,62 +10992,83 @@ function renderLobby(players){
 
   const amLeader = isLeader || gameState?.leader === myId;
   const readyPlayers = gameState?.readyPlayers || {};
+  const n = (players || []).length;
 
-  // Fully rebuild the grid every time — simple and reliable
-  grid.innerHTML = '';
-  (players || []).forEach((p, i) => {
-    if(!p || !p.id) return;
-    const isHost = gameState?.leader === p.id;
-    const isMe = p.id === myId;
-    const isReady = isHost || !!readyPlayers[p.id];
-    const isDc = !!p.disconnected;
+  if(n === 0){
+    grid.innerHTML = '<div style="text-align:center;opacity:.4;padding:2rem;font-size:.9rem">Waiting for players...</div>';
+  } else {
+    const radius = Math.max(100, Math.min(150, 70 + n * 14));
+    const cx = radius + 40, cy = radius + 40;
+    const size = (radius + 40) * 2;
 
-    let avatarHtml = '🐺';
-    if(isMe && _googleUser?.photoURL){
-      avatarHtml = `<img src="${_googleUser.photoURL}" alt="">`;
-    }
+    let html = `<div class="player-circle" style="width:${size}px;height:${size}px;margin:0 auto">`;
+    players.forEach((p, i) => {
+      if(!p || !p.id) return;
+      const angle = (2 * Math.PI * i / n) - (Math.PI / 2);
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      const isHost = gameState?.leader === p.id;
+      const isMe = p.id === myId;
+      const isReady = isHost || !!readyPlayers[p.id];
+      const isDc = !!p.disconnected;
 
-    const badgeClass = isHost ? 'host' : isReady ? 'ready' : 'waiting';
-    const badgeText  = isHost ? '👑 Host' : isReady ? '✓ Ready' : 'Waiting…';
-    const cardClass  = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
+      const borderCol = isHost ? 'var(--moon)' : isReady ? '#10b981' : 'rgba(212,160,23,.3)';
+      const glowCol   = isHost ? 'rgba(212,160,23,.45)' : isReady ? 'rgba(16,185,129,.35)' : 'none';
 
-    const card = document.createElement('div');
-    card.className = cardClass;
-    card.dataset.pid = p.id;
-    card.style.animationDelay = (i * 0.04) + 's';
-    card.innerHTML = `
-      ${isHost ? '<div class="lobby-card-crown">👑</div>' : ''}
-      <div class="lobby-card-avatar">${avatarHtml}</div>
-      <div class="lobby-card-name">${p.name||'?'}${isMe ? ' (you)' : ''}</div>
-      <span class="lobby-card-badge ${badgeClass}">${badgeText}</span>
-      <div class="lobby-card-dc" style="display:${isDc?'block':'none'}">⚠️ dc</div>
-      ${amLeader && !isMe && !isHost ? `<button class="lobby-kick-btn" onclick="event.stopPropagation();kickPlayer('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')" title="Kick player">✕ Kick</button>` : ''}
-    `;
-    grid.appendChild(card);
-  });
+      let avInner = '<span style="font-size:1.4rem">\u{1F43A}</span>';
+      if(isMe && _googleUser && _googleUser.photoURL){
+        avInner = `<img src="${_googleUser.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">`;
+      }
 
-  // Show/hide ready button for non-hosts
+      const badgeText  = isHost ? '\u{1F451} Host' : isReady ? '\u2713 Ready' : '\u2026';
+      const badgeColor = isHost ? 'var(--moon)' : isReady ? '#10b981' : 'rgba(232,232,232,.35)';
+
+      const safeN = (p.name||'?').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const kickBtn = amLeader && !isMe && !isHost
+        ? `<button onclick="event.stopPropagation();kickPlayer('${p.id}','${safeN}')" title="Kick" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:rgba(239,68,68,.85);border:1px solid #ef4444;color:#fff;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:10;padding:0">\u2715</button>`
+        : '';
+
+      html += `
+        <div class="pc-node${isMe?' is-me':''}" style="left:${x}px;top:${y}px;position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:.25rem;z-index:2">
+          <div style="position:relative">
+            <div class="pc-avatar-wrap" style="border-color:${borderCol};box-shadow:0 0 12px ${glowCol};opacity:${isDc?0.5:1}">
+              ${avInner}
+            </div>
+            ${isHost ? '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:.85rem">\u{1F451}</div>' : ''}
+            ${isDc ? '<div style="position:absolute;bottom:0;right:0;font-size:.6rem;background:rgba(239,68,68,.8);border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center">!</div>' : ''}
+            ${kickBtn}
+          </div>
+          <div class="pc-name-box">
+            <div class="pc-name">${p.name||'?'}</div>
+            ${isMe ? '<div class="pc-you-tag">YOU</div>' : ''}
+          </div>
+          <div style="font-size:.55rem;color:${badgeColor};font-family:'Creepster',cursive;letter-spacing:.03em">${badgeText}</div>
+        </div>`;
+    });
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+
   const readyWrap = document.getElementById('lobbyReadyWrap');
   if(readyWrap){
     readyWrap.style.display = (!amLeader) ? 'block' : 'none';
     const btn = document.getElementById('lobbyReadyBtn');
     if(btn){
-      _lobbyReadyState = !!readyPlayers[myId];
+      _lobbyReadyState = !!(readyPlayers[myId]);
       if(_lobbyReadyState){
         btn.style.background = 'rgba(16,185,129,.15)';
         btn.style.borderColor = '#10b981';
         btn.style.color = '#10b981';
-        btn.textContent = '✅ Ready! (click to undo)';
+        btn.textContent = '\u2705 Ready! (click to undo)';
       } else {
         btn.style.background = 'transparent';
         btn.style.borderColor = 'var(--moon)';
         btn.style.color = 'var(--moon)';
-        btn.textContent = '✋ Mark as Ready';
+        btn.textContent = '\u270B Mark as Ready';
       }
     }
   }
 }
-
 function lobbyToggleReady(){
   if(!fbOk || !db || !roomCode || !myId) return;
   _lobbyReadyState = !_lobbyReadyState;
