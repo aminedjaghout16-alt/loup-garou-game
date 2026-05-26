@@ -6643,6 +6643,13 @@ async function enterRoom(){
       renderGame();
     });
     showGame();
+    // Fallback: if gameState isn't set within 2 seconds, render anyway or fallback to offline
+    setTimeout(()=>{
+      if(!gameState){
+        console.warn('gameState not set after 2s, calling offlineEnter as fallback');
+        offlineEnter();
+      }
+    }, 2000);
   }catch(ex){
     console.error(ex);
     // Silently fall back to offline mode instead of showing a scary error
