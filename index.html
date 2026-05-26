@@ -70,7 +70,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 
 /* ── PROFILE MODAL ── */
 /* ══ MAIN MENU ══ */
-#mainMenu{position:fixed;inset:0;z-index:200;background:var(--void);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
+#mainMenu{position:fixed;inset:0;z-index:200;background:var(--void);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:2.5rem 1.5rem 1.5rem;overflow-y:auto}
 #mainMenu.hidden{display:none!important}
 .mn-title{font-family:'Cinzel Decorative',cursive;font-size:2rem;color:var(--moon);text-shadow:0 0 30px rgba(212,160,23,.4);text-align:center;margin-bottom:.2rem}
 .mn-sub{font-size:.72rem;color:var(--ghost);opacity:.4;letter-spacing:.1em;text-align:center;margin-bottom:1.4rem}
@@ -4542,11 +4542,6 @@ window.addEventListener('load', () => {
       <div class="mn-label">Leaderboard</div>
       <div class="mn-desc">Global rankings</div>
     </div>
-    <div class="mn-btn" onclick="openAvatarStore()">
-      <div class="mn-icon">🎭</div>
-      <div class="mn-label">Avatar Shop</div>
-      <div class="mn-desc">Customize look</div>
-    </div>
     <div class="mn-btn" onclick="openProfileModal()">
       <div class="mn-icon">📊</div>
       <div class="mn-label">Profile</div>
@@ -4556,7 +4551,6 @@ window.addEventListener('load', () => {
 
   <!-- Footer -->
   <div class="mn-footer">
-    <button class="mn-foot-btn" onclick="openSpinWheel()">🎡 Daily Spin</button>
     <button class="mn-foot-btn" id="mnSignOutBtn" onclick="mnSignOut()" style="display:none">Sign Out</button>
     <button class="mn-foot-btn" id="mnSignInBtn" onclick="mnGoLogin()">Sign In</button>
   </div>
@@ -10237,14 +10231,18 @@ function showMainMenu(){
   _hideAll();
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.add('hidden');
-  document.getElementById('mainMenu').classList.remove('hidden');
+  const mm = document.getElementById('mainMenu');
+  mm.classList.remove('hidden');
+  mm.scrollTop = 0;
   _mnRefresh();
 }
 
-// ── Patch showGame to always hide menu ──
+// ── Patch showGame to always hide menu + handle audio ──
 const _origShowGame = showGame;
 showGame = function(){
   _hideAll();
+  AUDIO.stopLoginAmbient();
+  AUDIO.startLobbyAmbient();
   _origShowGame();
 };
 
@@ -11145,13 +11143,7 @@ window.showGameOver = function(result){
   return _origShowGameOver(result);
 };
 
-// ── Enter game room: stop login ambient, start lobby ─────────────────────
-const _origShowGame = showGame;
-window.showGame = function(){
-  AUDIO.stopLoginAmbient();
-  AUDIO.startLobbyAmbient();
-  return _origShowGame();
-};
+// ── (showGame audio patch merged into main menu patch above) ─────────────
 
 // ════════════════════════════════════════════
 // PHASE MUSIC STATE MACHINE (owned by renderGame)
