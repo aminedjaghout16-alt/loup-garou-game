@@ -10821,18 +10821,23 @@ async function rcrEnterRoom(){
   if(_rcType === 'public' && typeof db !== 'undefined' && db){
     initFBWithRetry(async ()=>{
       const roomName = document.getElementById('rcRoomName')?.value?.trim() || 'Game Room';
-      await db.ref(`publicRooms/${roomCode}`).set({
-        code: roomCode,
-        name: roomName,
-        host: myName,
-        hostUid: myId,
-        maxPlayers: _rcMaxPlayers,
-        playerCount: 1,
-        status: 'waiting',
-        createdAt: Date.now()
-      });
-      // Remove listing when host disconnects or game starts
-      db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
+      try {
+        await db.ref(`publicRooms/${roomCode}`).set({
+          code: roomCode,
+          name: roomName,
+          host: myName,
+          hostUid: myId,
+          maxPlayers: _rcMaxPlayers,
+          playerCount: 1,
+          status: 'waiting',
+          createdAt: Date.now()
+        });
+        // Remove listing when host disconnects or game starts
+        db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
+      } catch(err) {
+        console.warn('Could not write public room listing (Firebase permissions):', err);
+        // Continue anyway - the game can still work, just won't show in public list
+      }
       enterRoom();
     });
   } else {
