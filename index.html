@@ -6414,13 +6414,8 @@ function changeCount(role,delta){
 function buildRolesGrid(){
   const grid=document.getElementById('rolesGrid');
   if(!grid) return;
-  // Robustly normalize cfg.roles to a plain array no matter what Firebase returns
-  if(!cfg.roles || (typeof cfg.roles === 'object' && !Array.isArray(cfg.roles) && Object.keys(cfg.roles).length === 0)) {
-    cfg.roles=['werewolf','seer','witch','villager'];
-  } else if(!Array.isArray(cfg.roles)) {
-    cfg.roles=Object.values(cfg.roles).filter(v => typeof v === 'string');
-  }
-  if(!Array.isArray(cfg.roles) || cfg.roles.length === 0) cfg.roles=['werewolf','seer','witch','villager'];
+  if(!cfg.roles) cfg.roles=['werewolf','seer','witch','villager'];
+  if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
   if(!cfg.roleCounts) cfg.roleCounts={};
   if(!cfg.roleCounts.werewolf) cfg.roleCounts.werewolf=1;
   if(cfg.roleCounts.villager===undefined) cfg.roleCounts.villager=1;
@@ -6631,9 +6626,7 @@ async function enterRoom(){
       gameState=snap.val();
       if(gameState?.config) {
         cfg=gameState.config;
-        if(!cfg.roles) cfg.roles=['werewolf','seer','witch','villager'];
-        else if(!Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles).filter(v=>typeof v==='string');
-        if(!Array.isArray(cfg.roles)||cfg.roles.length===0) cfg.roles=['werewolf','seer','witch','villager'];
+        if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
         if(!cfg.roleCounts) cfg.roleCounts={werewolf:1,villager:1};
       }
       // Derive leader status from Firebase data
@@ -7114,6 +7107,7 @@ function renderGame(){
     renderStats(players);
     // Only pass active (non-disconnected) players to the lobby grid
     const _lobbyActivePlayers = players.filter(p => !p.disconnected);
+    console.log('🔍 renderGame setup: all players=', players.length, 'active=', _lobbyActivePlayers.length, JSON.stringify(players.map(p=>({id:p.id,name:p.name,dc:p.disconnected}))));
     renderLobby(_lobbyActivePlayers);
     // Helper message: role total vs connected players + ready status
     const _helperEl=document.getElementById('startHelperMsg');
@@ -10990,11 +10984,13 @@ function mmGoToLogin(){
 let _lobbyReadyState = false;
 
 function renderLobby(players){
+  console.log('🔍 renderLobby called, players:', players?.length, JSON.stringify(players?.map(p=>({id:p.id,name:p.name,dc:p.disconnected}))));
   // Update room code display
   const codeEl = document.getElementById('lobbyCodeDisplay');
   if(codeEl) codeEl.textContent = roomCode || '——';
 
   const grid = document.getElementById('lobbyPlayerGrid');
+  console.log('🔍 grid found:', !!grid, 'setupView display:', document.getElementById('setupView')?.style?.display);
   if(!grid) return;
 
   const amLeader = isLeader || gameState?.leader === myId;
@@ -11043,14 +11039,15 @@ function renderLobby(players){
       el.className = 'lobby-card' + (isHost ? ' host' : isReady ? ' ready' : '');
       el.querySelector('.lobby-card-avatar').innerHTML = avatarHtml;
       el.querySelector('.lobby-card-name').textContent = p.name + (isMe ? ' (you)' : '');
-      // Re-render the badge correctly
+      // Use innerHTML instead of outerHTML so the element stays in the DOM
       const badgeEl = el.querySelector('.lobby-card-badge');
+      if(badgeEl) badgeEl.innerHTML = badge.replace(/<span[^>]*>|<\/span>/g, '') || badge;
+      // Re-render the badge correctly
       const tmpDiv = document.createElement('div');
       tmpDiv.innerHTML = badge;
-      const newBadge = tmpDiv.firstElementChild;
-      if(badgeEl && newBadge) {
-        badgeEl.className = newBadge.className;
-        badgeEl.innerHTML = newBadge.innerHTML;
+      if(badgeEl && tmpDiv.firstElementChild) {
+        badgeEl.className = tmpDiv.firstElementChild.className;
+        badgeEl.innerHTML = tmpDiv.firstElementChild.innerHTML;
       }
       const dcEl = el.querySelector('.lobby-card-dc');
       if(dcEl) dcEl.style.display = isDc ? 'block' : 'none';
