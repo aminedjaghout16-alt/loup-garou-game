@@ -10469,6 +10469,7 @@ function mmGetName(){
 }
 
 function mmDoCreate(){
+  hideMainMenu();
   // Pre-fill host name if known
   const name = mmGetName();
   const nameEl = document.getElementById('rcHostName');
@@ -10506,6 +10507,7 @@ function mmDoJoin(){
 }
 
 function mmOpenPublicRooms(){
+  hideMainMenu();
   document.getElementById('publicRoomsModal').classList.remove('hidden');
   prStartLiveListener();
 }
@@ -10519,6 +10521,7 @@ let _prJoinTarget = null; // code of room user wants to join
 function closePublicRooms(){
   document.getElementById('publicRoomsModal').classList.add('hidden');
   prStopListener();
+  showMainMenu();
 }
 
 function prStopListener(){
@@ -10681,6 +10684,7 @@ function rcAdjustPlayers(delta){
 
 function closeRoomCreate(){
   document.getElementById('roomCreateModal').classList.add('hidden');
+  showMainMenu();
 }
 
 async function rcConfirmCreate(){
