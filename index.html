@@ -7100,7 +7100,9 @@ function renderGame(){
     });
     buildRolesGrid();
     renderStats(players);
-    renderLobby(players);
+    // Only pass active (non-disconnected) players to the lobby grid
+    const _lobbyActivePlayers = players.filter(p => !p.disconnected);
+    renderLobby(_lobbyActivePlayers);
     // Helper message: role total vs connected players + ready status
     const _helperEl=document.getElementById('startHelperMsg');
     const _startBtn=document.getElementById('t_start');
@@ -10992,8 +10994,8 @@ function renderLobby(players){
     existing[el.dataset.pid] = el;
   });
 
-  // currentIds based on who should actually be visible in the lobby
-  const currentIds = new Set(players.filter(p => !p.disconnected || p.id === myId).map(p => p.id));
+  // currentIds — players array is already filtered to active-only before being passed in
+  const currentIds = new Set(players.map(p => p.id));
 
   // Animate out removed players
   Object.keys(existing).forEach(pid => {
@@ -11004,15 +11006,12 @@ function renderLobby(players){
     }
   });
 
-  // In lobby, filter out players who have fully left (disconnected) — they've gone, free the slot
-  const lobbyPlayers = players.filter(p => !p.disconnected || p.id === myId);
-
   // Add/update players
-  lobbyPlayers.forEach((p, i) => {
+  players.forEach((p, i) => {
     const isHost = gameState?.leader === p.id;
     const isMe = p.id === myId;
     const isReady = isHost || !!readyPlayers[p.id];
-    const isDc = false; // in lobby, disconnected players are already filtered out
+    const isDc = !!p.disconnected;
 
     // Avatar: use Google photo if available, else emoji
     let avatarHtml = '🐺';
