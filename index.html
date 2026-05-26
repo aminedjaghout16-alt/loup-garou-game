@@ -6765,11 +6765,19 @@ function runDisconnectWatcher(){
 }
 
 function doLeave(){
-  // Remove self from Firebase before reloading so presence is cleaned up instantly
   stopHeartbeat();
   if(fbOk&&db&&roomCode&&myId){
-    // Flag as disconnected; don't delete — the node must persist for game integrity
-    db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()});
+    if(gameState && gameState.status === 'setup'){
+      // Before game starts: fully remove the player from the room
+      db.ref(`games/${roomCode}/players/${myId}`).remove().catch(()=>{});
+      // Update public room player count
+      const remaining = Object.values(gameState.players || {}).filter(p => !p.disconnected && p.id !== myId);
+      const count = Math.max(remaining.length, 1);
+      db.ref(`publicRooms/${roomCode}/playerCount`).set(count).catch(()=>{});
+    } else {
+      // During game: just flag as disconnected — node must persist for game integrity
+      db.ref(`games/${roomCode}/players/${myId}`).update({disconnected:true, disconnectedAt:Date.now()});
+    }
   }
   window.location.reload();
 }
