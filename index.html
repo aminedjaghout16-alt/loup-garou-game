@@ -6577,12 +6577,14 @@ function offlineEnter(){
     players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}},
     config:cfg, chat:[], createdAt:Date.now()
   };
+  document.getElementById('mainMenuScreen').classList.add('hidden');
   showGame();
   renderGame();
 }
 
 function showGame(){
   document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('mainMenuScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
   document.getElementById('hRoom').textContent=roomCode;
   document.getElementById('hPlayerName').textContent=myName||'';
@@ -10761,13 +10763,7 @@ function mmGoToLogin(){
 
 // doGuestPlay already goes to main menu directly
 
-// Patch showGame (called after enterRoom) — hide main menu
-const _origShowGameMM = window.showGame;
-window.showGame = function(){
-  hideMainMenu();
-  prStopListener(); // stop public rooms listener if active
-  _origShowGameMM();
-};
+// showGame already hides mainMenuScreen directly — no patch needed
 
 // ════════════════════════════════════════════
 // LOVERS TOAST
