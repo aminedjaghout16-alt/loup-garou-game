@@ -751,6 +751,38 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .audio-slider::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--moon);cursor:pointer;box-shadow:0 0 4px rgba(212,160,23,.5)}
 .audio-mute{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:4px;padding:0 .35rem;font-size:.75rem;cursor:pointer;height:20px;line-height:1;font-family:inherit;transition:.15s}
 .audio-mute:hover{background:rgba(212,160,23,.15)}
+#publicRoomsModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:315;display:flex;align-items:center;justify-content:center;padding:1rem}
+#publicRoomsModal.hidden{display:none}
+.pr-box{background:var(--abyss);border:1px solid var(--moon);border-radius:14px;padding:1.6rem 1.4rem;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;position:relative;box-shadow:0 0 50px rgba(212,160,23,.16)}
+.pr-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:.3rem}
+.pr-subtitle{text-align:center;font-size:.75rem;color:var(--ghost);opacity:.45;margin-bottom:1rem}
+.pr-toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center}
+.pr-refresh-btn{padding:.4rem .9rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s;white-space:nowrap}
+.pr-refresh-btn:hover{background:rgba(212,160,23,.1)}
+.pr-refresh-btn.spinning{animation:prSpin .7s linear infinite}
+@keyframes prSpin{to{transform:rotate(360deg)}}
+.pr-create-link{padding:.4rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;transition:.2s;white-space:nowrap;margin-left:auto}
+.pr-create-link:hover{background:var(--blood)}
+.pr-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.6rem;padding-right:.2rem}
+.pr-list::-webkit-scrollbar{width:4px}
+.pr-list::-webkit-scrollbar-thumb{background:var(--moon);border-radius:2px}
+.pr-card{background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem;transition:.2s;cursor:default}
+.pr-card:hover{border-color:rgba(212,160,23,.5);background:rgba(26,10,46,.85)}
+.pr-card-icon{font-size:1.6rem;flex-shrink:0;width:40px;text-align:center}
+.pr-card-info{flex:1;min-width:0}
+.pr-card-name{font-size:.92rem;color:var(--ghost);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-card-host{font-size:.7rem;color:var(--ghost);opacity:.5;margin-top:.15rem}
+.pr-card-meta{display:flex;align-items:center;gap:.5rem;margin-top:.35rem;flex-wrap:wrap}
+.pr-card-players{font-size:.72rem;padding:.15rem .5rem;border-radius:4px;font-weight:700}
+.pr-card-players.open{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
+.pr-card-players.full{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25)}
+.pr-card-age{font-size:.68rem;color:var(--ghost);opacity:.4}
+.pr-join-btn{padding:.45rem .9rem;background:var(--blood-glow);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:700;transition:.2s;flex-shrink:0}
+.pr-join-btn:hover{background:var(--blood);box-shadow:0 0 12px rgba(185,28,28,.4)}
+.pr-join-btn:disabled{opacity:.4;cursor:not-allowed}
+.pr-empty{text-align:center;padding:2.5rem 1rem;color:var(--ghost);opacity:.4}
+.pr-empty .pr-empty-icon{font-size:2.5rem;margin-bottom:.5rem}
+.pr-empty p{font-size:.85rem}
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -10664,6 +10696,7 @@ function _prDoJoin(code, name){
 }
 
 // ════════════════════════════════════════════
+
 // PART 2 — ROOM CREATION
 // ════════════════════════════════════════════
 let _rcType = 'public';
@@ -11057,6 +11090,31 @@ window.addEventListener('load',()=>{
 </div>
 
 <!-- ── ROOM CREATION MODAL ── -->
+<div id="publicRoomsModal" class="hidden">
+  <div class="pr-box">
+    <button class="profile-close" onclick="closePublicRooms()">✕</button>
+    <h2>🌐 Public Rooms</h2>
+    <div class="pr-subtitle" id="prSubtitle">Live open games you can join</div>
+
+    <div class="pr-toolbar">
+      <button class="pr-refresh-btn" id="prRefreshBtn" onclick="prRefresh()">↻ Refresh</button>
+      <button class="pr-create-link" onclick="closePublicRooms();mmDoCreate()">+ Create Room</button>
+    </div>
+
+    <!-- Name prompt (guests need to enter name before joining) -->
+    <div class="pr-join-panel" id="prJoinPanel">
+      <label>Enter your name to join</label>
+      <input id="prJoinName" type="text" maxlength="20" placeholder="Your name…" autocomplete="off">
+      <button onclick="prConfirmJoin()" style="padding:.55rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:700;transition:.2s" onmouseover="this.style.background='var(--blood)'" onmouseout="this.style.background='var(--blood-glow)'">Join →</button>
+    </div>
+
+    <div class="pr-list" id="prList">
+      <div class="pr-loading">Loading rooms…</div>
+    </div>
+  </div>
+</div>
+
+
 <div id="roomCreateModal" class="hidden">
   <div class="rc-box">
     <button class="profile-close" onclick="closeRoomCreate()">✕</button>
