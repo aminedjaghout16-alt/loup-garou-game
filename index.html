@@ -5820,13 +5820,50 @@ function renderReadyStatus(readyPlayers){
 function handleRematch(){
   const btn=document.getElementById('rematchBtn');
   if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'✓ في انتظار الآخرين…':lang==='fr'?'✓ En attente des autres…':'✓ Waiting for others…'; }
-  doReady();
-  // If Firebase, start listening for readyPlayers updates to render who's ready
+
   if(fbOk&&db&&roomCode){
+    // Clear any stale readyPlayers (e.g. from lobby), then write only this player
+    db.ref(`games/${roomCode}/readyPlayers`).remove().then(()=>{
+      db.ref(`games/${roomCode}/readyPlayers/${myId}`).set({name:myName,ts:Date.now()});
+    });
+    // Listen for all players clicking rematch
     db.ref(`games/${roomCode}/readyPlayers`).on('value',snap=>{
       const rp=snap.val()||{};
-      renderReadyStatus(rp);
+      renderRematchStatus(rp);
     });
+  } else {
+    // Offline / IRL mode
+    if(gameState){
+      gameState.readyPlayers={};
+      gameState.readyPlayers[myId]={name:myName,ts:Date.now()};
+      renderRematchStatus(gameState.readyPlayers);
+      const players=Object.values(gameState.players||{});
+      if(Object.keys(gameState.readyPlayers).length>=players.length) doRestart();
+    }
+  }
+}
+
+function renderRematchStatus(readyPlayers){
+  const players=Object.values(gameState?.players||{});
+  const readyIds=Object.keys(readyPlayers);
+  const readyCount=readyIds.length;
+  const totalCount=players.length;
+
+  let html=`<div style="margin-bottom:.4rem">${readyCount}/${totalCount} ${lang==='ar'?'جاهزون للإعادة':lang==='fr'?'prêts pour la revanche':'ready for rematch'}</div>`;
+  html+='<div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap">';
+  players.forEach(p=>{
+    const isReady=readyIds.includes(p.id);
+    html+=`<span style="padding:.2rem .5rem;border-radius:3px;font-size:.75rem;background:${isReady?'var(--green)':'var(--purple)'};color:${isReady?'#fff':'var(--ghost)'};border:1px solid ${isReady?'var(--green)':'var(--moon)'}">${p.name} ${isReady?'✓':'…'}</span>`;
+  });
+  html+='</div>';
+
+  const rematchStatus=document.getElementById('rematchReadyStatus');
+  if(rematchStatus) rematchStatus.innerHTML=html;
+
+  // Once all players have clicked rematch, leader starts the game
+  if(isLeader && readyCount>=totalCount && totalCount>0){
+    if(fbOk&&db&&roomCode) db.ref(`games/${roomCode}/readyPlayers`).off();
+    doRestart();
   }
 }
 
