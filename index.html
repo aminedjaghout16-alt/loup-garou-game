@@ -6236,12 +6236,14 @@ function _initGoogleAuth(){
 }
 
 function _updateGoogleUI(user){
+  console.log('[Auth] _updateGoogleUI called, user=', user ? user.email : 'null');
   const signInBtn=document.getElementById('googleSignInBtn');
   const userBar=document.getElementById('googleUserBar');
   const nameInput=document.getElementById('inName');
   const hBtn=document.getElementById('headerStatsBtn');
   const emailWrap=document.getElementById('emailLoginWrap');
   const gameEntry=document.getElementById('gameEntryWrap');
+  console.log('[Auth] elements found:', {signInBtn:!!signInBtn, userBar:!!userBar, gameEntry:!!gameEntry});
   if(user){
     // Show profile bar, hide sign-in button + email form, show game entry
     if(signInBtn) signInBtn.style.display='none';
@@ -6269,9 +6271,8 @@ function _updateGoogleUI(user){
   }
 }
 
-let _googleSignInPending = false;
 function doGoogleSignIn(){
-  if(_googleSignInPending) return; // prevent duplicate popup
+  if(_googleUser){ _updateGoogleUI(_googleUser); return; } // already signed in
   if(!_fbAuth){
     initFBWithRetry(()=>{
       if(_fbAuth) doGoogleSignIn();
@@ -6279,9 +6280,11 @@ function doGoogleSignIn(){
     });
     return;
   }
-  _googleSignInPending = true;
   const provider=new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({prompt:'select_account'});
+  // Disable button to prevent double-click
+  const btn=document.getElementById('googleSignInBtn');
+  if(btn) btn.disabled=true;
   _fbAuth.signInWithPopup(provider)
     .then(result=>{
       _googleUser=result.user;
@@ -6294,7 +6297,7 @@ function doGoogleSignIn(){
       }
     })
     .finally(()=>{
-      _googleSignInPending = false;
+      if(btn) btn.disabled=false;
     });
 }
 
