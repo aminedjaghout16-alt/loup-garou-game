@@ -872,7 +872,7 @@ const AVATARS = [
     id: 'flint',
     name: 'The Axe',
     rarity: 'common',
-    price: 250,
+    price: 400,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#2a1a0e" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#7a4f2d" stroke-width="3" rx="6"/>
@@ -901,7 +901,7 @@ const AVATARS = [
     id: 'aldric',
     name: 'Iron Shield',
     rarity: 'common',
-    price: 250,
+    price: 400,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#1a1a2e" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#4a6a9a" stroke-width="3" rx="6"/>
@@ -930,7 +930,7 @@ const AVATARS = [
     id: 'morrigan',
     name: 'Witch Brew',
     rarity: 'common',
-    price: 250,
+    price: 400,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#0f1a0f" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#2a6a2a" stroke-width="3" rx="6"/>
@@ -959,7 +959,7 @@ const AVATARS = [
     id: 'ironclad',
     name: 'Sword',
     rarity: 'common',
-    price: 250,
+    price: 400,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#1a1000" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#7a6020" stroke-width="3" rx="6"/>
@@ -994,7 +994,7 @@ const AVATARS = [
     id: 'colt',
     name: 'Wolf Paw',
     rarity: 'common',
-    price: 250,
+    price: 400,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#1a0a00" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#7a3010" stroke-width="3" rx="6"/>
@@ -1034,7 +1034,7 @@ const AVATARS = [
     id: 'lunara',
     name: 'Crystal Ball',
     rarity: 'rare',
-    price: 800,
+    price: 1200,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#0a0a20" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#38bdf8" stroke-width="3" rx="6"/>
@@ -1069,7 +1069,7 @@ const AVATARS = [
     id: 'corvus',
     name: 'Black Feather',
     rarity: 'rare',
-    price: 800,
+    price: 1200,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#080808" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#555" stroke-width="3" rx="6"/>
@@ -1103,7 +1103,7 @@ const AVATARS = [
     id: 'vex',
     name: 'Poison Vial',
     rarity: 'rare',
-    price: 800,
+    price: 1200,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#0a1a0a" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#22aa22" stroke-width="3" rx="6"/>
@@ -1140,7 +1140,7 @@ const AVATARS = [
     id: 'mortis',
     name: 'Cursed Skull',
     rarity: 'rare',
-    price: 800,
+    price: 1200,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#100808" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#660000" stroke-width="3" rx="6"/>
@@ -1179,7 +1179,7 @@ const AVATARS = [
     id: 'shadowfang',
     name: 'Shadow Fang',
     rarity: 'legendary',
-    price: 2000,
+    price: 3000,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#080010" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#8b0000" stroke-width="3" rx="6"/>
@@ -1220,7 +1220,7 @@ const AVATARS = [
     id: 'selene',
     name: 'Moonblade',
     rarity: 'legendary',
-    price: 2000,
+    price: 3000,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <rect width="100" height="100" fill="#06060e" rx="6"/>
   <rect width="100" height="100" fill="none" stroke="#d4a017" stroke-width="3" rx="6"/>
@@ -1359,24 +1359,32 @@ const AVATAR_ANIMATION_CSS = `
   100%      { opacity:0; transform: translate(30px, -40px) rotate(-35deg); }
 }
 
-/* Character body group — moves inside the hex */
+/* Character body group — moves inside the box */
 .av-char-breathe {
   animation: av-breathe 3.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
 }
 .av-char-sway {
   animation: av-sway 5.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
 }
 
 /* Eye group only — squashes vertically */
 .av-eye-group {
   animation: av-blink 4.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 .av-eye-group-rare,
 .av-eye-group-legendary {
   animation: av-blink2 5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 
-/* Glow on the hex border polygon — frame stays put, only stroke glows */
+/* Glow on the content group */
 .av-hex-glow-legendary {
   animation: av-glow-legendary 2.2s ease-in-out infinite;
 }
@@ -1428,73 +1436,58 @@ function animateAvatar(svgEl, rarity) {
   if (!svgEl) return;
   // Always ensure CSS keyframes are injected before animating
   _injectCSS();
-  // If already animated, remove old wrapper groups so we can re-animate
-  // (needed when SVG is reused across rerenders — e.g. store preview swap)
+  // Guard against double-animating
   if (svgEl.dataset.avDone) return;
   svgEl.dataset.avDone = '1';
 
+  // free avatars: no animation at all — static display only
+  if (rarity === 'free') return;
+
   const svgNS = 'http://www.w3.org/2000/svg';
 
-  // ── 1. Find the character content group (has clip-path attr) ──
-  const clipGroup = svgEl.querySelector('g[clip-path]');
-  if (!clipGroup) return;
+  // ── 1. Find or create a content group to animate ──
+  // These SVGs are flat (no clip-path group), so we wrap ALL children
+  // in a new <g> and animate that directly.
+  let contentGroup = svgEl.querySelector('g[clip-path]');
+  if (!contentGroup) {
+    // Flat SVG: wrap every child node in a new group
+    const wrapG = document.createElementNS(svgNS, 'g');
+    const children = Array.from(svgEl.childNodes);
+    children.forEach(c => wrapG.appendChild(c));
+    svgEl.appendChild(wrapG);
+    contentGroup = wrapG;
+  }
 
-  // ── 2. Build breathe > sway wrapper around character content ──
-  //    We do NOT wrap background elements (first rect + circles)
-  //    — those stay static. We wrap everything from the body onward.
-  //    Simple approach: wrap ALL children of clipGroup in a char group.
-
-  const swayG = document.createElementNS(svgNS, 'g');
+  // ── 2. Build breathe > sway wrapper ──
+  const swayG    = document.createElementNS(svgNS, 'g');
   const breatheG = document.createElementNS(svgNS, 'g');
 
-  // transform-origin: bottom-center of the avatar
   breatheG.style.transformOrigin = '50px 85px';
   swayG.style.transformOrigin    = '50px 95px';
 
-  if (rarity !== 'free') {
-    // move all existing children into sway > breathe
-    const children = Array.from(clipGroup.childNodes);
-    children.forEach(c => swayG.appendChild(c));
-    breatheG.appendChild(swayG);
-    clipGroup.appendChild(breatheG);
+  // Move all children of contentGroup into sway > breathe
+  const kids = Array.from(contentGroup.childNodes);
+  kids.forEach(c => swayG.appendChild(c));
+  breatheG.appendChild(swayG);
+  contentGroup.appendChild(breatheG);
 
-    breatheG.classList.add('av-char-breathe');
-    if (rarity === 'rare' || rarity === 'legendary') {
-      swayG.classList.add('av-char-sway');
-    }
-  } else {
-    // free: breathe only, no sway wrapper needed
-    const children = Array.from(clipGroup.childNodes);
-    children.forEach(c => breatheG.appendChild(c));
-    clipGroup.appendChild(breatheG);
-    breatheG.style.transformOrigin = '50px 85px';
-    breatheG.classList.add('av-char-breathe');
+  breatheG.classList.add('av-char-breathe');
+  if (rarity === 'rare' || rarity === 'legendary') {
+    swayG.classList.add('av-char-sway');
   }
 
-  // ── 3. Eye blink group ──
-  // All rarities get blinking (free gets basic blink via breatheG)
-  {
-    const innerG = (rarity === 'rare' || rarity === 'legendary') ? swayG : breatheG;
-    _wrapEyes(innerG, svgNS, rarity);
-  }
+  // ── 3. Eye blink group (for character avatars with eye ellipses) ──
+  _wrapEyes(swayG, svgNS, rarity);
 
-  // ── 4. Hex border glow ──
-  // The bordered polygon is the first polygon with a stroke attr
-  const polygons = Array.from(svgEl.querySelectorAll('polygon'));
-  for (const p of polygons) {
-    if (p.getAttribute('stroke') && p.getAttribute('stroke') !== 'none') {
-      if (rarity === 'legendary') p.classList.add('av-hex-glow-legendary');
-      if (rarity === 'rare')      p.classList.add('av-hex-glow-rare');
-      break;
-    }
-  }
+  // ── 4. Glow on the content group itself (drop-shadow filter) ──
+  if (rarity === 'legendary') breatheG.classList.add('av-hex-glow-legendary');
+  else if (rarity === 'rare') breatheG.classList.add('av-hex-glow-rare');
 
   // ── 5. Shimmer overlay (legendary only) ──
   if (rarity === 'legendary') {
     const parent = svgEl.parentElement;
     if (parent) {
       parent.style.position = parent.style.position || 'relative';
-      // clip shimmer to hex shape using CSS clip-path (percentage-based)
       const wrap = document.createElement('div');
       wrap.className = 'av-shimmer-wrap';
       wrap.style.clipPath = 'inset(0 round 6px)';
