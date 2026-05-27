@@ -6883,6 +6883,71 @@ function runDisconnectWatcher(){
 }
 
 function doLeave(){
+  // Only show confirmation during an active game — lobby leave is fine without it
+  if(gameState && gameState.status === 'playing'){
+    _showLeaveConfirm();
+    return;
+  }
+  _doLeaveNow();
+}
+
+function _showLeaveConfirm(){
+  // Remove any existing dialog first
+  const existing = document.getElementById('leaveConfirmOverlay');
+  if(existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'leaveConfirmOverlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,.75);
+    display:flex;align-items:center;justify-content:center;
+    font-family:inherit;
+  `;
+  overlay.innerHTML = `
+    <div style="
+      background:#0e0620;
+      border:1.5px solid var(--blood-glow,#b91c1c);
+      border-radius:12px;
+      padding:1.6rem 1.8rem;
+      max-width:300px;
+      width:90%;
+      text-align:center;
+      box-shadow:0 8px 40px rgba(0,0,0,.7);
+    ">
+      <div style="font-size:2rem;margin-bottom:.5rem">⚠️</div>
+      <div style="font-family:'Cinzel',cursive;color:#fff;font-size:1rem;font-weight:700;margin-bottom:.5rem">
+        Leave the game?
+      </div>
+      <div style="color:rgba(255,255,255,.5);font-size:.8rem;margin-bottom:1.2rem;line-height:1.5">
+        You will be marked as disconnected.<br>Your team might lose without you.
+      </div>
+      <div style="display:flex;gap:.7rem;justify-content:center">
+        <button onclick="document.getElementById('leaveConfirmOverlay').remove()"
+          style="
+            flex:1;padding:.65rem;border-radius:7px;
+            background:transparent;border:1.5px solid rgba(255,255,255,.2);
+            color:rgba(255,255,255,.6);cursor:pointer;
+            font-family:inherit;font-size:.85rem;font-weight:700;
+          ">
+          Stay
+        </button>
+        <button onclick="_doLeaveNow()"
+          style="
+            flex:1;padding:.65rem;border-radius:7px;
+            background:#b91c1c;border:none;
+            color:#fff;cursor:pointer;
+            font-family:inherit;font-size:.85rem;font-weight:700;
+          ">
+          Leave
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function _doLeaveNow(){
   stopHeartbeat();
   if(fbOk&&db&&roomCode&&myId){
     if(gameState && gameState.status === 'setup'){
@@ -10721,7 +10786,7 @@ function renderLobby(players) {
   // Update pill
   const pill = document.getElementById('wrPlayerPill');
   if (pill) {
-    const maxP = gameState?.config?.maxPlayers || '?';
+    const maxP = gameState?.config?.maxPlayers || (typeof cfg !== 'undefined' && cfg?.maxPlayers) || '?';
     pill.textContent = players.length + ' / ' + maxP;
   }
 
