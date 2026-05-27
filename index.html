@@ -6592,11 +6592,13 @@ function doCreate(){
   if(!name){alert(tr('t_name')+' ?');return;}
   myId=(_googleUser?.uid)||('p_'+Date.now()); myName=name;
   roomCode=genCode(); isLeader=true;
-  // Show code immediately so user can share it
   const box=document.getElementById('createdCodeBox');
   document.getElementById('createdCodeVal').textContent=roomCode;
   box.style.display='block';
-  initFBWithRetry(()=>enterRoom());
+  // Load avatar data first so avatarId is ready when we write the player node
+  const _afterStore = () => initFBWithRetry(()=>enterRoom());
+  if(typeof _loadStoreData==='function') _loadStoreData().then(_afterStore).catch(_afterStore);
+  else _afterStore();
 }
 
 function doJoin(){
@@ -6604,7 +6606,10 @@ function doJoin(){
   const code=document.getElementById('inCode').value.trim().toUpperCase();
   if(!name||!code){alert(tr('t_name')+' / '+tr('t_code'));return;}
   myId=(_googleUser?.uid)||('p_'+Date.now()); myName=name; roomCode=code; isLeader=false;
-  initFBWithRetry(()=>enterRoom());
+  // Load avatar data first so avatarId is ready when we write the player node
+  const _afterStore = () => initFBWithRetry(()=>enterRoom());
+  if(typeof _loadStoreData==='function') _loadStoreData().then(_afterStore).catch(_afterStore);
+  else _afterStore();
 }
 
 function genCode(){
@@ -6656,7 +6661,7 @@ async function enterRoom(){
     }
     // Add self
     await ref.child(`players/${myId}`).set(
-      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null)}
+      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null}
     );
     // During setup: remove on disconnect so lobby stays clean.
     // Switched to flag-only once game starts (see live listener below).
@@ -6742,7 +6747,7 @@ function offlineEnter(){
   console.log('Offline mode');
   gameState={
     code:roomCode, leader:myId, status:'setup', phase:'setup',
-    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null)}},
+    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null}},
     config:cfg, chat:[], createdAt:Date.now()
   };
   showGame();
@@ -10998,22 +11003,14 @@ function _getCircleAvatarHTML(playerId) {
 async function _loadAllPlayerAvatars() {
   if (!gameState || !gameState.players) return;
   const players = Object.values(gameState.players);
-  await Promise.all(players.map(async p => {
-    if (p.id === myId) {
-      // Use locally loaded equippedAvatar — already fetched by _loadStoreData on join
-      _equippedAvatarMap[p.id] = (typeof getEquippedAvatar === 'function') ? (getEquippedAvatar() || null) : null;
-      return;
+  players.forEach(p => {
+    // avatarId is now written directly into the player node on join — no Firebase lookup needed
+    if (p.avatarId) {
+      _equippedAvatarMap[p.id] = p.avatarId;
+    } else if (p.id === myId && typeof getEquippedAvatar === 'function') {
+      _equippedAvatarMap[p.id] = getEquippedAvatar() || null;
     }
-    // Always fetch fresh from Firebase for other players (never use stale null cache)
-    if (!fbOk || !db) return;
-    // Use stored uid field first, fall back to p.id (which equals uid for Google users)
-    const lookupUid = p.uid || p.id;
-    if (!lookupUid || lookupUid.startsWith('p_')) return; // guest, no avatar
-    try {
-      const snap = await db.ref('users/' + lookupUid + '/equippedAvatar').once('value');
-      _equippedAvatarMap[p.id] = snap.val() || null;
-    } catch(e) { _equippedAvatarMap[p.id] = null; }
-  }));
+  });
 }
 
 // ── Animate all avatar SVGs in the circle ─────────────────
