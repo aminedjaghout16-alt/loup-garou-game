@@ -11473,19 +11473,9 @@ document.addEventListener('touchstart', function(e){
   if(t) AUDIO.sfx('click');
 }, { capture: true, passive: true });
 
-// ── Phase SFX + VOTE HISTORY RECAP ─────────────────────────────────────
+// ── Phase SFX only — music is owned entirely by the renderGame hook below ─
 const _origMaybeShowPhaseTransition = maybeShowPhaseTransition;
 window.maybeShowPhaseTransition = function(newPhase, delayMs){
-  // Show vote recap when transitioning FROM day phase
-  if(window._audioSfxLastPhase === 'day' && newPhase && newPhase !== 'day'){
-    // Delay the phase transition to show vote recap first
-    setTimeout(() => {
-      showVoteHistoryRecap();
-    }, 300);
-    // Don't call original yet, we'll call it after recap
-    return;
-  }
-  
   const result = _origMaybeShowPhaseTransition(newPhase, delayMs);
   // SFX only — no music calls here (renderGame owns music)
   if(newPhase && newPhase !== window._audioSfxLastPhase){
@@ -11493,8 +11483,6 @@ window.maybeShowPhaseTransition = function(newPhase, delayMs){
     AUDIO.stopLoginAmbient();
     if(newPhase === 'day')   AUDIO.sfx('phaseDay');
     if(newPhase === 'night') AUDIO.sfx('phaseNight');
-    // Initialize vote history for new day
-    if(newPhase === 'day') initVoteHistory();
   }
   return result;
 };
@@ -11521,18 +11509,14 @@ window.showDeathAnimation = function(name, role){
   return _origShowDeathAnimation(name, role);
 };
 
-// ── Vote SFX + TRACK VOTE HISTORY ────────────────────────────────────
+// ── Vote SFX ─────────────────────────────────────────────────────────────
 const _origDoVote = doVote;
 window.doVote = function(targetId){
   AUDIO.sfx('vote');
-  // Record the vote for history
-  if(gameState && gameState.myPlayerId){
-    recordVote(gameState.myPlayerId, targetId);
-  }
   return _origDoVote(targetId);
 };
 
-// ── Win / game-over SFX + stop music + UPDATE LEADERBOARD ────────────────
+// ── Win / game-over SFX + stop music ────────────────────────────────────
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
   AUDIO.stopMusic();
@@ -11540,220 +11524,10 @@ window.showGameOver = function(result){
   const newlyDeadCount = players.filter(p => !p.alive && _previousAlive && _previousAlive[p.id] === true).length;
   const winDelay = (newlyDeadCount * 4200) + 600;
   setTimeout(() => AUDIO.sfx('win'), winDelay);
-  
-  // Update leaderboard stats
-  if(result && gameState && gameState.players){
-    const winners = result.winners || [];
-    Object.entries(gameState.players).forEach(([playerId, player]) => {
-      const won = winners.includes(playerId);
-      // Get player name - try multiple properties
-      const playerName = player.name || player.displayName || player.username || `Player${playerId.slice(0,4)}`;
-      if(playerName && playerName.trim()){
-        updatePlayerStats(playerName, won);
-      }
-    });
-  }
-  
   return _origShowGameOver(result);
 };
 
-
 // ── (showGame audio patch merged into main menu patch above) ─────────────
-
-// ════════════════════════════════════════════
-// VOTE HISTORY SYSTEM
-// ════════════════════════════════════════════
-const VOTE_HISTORY_LS_KEY = 'lg_vote_history';
-
-let _currentVoteHistory = [];
-let _currentDayNumber = 1;
-
-function initVoteHistory(){
-  _currentVoteHistory = [];
-  _currentDayNumber = (gameState?.day || 1);
-}
-
-function recordVote(voterId, targetId){
-  if(!gameState || !gameState.players) return;
-  
-  const voter = gameState.players[voterId];
-  const target = gameState.players[targetId];
-  
-  if(voter && target){
-    _currentVoteHistory.push({
-      voter: voter.name,
-      voterId: voterId,
-      target: target.name,
-      targetId: targetId,
-      timestamp: new Date().toLocaleTimeString(),
-      day: _currentDayNumber
-    });
-  }
-}
-
-function getVoteCounts(){
-  const counts = {};
-  _currentVoteHistory.forEach(vote => {
-    counts[vote.targetId] = (counts[vote.targetId] || 0) + 1;
-  });
-  return counts;
-}
-
-function getMostVoted(){
-  const counts = getVoteCounts();
-  if(Object.keys(counts).length === 0) return null;
-  
-  const maxVotes = Math.max(...Object.values(counts));
-  const targets = Object.entries(counts)
-    .filter(([_, v]) => v === maxVotes)
-    .map(([id, _]) => id);
-  
-  return { targetIds: targets, voteCount: maxVotes };
-}
-
-function showVoteHistoryRecap(){
-  const modal = document.getElementById('voteHistoryModal');
-  if(!modal) return;
-  
-  const dayEl = document.getElementById('voteHistoryDay');
-  const summaryEl = document.getElementById('voteHistorySummary');
-  const entriesEl = document.getElementById('voteHistoryEntries');
-  
-  if(!dayEl || !summaryEl || !entriesEl) return;
-  
-  // Day info
-  dayEl.textContent = `Day ${_currentDayNumber}`;
-  
-  // Summary
-  const voteCount = getVoteCounts();
-  const mostVoted = getMostVoted();
-  let summaryHtml = `<p>Total votes cast: <strong>${_currentVoteHistory.length}</strong></p>`;
-  
-  if(mostVoted){
-    const targetName = gameState.players[mostVoted.targetIds[0]]?.name || 'Unknown';
-    summaryHtml += `<p>Most voted: <span class="executed">${targetName}</span> (${mostVoted.voteCount} votes)</p>`;
-  }
-  
-  summaryEl.innerHTML = summaryHtml;
-  
-  // Entries
-  if(_currentVoteHistory.length === 0){
-    entriesEl.innerHTML = '<div style="text-align:center;padding:1rem;color:rgba(232,232,232,.4)">No votes recorded</div>';
-  } else {
-    entriesEl.innerHTML = _currentVoteHistory.map((vote, idx) => `
-      <div class="vh-entry">
-        <div class="vh-voter">${vote.voter}</div>
-        <div class="vh-arrow">→</div>
-        <div class="vh-target">${vote.target}</div>
-      </div>
-    `).join('');
-  }
-  
-  modal.classList.remove('hidden');
-}
-
-function continueAfterVoteHistory(){
-  const modal = document.getElementById('voteHistoryModal');
-  modal.classList.add('hidden');
-  _currentVoteHistory = [];
-  _currentDayNumber += 1;
-  // Call the original phase transition
-  _origMaybeShowPhaseTransition(gameState?.phase === 'day' ? 'night' : 'day', 0);
-}
-
-// ════════════════════════════════════════════
-// LEADERBOARD SYSTEM
-// ════════════════════════════════════════════
-const LEADERBOARD_LS_KEY = 'lg_leaderboard';
-const PLAYER_STATS_LS_KEY = 'lg_player_stats';
-
-function getPlayerStats(){
-  try{
-    return JSON.parse(localStorage.getItem(PLAYER_STATS_LS_KEY) || '{}');
-  }catch(e){
-    return {};
-  }
-}
-
-function savePlayerStats(stats){
-  try{
-    localStorage.setItem(PLAYER_STATS_LS_KEY, JSON.stringify(stats));
-  }catch(e){
-    console.log('Could not save player stats');
-  }
-}
-
-function updatePlayerStats(playerName, won){
-  const stats = getPlayerStats();
-  if(!stats[playerName]){
-    stats[playerName] = { wins: 0, losses: 0, lastUpdated: Date.now() };
-  }
-  if(won){
-    stats[playerName].wins += 1;
-  } else {
-    stats[playerName].losses += 1;
-  }
-  stats[playerName].lastUpdated = Date.now();
-  savePlayerStats(stats);
-}
-
-function toggleLeaderboard(){
-  const modal = document.getElementById('leaderboardModal');
-  modal.classList.toggle('hidden');
-  if(!modal.classList.contains('hidden')){
-    renderLeaderboard('all');
-  }
-}
-
-function renderLeaderboard(filter){
-  const stats = getPlayerStats();
-  const entries = Object.entries(stats).map(([name, data]) => {
-    const total = data.wins + data.losses;
-    const winRate = total > 0 ? ((data.wins / total) * 100).toFixed(1) : 0;
-    return { name, ...data, total, winRate };
-  });
-
-  // Sort based on filter
-  if(filter === 'wins'){
-    entries.sort((a, b) => b.wins - a.wins);
-  } else if(filter === 'winrate'){
-    entries.sort((a, b) => parseFloat(b.winRate) - parseFloat(a.winRate));
-  } else {
-    entries.sort((a, b) => b.lastUpdated - a.lastUpdated);
-  }
-
-  // Update filter buttons
-  document.querySelectorAll('.lb-filter-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.filter === filter);
-    btn.onclick = () => renderLeaderboard(btn.dataset.filter);
-  });
-
-  // Render entries
-  const entriesContainer = document.getElementById('leaderboardEntries');
-  entriesContainer.innerHTML = entries.length === 0 
-    ? '<div style="text-align:center;padding:2rem;color:rgba(232,232,232,.4)">No stats yet. Play some games!</div>'
-    : entries.map((entry, idx) => `
-      <div class="lb-entry">
-        <div class="lb-rank">#${idx + 1}</div>
-        <div class="lb-info">
-          <div class="lb-name">${entry.name}</div>
-          <div class="lb-record">${entry.wins}W - ${entry.losses}L</div>
-        </div>
-        <div class="lb-stats">
-          <div class="lb-winrate">${entry.winRate}%</div>
-          <div class="lb-coins">${entry.wins} wins</div>
-        </div>
-      </div>
-    `).join('');
-}
-
-// Patch the existing openLeaderboard function to show our custom leaderboard
-const _origOpenLeaderboard = window.openLeaderboard;
-window.openLeaderboard = function(){
-  // Show our leaderboard with stats instead
-  toggleLeaderboard();
-};
-
 
 // ════════════════════════════════════════════
 // PHASE MUSIC STATE MACHINE (owned by renderGame)
@@ -11833,7 +11607,157 @@ window.renderGame = function(){
 };
 </script>
 
-<!-- ── LEADERBOARD MODAL ── -->
+<script>
+// ════════════════════════════════════════════
+// LEADERBOARD & VOTE HISTORY SYSTEM
+// ════════════════════════════════════════════
+
+const PLAYER_STATS_LS_KEY = 'lg_player_stats';
+let _currentVoteHistory = [];
+let _currentDayNumber = 1;
+
+// Leaderboard functions
+function getPlayerStats(){
+  try{
+    return JSON.parse(localStorage.getItem(PLAYER_STATS_LS_KEY) || '{}');
+  }catch(e){
+    return {};
+  }
+}
+
+function savePlayerStats(stats){
+  try{
+    localStorage.setItem(PLAYER_STATS_LS_KEY, JSON.stringify(stats));
+  }catch(e){}
+}
+
+function updatePlayerStats(playerName, won){
+  if(!playerName || !playerName.trim()) return;
+  const stats = getPlayerStats();
+  if(!stats[playerName]){
+    stats[playerName] = { wins: 0, losses: 0, lastUpdated: Date.now() };
+  }
+  if(won){
+    stats[playerName].wins += 1;
+  } else {
+    stats[playerName].losses += 1;
+  }
+  stats[playerName].lastUpdated = Date.now();
+  savePlayerStats(stats);
+}
+
+function toggleLeaderboard(){
+  const modal = document.getElementById('leaderboardModal');
+  modal.classList.toggle('hidden');
+  if(!modal.classList.contains('hidden')){
+    renderLeaderboard('all');
+  }
+}
+
+function renderLeaderboard(filter){
+  const stats = getPlayerStats();
+  const entries = Object.entries(stats).map(([name, data]) => {
+    const total = data.wins + data.losses;
+    const winRate = total > 0 ? ((data.wins / total) * 100).toFixed(1) : 0;
+    return { name, ...data, total, winRate };
+  });
+
+  if(filter === 'wins'){
+    entries.sort((a, b) => b.wins - a.wins);
+  } else if(filter === 'winrate'){
+    entries.sort((a, b) => parseFloat(b.winRate) - parseFloat(a.winRate));
+  } else {
+    entries.sort((a, b) => b.lastUpdated - a.lastUpdated);
+  }
+
+  document.querySelectorAll('.lb-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+    btn.onclick = () => renderLeaderboard(btn.dataset.filter);
+  });
+
+  const entriesContainer = document.getElementById('leaderboardEntries');
+  entriesContainer.innerHTML = entries.length === 0 
+    ? '<div style="text-align:center;padding:2rem;color:rgba(232,232,232,.4)">No stats yet. Play some games!</div>'
+    : entries.map((entry, idx) => `
+      <div class="lb-entry">
+        <div class="lb-rank">#${idx + 1}</div>
+        <div class="lb-info">
+          <div class="lb-name">${entry.name}</div>
+          <div class="lb-record">${entry.wins}W - ${entry.losses}L</div>
+        </div>
+        <div class="lb-stats">
+          <div class="lb-winrate">${entry.winRate}%</div>
+          <div class="lb-coins">${entry.wins} wins</div>
+        </div>
+      </div>
+    `).join('');
+}
+
+// Vote history functions
+function initVoteHistory(){
+  _currentVoteHistory = [];
+  _currentDayNumber = (gameState?.day || 1);
+}
+
+function recordVote(voterId, targetId){
+  if(!gameState || !gameState.players) return;
+  const voter = gameState.players[voterId];
+  const target = gameState.players[targetId];
+  if(voter && target){
+    _currentVoteHistory.push({
+      voter: voter.name || `Player${voterId.slice(0,4)}`,
+      target: target.name || `Player${targetId.slice(0,4)}`,
+      timestamp: new Date().toLocaleTimeString(),
+      day: _currentDayNumber
+    });
+  }
+}
+
+function showVoteHistoryRecap(){
+  const modal = document.getElementById('voteHistoryModal');
+  const dayEl = document.getElementById('voteHistoryDay');
+  const summaryEl = document.getElementById('voteHistorySummary');
+  const entriesEl = document.getElementById('voteHistoryEntries');
+  
+  if(!modal || !dayEl || !summaryEl || !entriesEl) return;
+  
+  dayEl.textContent = `Day ${_currentDayNumber}`;
+  summaryEl.innerHTML = `<p>Total votes: <strong>${_currentVoteHistory.length}</strong></p>`;
+  
+  entriesEl.innerHTML = _currentVoteHistory.length === 0 
+    ? '<div style="text-align:center;padding:1rem;color:rgba(232,232,232,.4)">No votes</div>'
+    : _currentVoteHistory.map(v => `<div class="vh-entry"><div class="vh-voter">${v.voter}</div><div class="vh-arrow">→</div><div class="vh-target">${v.target}</div></div>`).join('');
+  
+  modal.classList.remove('hidden');
+}
+
+function continueAfterVoteHistory(){
+  document.getElementById('voteHistoryModal').classList.add('hidden');
+  _currentVoteHistory = [];
+  _currentDayNumber += 1;
+}
+
+// Patch openLeaderboard to use our function
+const _origOpenLeaderboard = window.openLeaderboard;
+window.openLeaderboard = function(){
+  toggleLeaderboard();
+};
+
+// Update stats on game over
+const _origShowGameOver = window.showGameOver;
+window.showGameOver = function(result){
+  if(result && gameState && gameState.players){
+    const winners = result.winners || [];
+    Object.entries(gameState.players).forEach(([playerId, player]) => {
+      const playerName = player.name || player.displayName || `Player${playerId.slice(0,4)}`;
+      const won = winners.includes(playerId);
+      updatePlayerStats(playerName, won);
+    });
+  }
+  return _origShowGameOver(result);
+};
+
+
 <div id="leaderboardModal" class="hidden">
   <div class="lb-box">
     <h2>🏆 Leaderboard</h2>
