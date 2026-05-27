@@ -6661,7 +6661,7 @@ async function enterRoom(){
     }
     // Add self
     await ref.child(`players/${myId}`).set(
-      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null}
+      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
     );
     // During setup: remove on disconnect so lobby stays clean.
     // Switched to flag-only once game starts (see live listener below).
@@ -6747,7 +6747,7 @@ function offlineEnter(){
   console.log('Offline mode');
   gameState={
     code:roomCode, leader:myId, status:'setup', phase:'setup',
-    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null}},
+    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}},
     config:cfg, chat:[], createdAt:Date.now()
   };
   showGame();
@@ -10787,19 +10787,28 @@ function _wrCircleSVG(svg, pid) {
 }
 
 function _wrGetAvatarHTML(p) {
-  // 1. Custom avatar from map
-  const map = window._equippedAvatarMap;
-  const avatarId = map && map[p.id];
+  // 1. Custom equipped avatar from player node (written on join)
+  const avatarId = p.avatarId || (window._equippedAvatarMap && window._equippedAvatarMap[p.id]);
   if (avatarId && typeof AVATARS !== 'undefined') {
     const av = AVATARS.find(a => a.id === avatarId);
     if (av) return _wrCircleSVG(av.svg, p.id);
   }
-  // 2. Google photo (own player)
+  // 2. Google photo — own player
   if (p.id === myId && typeof _googleUser !== 'undefined' && _googleUser?.photoURL) {
-    return `<img src="${_googleUser.photoURL}" alt="">`;
+    return `<img src="${_googleUser.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
   }
-  // 3. Fallback emoji
-  return '🐺';
+  // 3. Google photo stored in player node (other players who wrote it on join)
+  if (p.photoURL) {
+    return `<img src="${p.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+  // 4. Generated initial avatar (always works, no Firebase needed)
+  const initial = (p.name || '?')[0].toUpperCase();
+  const colors = ['#7c3aed','#b91c1c','#0369a1','#065f46','#92400e','#1e3a5f','#6b21a8'];
+  const bg = colors[initial.charCodeAt(0) % colors.length];
+  return `<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+    <circle cx="28" cy="28" r="28" fill="${bg}"/>
+    <text x="28" y="36" text-anchor="middle" font-size="24" font-family="Cinzel,serif" fill="rgba(255,255,255,0.9)" font-weight="bold">${initial}</text>
+  </svg>`;
 }
 
 // ── Host context menu ─────────────────────────────────────────────────────
