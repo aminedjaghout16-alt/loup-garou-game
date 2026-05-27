@@ -105,6 +105,27 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .vh-continue{width:100%;padding:.7rem;background:var(--blood-glow);border:none;color:#fff;border-radius:7px;cursor:pointer;font-family:inherit;transition:.2s}
 .vh-continue:hover{background:var(--blood)}
 
+/* ── COIN POWERS SHOP ── */
+#coinPowersModal{position:fixed;inset:0;z-index:218;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:1rem}
+#coinPowersModal.hidden{display:none!important}
+.cp-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.5rem 1.3rem;width:100%;max-width:400px;box-shadow:0 0 40px rgba(212,160,23,.18)}
+.cp-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.5rem;text-align:center;margin-bottom:.25rem}
+.cp-balance{text-align:center;font-size:.8rem;color:var(--ghost);opacity:.55;margin-bottom:1.1rem}
+.cp-grid{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem}
+.cp-card{display:flex;align-items:center;gap:.8rem;padding:.75rem .9rem;background:var(--purple);border:1px solid rgba(212,160,23,.2);border-radius:9px;transition:.15s}
+.cp-card:hover{border-color:rgba(212,160,23,.45)}
+.cp-card.cp-used{opacity:.4;pointer-events:none}
+.cp-icon{font-size:1.5rem;flex-shrink:0;width:2rem;text-align:center}
+.cp-info{flex:1;min-width:0}
+.cp-name{font-family:'Creepster',cursive;font-size:.95rem;color:var(--moon-pale);letter-spacing:.03em}
+.cp-desc{font-size:.72rem;color:var(--ghost);opacity:.55;margin-top:.1rem;line-height:1.3}
+.cp-buy{padding:.35rem .75rem;border-radius:5px;border:none;cursor:pointer;font-family:'Creepster',cursive;font-size:.82rem;font-weight:700;white-space:nowrap;background:var(--moon);color:var(--void);transition:.15s;flex-shrink:0}
+.cp-buy:hover{background:var(--moon-pale)}
+.cp-buy:disabled{opacity:.35;cursor:not-allowed;background:rgba(212,160,23,.3);color:var(--ghost)}
+.cp-buy.cp-owned{background:rgba(16,185,129,.25);color:#6ee7b7;border:1px solid rgba(16,185,129,.4);cursor:default}
+.cp-close{width:100%;padding:.6rem;background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:7px;cursor:pointer;font-family:inherit;transition:.2s}
+.cp-close:hover{background:rgba(212,160,23,.2)}
+
 /* ── PROFILE MODAL ── */
 /* ══ MAIN MENU ══ */
 #mainMenu{position:fixed;inset:0;z-index:200;background:var(--void);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:2.5rem 1.5rem 1.5rem;overflow-y:auto}
@@ -811,768 +832,425 @@ const AVATARS = [
   // ── FREE ──────────────────────────────────────────────────
   {
     id: 'dusty',
-    name: 'Dusty',
+    name: 'Full Moon',
     rarity: 'free',
     price: 0,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#0d0d2e" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#3a2a5a" stroke-width="3" rx="6"/>
+  <!-- stars -->
+  <circle cx="15" cy="18" r="1.2" fill="white" opacity=".7"/>
+  <circle cx="82" cy="12" r="1" fill="white" opacity=".6"/>
+  <circle cx="90" cy="35" r="1.3" fill="white" opacity=".5"/>
+  <circle cx="10" cy="60" r="1" fill="white" opacity=".6"/>
+  <circle cx="88" cy="72" r="1.2" fill="white" opacity=".5"/>
+  <circle cx="22" cy="85" r="1" fill="white" opacity=".4"/>
+  <circle cx="75" cy="88" r="1.1" fill="white" opacity=".5"/>
+  <!-- moon glow -->
+  <circle cx="50" cy="50" r="30" fill="#d4a017" opacity=".15"/>
+  <circle cx="50" cy="50" r="26" fill="#d4a017" opacity=".2"/>
+  <!-- moon body -->
+  <circle cx="50" cy="50" r="24" fill="#e8c44a"/>
+  <!-- crater shading -->
+  <circle cx="50" cy="50" r="24" fill="url(#moonShade)"/>
   <defs>
-    <clipPath id="hex-dusty">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <radialGradient id="moonShade" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#fff8dc" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="#b8860b" stop-opacity=".4"/>
+    </radialGradient>
   </defs>
-  <!-- hex background -->
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#888888" stroke-width="2.5"/>
-  <g clip-path="url(#hex-dusty)">
-    <!-- sky bg -->
-    <rect x="7" y="4" width="86" height="94" fill="#1a1a2e"/>
-    <!-- body / tunic -->
-    <ellipse cx="50" cy="95" rx="28" ry="18" fill="#5a4a3a"/>
-    <rect x="28" y="72" width="44" height="28" fill="#5a4a3a" rx="4"/>
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="14" fill="#c8956c"/>
-    <!-- head -->
-    <ellipse cx="50" cy="54" rx="20" ry="22" fill="#c8956c"/>
-    <!-- messy brown hair -->
-    <ellipse cx="50" cy="35" rx="21" ry="12" fill="#6b4226"/>
-    <ellipse cx="32" cy="42" rx="8" ry="10" fill="#6b4226"/>
-    <ellipse cx="68" cy="42" rx="8" ry="10" fill="#6b4226"/>
-    <ellipse cx="50" cy="33" rx="16" ry="8" fill="#7a4f2d"/>
-    <!-- ears -->
-    <ellipse cx="30" cy="54" rx="5" ry="6" fill="#c8956c"/>
-    <ellipse cx="70" cy="54" rx="5" ry="6" fill="#c8956c"/>
-    <ellipse cx="30" cy="54" rx="3" ry="4" fill="#b07855"/>
-    <ellipse cx="70" cy="54" rx="3" ry="4" fill="#b07855"/>
-    <!-- eyes -->
-    <ellipse cx="42" cy="52" rx="5" ry="5.5" fill="white"/>
-    <ellipse cx="58" cy="52" rx="5" ry="5.5" fill="white"/>
-    <ellipse cx="43" cy="53" rx="3" ry="3.5" fill="#5a3a1a"/>
-    <ellipse cx="59" cy="53" rx="3" ry="3.5" fill="#5a3a1a"/>
-    <circle cx="44" cy="52" r="1.2" fill="#1a0a00"/>
-    <circle cx="60" cy="52" r="1.2" fill="#1a0a00"/>
-    <circle cx="44.8" cy="51.2" r="0.7" fill="white"/>
-    <circle cx="60.8" cy="51.2" r="0.7" fill="white"/>
-    <!-- eyebrows -->
-    <path d="M38 47 Q42 45 46 47" stroke="#6b4226" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M54 47 Q58 45 62 47" stroke="#6b4226" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- nose -->
-    <ellipse cx="50" cy="58" rx="3" ry="2" fill="#b07855"/>
-    <circle cx="48" cy="58.5" r="1.2" fill="#9a6645"/>
-    <circle cx="52" cy="58.5" r="1.2" fill="#9a6645"/>
-    <!-- mouth — slight frown -->
-    <path d="M44 64 Q50 62 56 64" stroke="#9a5c3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- stubble -->
-    <ellipse cx="50" cy="66" rx="12" ry="5" fill="#b07855" opacity="0.3"/>
-    <!-- patch on tunic -->
-    <rect x="42" y="78" width="8" height="6" fill="#7a6050" rx="1"/>
-  </g>
+  <!-- craters -->
+  <circle cx="40" cy="44" r="5" fill="none" stroke="#c8a020" stroke-width="1.5" opacity=".6"/>
+  <circle cx="60" cy="58" r="3.5" fill="none" stroke="#c8a020" stroke-width="1.2" opacity=".5"/>
+  <circle cx="45" cy="62" r="2.5" fill="none" stroke="#c8a020" stroke-width="1" opacity=".4"/>
+  <circle cx="62" cy="38" r="2" fill="none" stroke="#c8a020" stroke-width="1" opacity=".4"/>
 </svg>`
   },
 
   // ── COMMON ────────────────────────────────────────────────
   {
     id: 'flint',
-    name: 'Flint',
+    name: 'The Axe',
     rarity: 'common',
     price: 250,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#2a1a0e" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#7a4f2d" stroke-width="3" rx="6"/>
+  <!-- handle -->
+  <rect x="48" y="28" width="7" height="52" rx="3" fill="#6b4226"/>
+  <rect x="49.5" y="28" width="2" height="52" rx="1" fill="#8a5530" opacity=".5"/>
+  <!-- axe head -->
+  <path d="M52 30 Q72 24 74 36 Q76 46 66 52 Q72 58 70 66 Q68 74 52 68 Z" fill="#aaaaaa"/>
+  <path d="M52 30 Q72 24 74 36 Q76 46 66 52 Q72 58 70 66 Q68 74 52 68 Z" fill="url(#axeShine)"/>
   <defs>
-    <clipPath id="hex-flint">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <linearGradient id="axeShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="white" stop-opacity=".5"/>
+      <stop offset="50%" stop-color="#888" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#333" stop-opacity=".3"/>
+    </linearGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
-  <g clip-path="url(#hex-flint)">
-    <rect x="7" y="4" width="86" height="94" fill="#1c1408"/>
-    <!-- forest bg hint -->
-    <ellipse cx="20" cy="90" rx="18" ry="30" fill="#1a2a10" opacity="0.6"/>
-    <ellipse cx="80" cy="90" rx="18" ry="30" fill="#1a2a10" opacity="0.6"/>
-    <!-- body leather -->
-    <rect x="26" y="70" width="48" height="28" fill="#5c3d1e" rx="4"/>
-    <rect x="36" y="70" width="28" height="6" fill="#7a5230"/>
-    <!-- neck -->
-    <rect x="44" y="61" width="12" height="13" fill="#b8804a"/>
-    <!-- head -->
-    <ellipse cx="50" cy="52" rx="19" ry="21" fill="#b8804a"/>
-    <!-- dark hair, swept back -->
-    <ellipse cx="50" cy="33" rx="20" ry="10" fill="#2a1a08"/>
-    <ellipse cx="31" cy="40" rx="7" ry="9" fill="#2a1a08"/>
-    <ellipse cx="69" cy="40" rx="7" ry="9" fill="#2a1a08"/>
-    <!-- ears -->
-    <ellipse cx="31" cy="52" rx="5" ry="6" fill="#b8804a"/>
-    <ellipse cx="69" cy="52" rx="5" ry="6" fill="#b8804a"/>
-    <ellipse cx="31" cy="52" rx="3" ry="4" fill="#a06a38"/>
-    <ellipse cx="69" cy="52" rx="3" ry="4" fill="#a06a38"/>
-    <!-- eyes — intense green -->
-    <ellipse cx="42" cy="50" rx="5" ry="5.5" fill="white"/>
-    <ellipse cx="58" cy="50" rx="5" ry="5.5" fill="white"/>
-    <ellipse cx="43" cy="51" rx="3" ry="3.5" fill="#2d6a2d"/>
-    <ellipse cx="59" cy="51" rx="3" ry="3.5" fill="#2d6a2d"/>
-    <circle cx="44" cy="50" r="1.2" fill="#0a1a0a"/>
-    <circle cx="60" cy="50" r="1.2" fill="#0a1a0a"/>
-    <circle cx="44.8" cy="49.2" r="0.7" fill="white"/>
-    <circle cx="60.8" cy="49.2" r="0.7" fill="white"/>
-    <!-- scar on left cheek -->
-    <path d="M35 54 L39 60" stroke="#8a5030" stroke-width="1.5" stroke-linecap="round"/>
-    <!-- eyebrows — stern -->
-    <path d="M38 45 Q42 43 46 45" stroke="#2a1a08" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M54 45 Q58 43 62 45" stroke="#2a1a08" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- nose -->
-    <ellipse cx="50" cy="56" rx="3" ry="2" fill="#a06a38"/>
-    <circle cx="48" cy="56.5" r="1.2" fill="#8a5428"/>
-    <circle cx="52" cy="56.5" r="1.2" fill="#8a5428"/>
-    <!-- mouth — firm -->
-    <path d="M44 62 Q50 63 56 62" stroke="#8a5030" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- leather collar -->
-    <path d="M36 68 Q50 72 64 68" stroke="#7a5230" stroke-width="3" fill="none"/>
-    <!-- quiver strap -->
-    <path d="M62 70 L72 50" stroke="#8a6040" stroke-width="2.5" stroke-linecap="round"/>
-  </g>
+  <!-- edge highlight -->
+  <path d="M72 36 Q75 46 70 56" stroke="white" stroke-width="1.2" fill="none" opacity=".4"/>
+  <!-- wood grain -->
+  <path d="M50 40 Q52 42 50 44" stroke="#8a5530" stroke-width=".8" fill="none" opacity=".5"/>
+  <path d="M50 50 Q52 52 50 54" stroke="#8a5530" stroke-width=".8" fill="none" opacity=".5"/>
 </svg>`
   },
 
   {
     id: 'aldric',
-    name: 'Aldric',
+    name: 'Iron Shield',
     rarity: 'common',
-    price: 300,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 250,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#1a1a2e" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#4a6a9a" stroke-width="3" rx="6"/>
+  <!-- shield body -->
+  <path d="M50 18 L72 26 L72 54 Q72 70 50 82 Q28 70 28 54 L28 26 Z" fill="#4a5a7a"/>
+  <path d="M50 18 L72 26 L72 54 Q72 70 50 82 Q28 70 28 54 L28 26 Z" fill="url(#shieldGrad)"/>
   <defs>
-    <clipPath id="hex-aldric">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7a8aaa" stop-opacity=".7"/>
+      <stop offset="100%" stop-color="#2a3a5a" stop-opacity=".5"/>
+    </linearGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
-  <g clip-path="url(#hex-aldric)">
-    <rect x="7" y="4" width="86" height="94" fill="#0e0e1f"/>
-    <!-- golden robe -->
-    <rect x="24" y="70" width="52" height="28" fill="#8a6a10" rx="4"/>
-    <rect x="36" y="70" width="28" height="5" fill="#c4960e"/>
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="12" fill="#d4a870"/>
-    <!-- head — older, wider -->
-    <ellipse cx="50" cy="53" rx="20" ry="21" fill="#d4a870"/>
-    <!-- white hair -->
-    <ellipse cx="50" cy="34" rx="21" ry="11" fill="#e8e8e8"/>
-    <ellipse cx="30" cy="43" rx="8" ry="11" fill="#e8e8e8"/>
-    <ellipse cx="70" cy="43" rx="8" ry="11" fill="#e8e8e8"/>
-    <!-- bald top -->
-    <ellipse cx="50" cy="36" rx="14" ry="8" fill="#c4a060"/>
-    <!-- ears -->
-    <ellipse cx="30" cy="53" rx="5" ry="7" fill="#d4a870"/>
-    <ellipse cx="70" cy="53" rx="5" ry="7" fill="#d4a870"/>
-    <ellipse cx="30" cy="53" rx="3" ry="5" fill="#c09060"/>
-    <ellipse cx="70" cy="53" rx="3" ry="5" fill="#c09060"/>
-    <!-- wrinkles forehead -->
-    <path d="M38 44 Q50 42 62 44" stroke="#b8885a" stroke-width="0.8" fill="none"/>
-    <path d="M40 47 Q50 45 60 47" stroke="#b8885a" stroke-width="0.8" fill="none"/>
-    <!-- eyes — warm brown, half-closed wise -->
-    <ellipse cx="42" cy="53" rx="5.5" ry="4.5" fill="white"/>
-    <ellipse cx="58" cy="53" rx="5.5" ry="4.5" fill="white"/>
-    <ellipse cx="43" cy="54" rx="3" ry="3" fill="#6b3a10"/>
-    <ellipse cx="59" cy="54" rx="3" ry="3" fill="#6b3a10"/>
-    <circle cx="44" cy="53" r="1.2" fill="#1a0800"/>
-    <circle cx="60" cy="53" r="1.2" fill="#1a0800"/>
-    <circle cx="44.8" cy="52.2" r="0.7" fill="white"/>
-    <circle cx="60.8" cy="52.2" r="0.7" fill="white"/>
-    <!-- bushy white eyebrows -->
-    <path d="M37 48 Q42 46 47 48" stroke="#e8e8e8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M53 48 Q58 46 63 48" stroke="#e8e8e8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <!-- nose — bulbous -->
-    <ellipse cx="50" cy="59" rx="4" ry="3" fill="#c09060"/>
-    <circle cx="47.5" cy="59.5" r="1.5" fill="#aa7a48"/>
-    <circle cx="52.5" cy="59.5" r="1.5" fill="#aa7a48"/>
-    <!-- long white beard -->
-    <ellipse cx="50" cy="72" rx="16" ry="14" fill="#e8e8e8"/>
-    <ellipse cx="50" cy="80" rx="11" ry="10" fill="#e0e0e0"/>
-    <!-- mouth under beard hint -->
-    <path d="M45 66 Q50 68 55 66" stroke="#b8885a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- staff hint -->
-    <rect x="72" y="40" width="3" height="58" fill="#8a6a10" rx="1"/>
-    <circle cx="73.5" cy="40" r="4" fill="#d4a017"/>
-  </g>
+  <!-- shield border -->
+  <path d="M50 18 L72 26 L72 54 Q72 70 50 82 Q28 70 28 54 L28 26 Z" fill="none" stroke="#8a9aba" stroke-width="2"/>
+  <!-- cross emblem -->
+  <line x1="50" y1="28" x2="50" y2="70" stroke="#d4a017" stroke-width="3" stroke-linecap="round"/>
+  <line x1="34" y1="44" x2="66" y2="44" stroke="#d4a017" stroke-width="3" stroke-linecap="round"/>
+  <!-- rim rivets -->
+  <circle cx="50" cy="20" r="2" fill="#aab8cc"/>
+  <circle cx="70" cy="28" r="2" fill="#aab8cc"/>
+  <circle cx="30" cy="28" r="2" fill="#aab8cc"/>
 </svg>`
   },
 
   {
     id: 'morrigan',
-    name: 'Morrigan',
+    name: 'Witch Brew',
     rarity: 'common',
-    price: 350,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
-  <defs>
-    <clipPath id="hex-morrigan">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
-  </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
-  <g clip-path="url(#hex-morrigan)">
-    <rect x="7" y="4" width="86" height="94" fill="#120820"/>
-    <!-- dark robe -->
-    <rect x="24" y="70" width="52" height="28" fill="#2a1040" rx="4"/>
-    <!-- purple trim -->
-    <path d="M24 70 Q50 76 76 70" stroke="#7c3aed" stroke-width="2" fill="none"/>
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="12" fill="#e8b89a"/>
-    <!-- head -->
-    <ellipse cx="50" cy="52" rx="19" ry="21" fill="#e8b89a"/>
-    <!-- large purple pointy hat -->
-    <polygon points="50,8 35,52 65,52" fill="#4c1d95"/>
-    <polygon points="50,8 38,48 62,48" fill="#5b21b6"/>
-    <rect x="30" y="49" width="40" height="6" fill="#6d28d9" rx="2"/>
-    <!-- stars on hat -->
-    <circle cx="50" cy="22" r="1.5" fill="#f0d060"/>
-    <circle cx="44" cy="32" r="1" fill="#f0d060"/>
-    <circle cx="56" cy="28" r="1" fill="#f0d060"/>
-    <!-- long black hair sides -->
-    <ellipse cx="30" cy="58" rx="9" ry="18" fill="#1a0a2e"/>
-    <ellipse cx="70" cy="58" rx="9" ry="18" fill="#1a0a2e"/>
-    <!-- ears -->
-    <ellipse cx="31" cy="52" rx="4" ry="5" fill="#e8b89a"/>
-    <ellipse cx="69" cy="52" rx="4" ry="5" fill="#e8b89a"/>
-    <!-- eyes — bright green -->
-    <ellipse cx="42" cy="51" rx="5.5" ry="5.5" fill="white"/>
-    <ellipse cx="58" cy="51" rx="5.5" ry="5.5" fill="white"/>
-    <ellipse cx="43" cy="52" rx="3.5" ry="4" fill="#166534"/>
-    <ellipse cx="59" cy="52" rx="3.5" ry="4" fill="#166534"/>
-    <circle cx="44" cy="51" r="1.4" fill="#052e16"/>
-    <circle cx="60" cy="51" r="1.4" fill="#052e16"/>
-    <circle cx="44.8" cy="50.2" r="0.8" fill="white"/>
-    <circle cx="60.8" cy="50.2" r="0.8" fill="white"/>
-    <!-- eyebrows — arched, dark -->
-    <path d="M37 46 Q42 43 47 46" stroke="#1a0a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M53 46 Q58 43 63 46" stroke="#1a0a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- nose -->
-    <ellipse cx="50" cy="57" rx="3" ry="2" fill="#d4a07a"/>
-    <!-- slight smirk -->
-    <path d="M44 63 Q50 66 57 62" stroke="#c47a5a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- crescent moon brooch -->
-    <path d="M46 71 Q50 67 54 71 Q50 73 46 71 Z" fill="#d4a017"/>
-  </g>
+    price: 250,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#0f1a0f" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#2a6a2a" stroke-width="3" rx="6"/>
+  <!-- cauldron body -->
+  <ellipse cx="50" cy="72" rx="26" ry="10" fill="#1a1a1a"/>
+  <path d="M26 58 Q24 72 50 82 Q76 72 74 58 Z" fill="#2a2a2a"/>
+  <path d="M30 52 Q28 66 50 74 Q72 66 70 52 Z" fill="#333"/>
+  <!-- cauldron rim -->
+  <ellipse cx="50" cy="52" rx="22" ry="7" fill="#444" stroke="#555" stroke-width="1.5"/>
+  <!-- legs -->
+  <rect x="34" y="76" width="5" height="10" rx="2" fill="#2a2a2a"/>
+  <rect x="61" y="76" width="5" height="10" rx="2" fill="#2a2a2a"/>
+  <!-- bubbling liquid -->
+  <ellipse cx="50" cy="52" rx="19" ry="6" fill="#10b030"/>
+  <circle cx="40" cy="50" r="4" fill="#18c838" opacity=".7"/>
+  <circle cx="55" cy="49" r="3" fill="#18c838" opacity=".6"/>
+  <circle cx="46" cy="47" r="2.5" fill="#22ee44" opacity=".5"/>
+  <!-- steam -->
+  <path d="M38 44 Q36 38 38 32 Q40 26 38 20" stroke="#18c838" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/>
+  <path d="M50 42 Q48 36 50 30 Q52 24 50 18" stroke="#18c838" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".4"/>
+  <path d="M62 44 Q64 38 62 32 Q60 26 62 20" stroke="#18c838" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/>
 </svg>`
   },
 
   {
     id: 'ironclad',
-    name: 'Ironclad',
+    name: 'Sword',
     rarity: 'common',
-    price: 400,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 250,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#1a1000" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#7a6020" stroke-width="3" rx="6"/>
+  <!-- blade -->
+  <polygon points="50,12 54,72 50,78 46,72" fill="#c0c0c0"/>
+  <polygon points="50,12 54,72 50,78 46,72" fill="url(#bladeGrad)"/>
   <defs>
-    <clipPath id="hex-ironclad">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#888" stop-opacity=".5"/>
+      <stop offset="40%" stop-color="white" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="#666" stop-opacity=".4"/>
+    </linearGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
-  <g clip-path="url(#hex-ironclad)">
-    <rect x="7" y="4" width="86" height="94" fill="#0a0f1a"/>
-    <!-- armour body -->
-    <rect x="22" y="68" width="56" height="30" fill="#374151" rx="3"/>
-    <rect x="34" y="68" width="32" height="5" fill="#4b5563"/>
-    <!-- blue cape behind -->
-    <ellipse cx="50" cy="90" rx="32" ry="20" fill="#1e3a5f"/>
-    <!-- pauldrons -->
-    <ellipse cx="28" cy="68" rx="12" ry="8" fill="#4b5563"/>
-    <ellipse cx="72" cy="68" rx="12" ry="8" fill="#4b5563"/>
-    <!-- helmet -->
-    <ellipse cx="50" cy="50" rx="22" ry="24" fill="#4b5563"/>
-    <rect x="28" y="38" width="44" height="26" fill="#4b5563" rx="4"/>
-    <!-- helmet top ridge -->
-    <rect x="46" y="28" width="8" height="16" fill="#6b7280" rx="2"/>
-    <!-- visor open — face visible -->
-    <rect x="33" y="46" width="34" height="20" fill="#1a1a0a" rx="2"/>
-    <rect x="35" y="48" width="30" height="16" fill="#e8c890" rx="2"/>
-    <!-- face inside visor -->
-    <ellipse cx="50" cy="56" rx="14" ry="8" fill="#e8c890"/>
-    <!-- eyes — steel blue -->
-    <ellipse cx="43" cy="54" rx="4.5" ry="4.5" fill="white"/>
-    <ellipse cx="57" cy="54" rx="4.5" ry="4.5" fill="white"/>
-    <ellipse cx="44" cy="55" rx="3" ry="3" fill="#1d4ed8"/>
-    <ellipse cx="58" cy="55" rx="3" ry="3" fill="#1d4ed8"/>
-    <circle cx="44.5" cy="54" r="1.2" fill="#0a0a2a"/>
-    <circle cx="58.5" cy="54" r="1.2" fill="#0a0a2a"/>
-    <circle cx="45.2" cy="53.2" r="0.7" fill="white"/>
-    <circle cx="59.2" cy="53.2" r="0.7" fill="white"/>
-    <!-- stern brow -->
-    <path d="M39 50 Q43 48 47 50" stroke="#8a6a30" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <path d="M53 50 Q57 48 61 50" stroke="#8a6a30" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- nose -->
-    <ellipse cx="50" cy="58" rx="2.5" ry="1.5" fill="#d4a870"/>
-    <!-- mouth — determined -->
-    <path d="M44 62 Q50 63 56 62" stroke="#a07040" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- helmet cheek guards -->
-    <rect x="28" y="46" width="7" height="22" fill="#4b5563" rx="2"/>
-    <rect x="65" y="46" width="7" height="22" fill="#4b5563" rx="2"/>
-    <!-- visor bar -->
-    <rect x="33" y="55" width="34" height="2" fill="#374151" opacity="0.6"/>
-    <!-- cross emblem on chest -->
-    <rect x="47" y="71" width="6" height="14" fill="#6b7280" rx="1"/>
-    <rect x="42" y="76" width="16" height="4" fill="#6b7280" rx="1"/>
-  </g>
+  <!-- blade edge highlight -->
+  <line x1="51" y1="14" x2="53" y2="70" stroke="white" stroke-width=".8" opacity=".5"/>
+  <!-- crossguard -->
+  <rect x="32" y="70" width="36" height="6" rx="3" fill="#d4a017"/>
+  <rect x="32" y="70" width="36" height="3" rx="2" fill="#e8c44a" opacity=".5"/>
+  <!-- grip -->
+  <rect x="46" y="76" width="8" height="14" rx="3" fill="#6b3010"/>
+  <!-- grip wrap -->
+  <line x1="46" y1="79" x2="54" y2="79" stroke="#d4a017" stroke-width="1" opacity=".6"/>
+  <line x1="46" y1="83" x2="54" y2="83" stroke="#d4a017" stroke-width="1" opacity=".6"/>
+  <line x1="46" y1="87" x2="54" y2="87" stroke="#d4a017" stroke-width="1" opacity=".6"/>
+  <!-- pommel -->
+  <circle cx="50" cy="92" r="4" fill="#d4a017"/>
+  <circle cx="50" cy="92" r="2" fill="#e8c44a"/>
 </svg>`
   },
 
   {
     id: 'colt',
-    name: 'Colt',
+    name: 'Wolf Paw',
     rarity: 'common',
-    price: 280,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 250,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#1a0a00" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#7a3010" stroke-width="3" rx="6"/>
+  <!-- paw pad main -->
+  <ellipse cx="50" cy="62" rx="22" ry="18" fill="#8b4513"/>
+  <ellipse cx="50" cy="62" rx="22" ry="18" fill="url(#pawGrad)"/>
   <defs>
-    <clipPath id="hex-colt">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <radialGradient id="pawGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#c0703a" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="#5a2a08" stop-opacity=".3"/>
+    </radialGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#d4a017" stroke-width="2.5"/>
-  <g clip-path="url(#hex-colt)">
-    <rect x="7" y="4" width="86" height="94" fill="#180f04"/>
-    <!-- tan vest body -->
-    <rect x="24" y="68" width="52" height="30" fill="#92622a" rx="4"/>
-    <rect x="36" y="68" width="28" height="5" fill="#b07840"/>
-    <!-- neck -->
-    <rect x="44" y="60" width="12" height="12" fill="#d4956c"/>
-    <!-- head -->
-    <ellipse cx="50" cy="51" rx="20" ry="21" fill="#d4956c"/>
-    <!-- wide-brim sheriff hat -->
-    <ellipse cx="50" cy="33" rx="28" ry="5" fill="#6b4010"/>
-    <rect x="30" y="23" width="40" height="13" fill="#8a5520" rx="3"/>
-    <rect x="32" y="22" width="36" height="4" fill="#7a4a18"/>
-    <!-- hat band -->
-    <rect x="30" y="33" width="40" height="3" fill="#5a3010"/>
-    <!-- star badge on hat -->
-    <polygon points="50,25 51.5,29 55,29 52.5,31.5 53.5,35 50,33 46.5,35 47.5,31.5 45,29 48.5,29" fill="#d4a017"/>
-    <!-- ears -->
-    <ellipse cx="30" cy="51" rx="5" ry="6" fill="#d4956c"/>
-    <ellipse cx="70" cy="51" rx="5" ry="6" fill="#d4956c"/>
-    <ellipse cx="30" cy="51" rx="3" ry="4" fill="#c07850"/>
-    <ellipse cx="70" cy="51" rx="3" ry="4" fill="#c07850"/>
-    <!-- eyes — amber/hazel -->
-    <ellipse cx="42" cy="50" rx="5" ry="5" fill="white"/>
-    <ellipse cx="58" cy="50" rx="5" ry="5" fill="white"/>
-    <ellipse cx="43" cy="51" rx="3.2" ry="3.5" fill="#8a5a10"/>
-    <ellipse cx="59" cy="51" rx="3.2" ry="3.5" fill="#8a5a10"/>
-    <circle cx="44" cy="50" r="1.2" fill="#1a0800"/>
-    <circle cx="60" cy="50" r="1.2" fill="#1a0800"/>
-    <circle cx="44.8" cy="49.2" r="0.7" fill="white"/>
-    <circle cx="60.8" cy="49.2" r="0.7" fill="white"/>
-    <!-- eyebrows -->
-    <path d="M38 45 Q42 43.5 46 45" stroke="#5a3010" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <path d="M54 45 Q58 43.5 62 45" stroke="#5a3010" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- nose -->
-    <ellipse cx="50" cy="57" rx="3" ry="2" fill="#c07850"/>
-    <circle cx="48" cy="57.5" r="1.2" fill="#a86038"/>
-    <circle cx="52" cy="57.5" r="1.2" fill="#a86038"/>
-    <!-- confident smirk -->
-    <path d="M44 63 Q50 66 57 62" stroke="#a86038" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- star badge on chest -->
-    <polygon points="50,73 51.5,77 55,77 52.5,79.5 53.5,83 50,81 46.5,83 47.5,79.5 45,77 48.5,77" fill="#d4a017"/>
-    <!-- stubble -->
-    <ellipse cx="50" cy="65" rx="10" ry="4" fill="#b07850" opacity="0.25"/>
-  </g>
+  <!-- inner pad -->
+  <ellipse cx="50" cy="65" rx="13" ry="10" fill="#7a3a10"/>
+  <!-- toe beans -->
+  <ellipse cx="32" cy="42" rx="8" ry="9" fill="#8b4513"/>
+  <ellipse cx="44" cy="36" rx="8" ry="9" fill="#8b4513"/>
+  <ellipse cx="56" cy="36" rx="8" ry="9" fill="#8b4513"/>
+  <ellipse cx="68" cy="42" rx="8" ry="9" fill="#8b4513"/>
+  <!-- toe inner -->
+  <ellipse cx="32" cy="43" rx="5" ry="5.5" fill="#7a3a10"/>
+  <ellipse cx="44" cy="38" rx="5" ry="5.5" fill="#7a3a10"/>
+  <ellipse cx="56" cy="38" rx="5" ry="5.5" fill="#7a3a10"/>
+  <ellipse cx="68" cy="43" rx="5" ry="5.5" fill="#7a3a10"/>
+  <!-- claws -->
+  <path d="M29 36 Q27 28 31 24" stroke="#c8c8c8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M32 34 Q32 26 36 22" stroke="#c8c8c8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M44 30 Q44 22 48 18" stroke="#c8c8c8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M56 30 Q56 22 52 18" stroke="#c8c8c8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M66 34 Q68 26 72 24" stroke="#c8c8c8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M69 36 Q73 28 71 24" stroke="#c8c8c8" stroke-width="2" fill="none" stroke-linecap="round"/>
 </svg>`
   },
 
   // ── RARE ──────────────────────────────────────────────────
   {
     id: 'lunara',
-    name: 'Lunara',
+    name: 'Crystal Ball',
     rarity: 'rare',
-    price: 550,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 800,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#0a0a20" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#38bdf8" stroke-width="3" rx="6"/>
+  <!-- stand -->
+  <ellipse cx="50" cy="85" rx="18" ry="5" fill="#2a1a4a"/>
+  <path d="M36 82 Q38 78 50 76 Q62 78 64 82" fill="#2a1a4a"/>
+  <!-- ball glow -->
+  <circle cx="50" cy="50" r="30" fill="#7c3aed" opacity=".15"/>
+  <circle cx="50" cy="50" r="26" fill="#6d28d9" opacity=".2"/>
+  <!-- ball body -->
+  <circle cx="50" cy="50" r="24" fill="#1e1b4b"/>
+  <circle cx="50" cy="50" r="24" fill="url(#crystalGrad)"/>
   <defs>
-    <clipPath id="hex-lunara">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <radialGradient id="crystalGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity=".6"/>
+      <stop offset="60%" stop-color="#4c1d95" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="#1e1b4b" stop-opacity=".8"/>
+    </radialGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
-  <g clip-path="url(#hex-lunara)">
-    <rect x="7" y="4" width="86" height="94" fill="#080818"/>
-    <!-- cosmic bg stars -->
-    <circle cx="15" cy="15" r="0.8" fill="#38bdf8" opacity="0.6"/>
-    <circle cx="85" cy="20" r="0.8" fill="#38bdf8" opacity="0.6"/>
-    <circle cx="20" cy="80" r="0.6" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="78" cy="75" r="0.6" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="88" cy="50" r="0.5" fill="white" opacity="0.5"/>
-    <circle cx="12" cy="55" r="0.5" fill="white" opacity="0.5"/>
-    <!-- robes deep blue -->
-    <rect x="22" y="68" width="56" height="30" fill="#1e3a5f" rx="4"/>
-    <path d="M22 68 Q50 74 78 68" stroke="#38bdf8" stroke-width="1.5" fill="none" opacity="0.7"/>
-    <!-- silver hair long -->
-    <ellipse cx="50" cy="48" rx="24" ry="26" fill="#c8d8e8"/>
-    <ellipse cx="26" cy="60" rx="10" ry="22" fill="#c8d8e8"/>
-    <ellipse cx="74" cy="60" rx="10" ry="22" fill="#c8d8e8"/>
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="10" fill="#e8d0b8"/>
-    <!-- head -->
-    <ellipse cx="50" cy="52" rx="18" ry="20" fill="#e8d0b8"/>
-    <!-- hair top -->
-    <ellipse cx="50" cy="34" rx="18" ry="9" fill="#d8e8f8"/>
-    <!-- glowing gem on forehead -->
-    <ellipse cx="50" cy="40" rx="4" ry="4" fill="#38bdf8" opacity="0.9"/>
-    <ellipse cx="50" cy="40" rx="2.5" ry="2.5" fill="white" opacity="0.8"/>
-    <ellipse cx="50" cy="40" rx="5" ry="5" fill="#38bdf8" opacity="0.2"/>
-    <!-- ears -->
-    <ellipse cx="32" cy="52" rx="4" ry="5" fill="#e8d0b8"/>
-    <ellipse cx="68" cy="52" rx="4" ry="5" fill="#e8d0b8"/>
-    <!-- eyes — pale silver-blue, ethereal -->
-    <ellipse cx="42" cy="51" rx="5.5" ry="5.5" fill="white"/>
-    <ellipse cx="58" cy="51" rx="5.5" ry="5.5" fill="white"/>
-    <ellipse cx="43" cy="52" rx="3.5" ry="4" fill="#7dd3fc"/>
-    <ellipse cx="59" cy="52" rx="3.5" ry="4" fill="#7dd3fc"/>
-    <circle cx="44" cy="51" r="1.4" fill="#0c4a6e"/>
-    <circle cx="60" cy="51" r="1.4" fill="#0c4a6e"/>
-    <circle cx="44.8" cy="50.2" r="0.8" fill="white"/>
-    <circle cx="60.8" cy="50.2" r="0.8" fill="white"/>
-    <!-- glow under eyes -->
-    <ellipse cx="43" cy="54" rx="4" ry="1.5" fill="#38bdf8" opacity="0.2"/>
-    <ellipse cx="59" cy="54" rx="4" ry="1.5" fill="#38bdf8" opacity="0.2"/>
-    <!-- eyebrows — light silver -->
-    <path d="M38 46 Q42 44 46 46" stroke="#c8d8e8" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M54 46 Q58 44 62 46" stroke="#c8d8e8" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- nose — delicate -->
-    <ellipse cx="50" cy="57" rx="2.5" ry="1.8" fill="#d0b8a0"/>
-    <!-- serene slight smile -->
-    <path d="M45 63 Q50 65 55 63" stroke="#c0a080" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- moon crescent above -->
-    <path d="M62 18 Q72 22 68 32 Q60 26 62 18 Z" fill="#d4a017" opacity="0.8"/>
-  </g>
+  <!-- inner swirls -->
+  <path d="M36 44 Q44 36 56 44 Q64 52 56 60 Q44 68 36 60 Q28 52 36 44" fill="none" stroke="#7c3aed" stroke-width="1.2" opacity=".6"/>
+  <circle cx="44" cy="46" r="4" fill="#8b5cf6" opacity=".5"/>
+  <circle cx="58" cy="56" r="3" fill="#a78bfa" opacity=".4"/>
+  <!-- highlight -->
+  <ellipse cx="40" cy="38" rx="7" ry="5" fill="white" opacity=".15" transform="rotate(-20 40 38)"/>
+  <!-- ball border -->
+  <circle cx="50" cy="50" r="24" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
 </svg>`
   },
 
   {
     id: 'corvus',
-    name: 'Corvus',
+    name: 'Black Feather',
     rarity: 'rare',
-    price: 600,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
-  <defs>
-    <clipPath id="hex-corvus">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
-  </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
-  <g clip-path="url(#hex-corvus)">
-    <rect x="7" y="4" width="86" height="94" fill="#050510"/>
-    <!-- feather cloak -->
-    <ellipse cx="50" cy="88" rx="34" ry="20" fill="#1a1a1a"/>
-    <rect x="20" y="68" width="60" height="30" fill="#111111" rx="4"/>
-    <!-- feather details -->
-    <path d="M20 75 Q30 68 22 85" stroke="#2a2a2a" stroke-width="2" fill="none"/>
-    <path d="M80 75 Q70 68 78 85" stroke="#2a2a2a" stroke-width="2" fill="none"/>
-    <path d="M25 80 Q35 72 28 90" stroke="#222222" stroke-width="1.5" fill="none"/>
-    <path d="M75 80 Q65 72 72 90" stroke="#222222" stroke-width="1.5" fill="none"/>
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="10" fill="#c8a080"/>
-    <!-- head -->
-    <ellipse cx="50" cy="52" rx="19" ry="21" fill="#c8a080"/>
-    <!-- jet black hair -->
-    <ellipse cx="50" cy="33" rx="20" ry="10" fill="#0a0a0a"/>
-    <ellipse cx="30" cy="42" rx="8" ry="12" fill="#0a0a0a"/>
-    <ellipse cx="70" cy="42" rx="8" ry="12" fill="#0a0a0a"/>
-    <!-- ears -->
-    <ellipse cx="31" cy="52" rx="4" ry="5" fill="#c8a080"/>
-    <ellipse cx="69" cy="52" rx="4" ry="5" fill="#c8a080"/>
-    <!-- eyes — vivid red -->
-    <ellipse cx="42" cy="51" rx="5.5" ry="5.5" fill="#2a0a0a"/>
-    <ellipse cx="58" cy="51" rx="5.5" ry="5.5" fill="#2a0a0a"/>
-    <ellipse cx="43" cy="52" rx="3.5" ry="4" fill="#ef4444"/>
-    <ellipse cx="59" cy="52" rx="3.5" ry="4" fill="#ef4444"/>
-    <circle cx="44" cy="51" r="1.4" fill="#7f1d1d"/>
-    <circle cx="60" cy="51" r="1.4" fill="#7f1d1d"/>
-    <circle cx="44.8" cy="50.2" r="0.8" fill="#fca5a5" opacity="0.8"/>
-    <circle cx="60.8" cy="50.2" r="0.8" fill="#fca5a5" opacity="0.8"/>
-    <!-- red glow under eyes -->
-    <ellipse cx="43" cy="54.5" rx="4" ry="1.5" fill="#ef4444" opacity="0.25"/>
-    <ellipse cx="59" cy="54.5" rx="4" ry="1.5" fill="#ef4444" opacity="0.25"/>
-    <!-- eyebrows — sharp dark -->
-    <path d="M37 46 Q42 43.5 47 46" stroke="#0a0a0a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M53 46 Q58 43.5 63 46" stroke="#0a0a0a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <!-- nose -->
-    <ellipse cx="50" cy="57" rx="3" ry="2" fill="#b08868"/>
-    <!-- thin cold smile -->
-    <path d="M44 63 Q50 64 56 63" stroke="#a07050" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- feather collar up near chin -->
-    <path d="M30 66 Q40 60 50 63 Q60 60 70 66" fill="#1a1a1a"/>
-    <path d="M32 67 Q42 61 50 64 Q58 61 68 67" stroke="#2a2a2a" stroke-width="1.2" fill="none"/>
-    <!-- small raven on shoulder hint -->
-    <ellipse cx="74" cy="64" rx="5" ry="4" fill="#0a0a0a"/>
-    <circle cx="76" cy="62" r="3" fill="#0a0a0a"/>
-    <circle cx="77.5" cy="61.5" r="0.8" fill="#ef4444"/>
-  </g>
+    price: 800,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#080808" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#555" stroke-width="3" rx="6"/>
+  <!-- feather shaft -->
+  <path d="M50 88 Q48 60 40 20" stroke="#1a1a1a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M50 88 Q52 60 60 20" stroke="#2a2a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- feather barbs left -->
+  <path d="M48 78 Q36 74 28 66" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M47 70 Q34 64 24 54" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M46 62 Q32 54 24 42" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M45 54 Q32 44 26 32" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M44 46 Q34 34 30 22" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M43 38 Q36 26 36 16" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- feather barbs right -->
+  <path d="M52 78 Q64 74 72 66" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M53 70 Q66 64 76 54" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M54 62 Q68 54 76 42" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M55 54 Q68 44 74 32" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M56 46 Q66 34 70 22" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M57 38 Q64 26 64 16" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- iridescent sheen -->
+  <path d="M44 46 Q50 40 56 46" stroke="#4040aa" stroke-width="1" fill="none" opacity=".5"/>
+  <path d="M43 54 Q50 48 57 54" stroke="#224422" stroke-width="1" fill="none" opacity=".4"/>
+  <path d="M45 62 Q50 56 55 62" stroke="#442244" stroke-width="1" fill="none" opacity=".4"/>
+  <!-- quill tip -->
+  <ellipse cx="50" cy="90" rx="3" ry="4" fill="#1a1a1a"/>
 </svg>`
   },
 
   {
     id: 'vex',
-    name: 'Vex',
+    name: 'Poison Vial',
     rarity: 'rare',
-    price: 500,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 800,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#0a1a0a" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#22aa22" stroke-width="3" rx="6"/>
+  <!-- cork -->
+  <rect x="43" y="14" width="14" height="10" rx="3" fill="#8b6914"/>
+  <rect x="44" y="15" width="12" height="4" rx="2" fill="#a07820" opacity=".6"/>
+  <!-- bottle neck -->
+  <rect x="44" y="23" width="12" height="10" rx="2" fill="#2aaa2a" opacity=".5"/>
+  <rect x="44" y="23" width="12" height="10" rx="2" fill="url(#vialShine)" opacity=".4"/>
+  <!-- bottle body -->
+  <path d="M38 33 Q34 38 34 58 Q34 76 50 82 Q66 76 66 58 Q66 38 62 33 Z" fill="#1a8a1a"/>
+  <path d="M38 33 Q34 38 34 58 Q34 76 50 82 Q66 76 66 58 Q66 38 62 33 Z" fill="url(#vialShine)"/>
   <defs>
-    <clipPath id="hex-vex">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <linearGradient id="vialShine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="white" stop-opacity=".25"/>
+      <stop offset="40%" stop-color="white" stop-opacity=".1"/>
+      <stop offset="100%" stop-color="black" stop-opacity=".2"/>
+    </linearGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
-  <g clip-path="url(#hex-vex)">
-    <rect x="7" y="4" width="86" height="94" fill="#120a00"/>
-    <!-- warm bg glow -->
-    <ellipse cx="50" cy="70" rx="40" ry="30" fill="#7c2d12" opacity="0.15"/>
-    <!-- body — rust orange tunic -->
-    <rect x="24" y="68" width="52" height="30" fill="#9a3d10" rx="4"/>
-    <!-- neck -->
-    <rect x="44" y="61" width="12" height="11" fill="#e8a060"/>
-    <!-- head — slightly wider, fox-ish -->
-    <ellipse cx="50" cy="51" rx="20" ry="22" fill="#e8a060"/>
-    <!-- fox ears! pointed -->
-    <polygon points="32,38 26,18 42,34" fill="#e8a060"/>
-    <polygon points="68,38 74,18 58,34" fill="#e8a060"/>
-    <polygon points="33,37 28,22 41,34" fill="#c85030" opacity="0.7"/>
-    <polygon points="67,37 72,22 59,34" fill="#c85030" opacity="0.7"/>
-    <!-- orange/auburn hair -->
-    <ellipse cx="50" cy="33" rx="20" ry="10" fill="#c85030"/>
-    <ellipse cx="50" cy="30" rx="16" ry="7" fill="#e06030"/>
-    <!-- white face marking -->
-    <ellipse cx="50" cy="58" rx="12" ry="10" fill="#f8e8d0" opacity="0.5"/>
-    <!-- ears (side) -->
-    <ellipse cx="30" cy="52" rx="4" ry="5" fill="#e8a060"/>
-    <ellipse cx="70" cy="52" rx="4" ry="5" fill="#e8a060"/>
-    <!-- eyes — amber gold, sly -->
-    <ellipse cx="42" cy="50" rx="5.5" ry="5" fill="white"/>
-    <ellipse cx="58" cy="50" rx="5.5" ry="5" fill="white"/>
-    <!-- slitted pupils -->
-    <ellipse cx="43" cy="51" rx="3" ry="4" fill="#d97706"/>
-    <ellipse cx="59" cy="51" rx="3" ry="4" fill="#d97706"/>
-    <ellipse cx="43.5" cy="51" rx="1.2" ry="3.5" fill="#1a0800"/>
-    <ellipse cx="59.5" cy="51" rx="1.2" ry="3.5" fill="#1a0800"/>
-    <circle cx="43.5" cy="49.5" r="0.7" fill="white"/>
-    <circle cx="59.5" cy="49.5" r="0.7" fill="white"/>
-    <!-- eyebrows — cocked, mischievous -->
-    <path d="M37 45 Q42 42 47 44" stroke="#8a3010" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M53 44 Q58 42 63 45" stroke="#8a3010" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- small nose -->
-    <ellipse cx="50" cy="57" rx="2.5" ry="2" fill="#c87040"/>
-    <circle cx="48.5" cy="57.5" r="1.2" fill="#a85030"/>
-    <circle cx="51.5" cy="57.5" r="1.2" fill="#a85030"/>
-    <!-- sly grin -->
-    <path d="M43 63 Q50 67 57 62" stroke="#a05028" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- whisker marks -->
-    <path d="M28 57 L38 58" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
-    <path d="M28 60 L38 60" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
-    <path d="M72 57 L62 58" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
-    <path d="M72 60 L62 60" stroke="#d4956c" stroke-width="0.8" opacity="0.6"/>
-    <!-- bushy tail hint at bottom -->
-    <ellipse cx="72" cy="90" rx="12" ry="8" fill="#e8a060" opacity="0.6"/>
-    <ellipse cx="72" cy="90" rx="8" ry="5" fill="#f8e8d0" opacity="0.5"/>
-  </g>
+  <!-- liquid level -->
+  <path d="M36 55 Q34 62 34 66 Q34 76 50 82 Q66 76 66 66 Q66 62 64 55 Z" fill="#44ee44" opacity=".7"/>
+  <!-- bubbles -->
+  <circle cx="44" cy="66" r="3" fill="#88ff88" opacity=".5"/>
+  <circle cx="55" cy="62" r="2" fill="#88ff88" opacity=".4"/>
+  <circle cx="48" cy="72" r="1.5" fill="#88ff88" opacity=".5"/>
+  <!-- glow -->
+  <path d="M38 33 Q34 38 34 58 Q34 76 50 82 Q66 76 66 58 Q66 38 62 33 Z" fill="none" stroke="#44ee44" stroke-width="1.5"/>
+  <!-- shine streak -->
+  <path d="M41 38 Q40 55 40 64" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity=".25"/>
 </svg>`
   },
 
   {
     id: 'mortis',
-    name: 'Mortis',
+    name: 'Cursed Skull',
     rarity: 'rare',
-    price: 650,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 800,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#100808" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#660000" stroke-width="3" rx="6"/>
+  <!-- skull cranium -->
+  <ellipse cx="50" cy="44" rx="26" ry="28" fill="#d0c8b8"/>
+  <ellipse cx="50" cy="44" rx="26" ry="28" fill="url(#skullShade)"/>
   <defs>
-    <clipPath id="hex-mortis">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <radialGradient id="skullShade" cx="35%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="white" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="#8a8070" stop-opacity=".4"/>
+    </radialGradient>
   </defs>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#38bdf8" stroke-width="2.5"/>
-  <g clip-path="url(#hex-mortis)">
-    <rect x="7" y="4" width="86" height="94" fill="#050508"/>
-    <!-- dark robe -->
-    <rect x="20" y="66" width="60" height="32" fill="#0f0f14" rx="4"/>
-    <!-- bone/skull trim -->
-    <path d="M20 66 Q50 72 80 66" stroke="#4a4a5a" stroke-width="1.5" fill="none"/>
-    <!-- hood shadow -->
-    <ellipse cx="50" cy="42" rx="28" ry="26" fill="#0f0f14"/>
-    <!-- hood inner deep shadow -->
-    <ellipse cx="50" cy="44" rx="22" ry="22" fill="#050508"/>
-    <!-- pale face emerging from hood -->
-    <ellipse cx="50" cy="52" rx="16" ry="18" fill="#d8d0c0"/>
-    <!-- hollow eyes — dark sunken -->
-    <ellipse cx="42" cy="50" rx="6" ry="6" fill="#0a0a0a"/>
-    <ellipse cx="58" cy="50" rx="6" ry="6" fill="#0a0a0a"/>
-    <!-- pale iris glow faint -->
-    <ellipse cx="43" cy="51" rx="3" ry="3.5" fill="#1e1e2e"/>
-    <ellipse cx="59" cy="51" rx="3" ry="3.5" fill="#1e1e2e"/>
-    <!-- tiny pale glow in eyes -->
-    <circle cx="43" cy="50" r="1.2" fill="#7dd3fc" opacity="0.6"/>
-    <circle cx="59" cy="50" r="1.2" fill="#7dd3fc" opacity="0.6"/>
-    <circle cx="43.5" cy="49.3" r="0.6" fill="white" opacity="0.5"/>
-    <circle cx="59.5" cy="49.3" r="0.6" fill="white" opacity="0.5"/>
-    <!-- eye socket shadows -->
-    <ellipse cx="42" cy="51" rx="7" ry="6" fill="#0a0a0a" opacity="0.5"/>
-    <ellipse cx="58" cy="51" rx="7" ry="6" fill="#0a0a0a" opacity="0.5"/>
-    <!-- nose — sunken -->
-    <ellipse cx="50" cy="58" rx="2.5" ry="2" fill="#b0a898"/>
-    <circle cx="48.5" cy="58.5" r="1" fill="#8a8278"/>
-    <circle cx="51.5" cy="58.5" r="1" fill="#8a8278"/>
-    <!-- thin smile — slightly unsettling -->
-    <path d="M43 64 Q50 66 57 64" stroke="#8a8070" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- bone crown -->
-    <path d="M30 38 L34 28 L38 36 L42 24 L46 34 L50 22 L54 34 L58 24 L62 36 L66 28 L70 38" stroke="#c8c0a8" stroke-width="2" fill="none" stroke-linejoin="round"/>
-    <!-- robe clasp -->
-    <circle cx="50" cy="70" r="4" fill="#2a2a3a" stroke="#4a4a5a" stroke-width="1"/>
-    <circle cx="50" cy="70" r="2" fill="#7dd3fc" opacity="0.5"/>
-    <!-- bony fingers hint -->
-    <path d="M24 80 L28 70 M28 82 L31 72 M32 83 L34 73" stroke="#b0a898" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
-  </g>
+  <!-- jaw -->
+  <path d="M30 62 Q28 76 36 80 Q50 84 64 80 Q72 76 70 62 Z" fill="#c8c0b0"/>
+  <!-- jaw teeth -->
+  <rect x="36" y="72" width="7" height="10" rx="2" fill="#e8e0d0"/>
+  <rect x="46" y="73" width="8" height="11" rx="2" fill="#e8e0d0"/>
+  <rect x="57" y="72" width="7" height="10" rx="2" fill="#e8e0d0"/>
+  <!-- eye sockets -->
+  <ellipse cx="38" cy="46" rx="9" ry="10" fill="#1a0808"/>
+  <ellipse cx="62" cy="46" rx="9" ry="10" fill="#1a0808"/>
+  <!-- glowing eyes -->
+  <ellipse cx="38" cy="46" rx="6" ry="7" fill="#b91c1c" opacity=".6"/>
+  <ellipse cx="62" cy="46" rx="6" ry="7" fill="#b91c1c" opacity=".6"/>
+  <ellipse cx="38" cy="46" rx="3" ry="3.5" fill="#ff4444" opacity=".8"/>
+  <ellipse cx="62" cy="46" rx="3" ry="3.5" fill="#ff4444" opacity=".8"/>
+  <!-- nose hole -->
+  <path d="M46 56 L50 52 L54 56 Q52 60 50 60 Q48 60 46 56 Z" fill="#1a0808"/>
+  <!-- crack -->
+  <path d="M50 18 Q52 26 50 34 Q49 38 51 44" stroke="#8a8070" stroke-width="1.2" fill="none" opacity=".6"/>
 </svg>`
   },
 
   // ── LEGENDARY ─────────────────────────────────────────────
   {
     id: 'shadowfang',
-    name: 'Shadowfang',
+    name: 'Shadow Fang',
     rarity: 'legendary',
-    price: 900,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 2000,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#080010" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#8b0000" stroke-width="3" rx="6"/>
+  <!-- dark glow -->
+  <circle cx="50" cy="50" r="38" fill="#4a0010" opacity=".3"/>
+  <!-- left fang -->
+  <path d="M34 22 L28 82 L38 72 L44 88 L46 30 Z" fill="#e8e0d0"/>
+  <path d="M34 22 L28 82 L38 72 L44 88 L46 30 Z" fill="url(#fangL)"/>
   <defs>
-    <clipPath id="hex-shadowfang">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <linearGradient id="fangL" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#888" stop-opacity=".3"/>
+      <stop offset="60%" stop-color="white" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="#555" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="fangR" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#888" stop-opacity=".3"/>
+      <stop offset="60%" stop-color="white" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="#555" stop-opacity=".2"/>
+    </linearGradient>
   </defs>
-  <!-- legendary star marker -->
-  <polygon points="50,0 51.5,3.5 55,3.5 52.5,5.8 53.5,9 50,7 46.5,9 47.5,5.8 45,3.5 48.5,3.5" fill="#ef4444"/>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#ef4444" stroke-width="3"/>
-  <g clip-path="url(#hex-shadowfang)">
-    <rect x="7" y="4" width="86" height="94" fill="#0a0005"/>
-    <!-- dark blood mist bg -->
-    <ellipse cx="50" cy="60" rx="45" ry="35" fill="#4a0010" opacity="0.2"/>
-    <!-- armour body dark -->
-    <rect x="20" y="66" width="60" height="32" fill="#1a0a0a" rx="4"/>
-    <!-- blood red trim -->
-    <path d="M20 66 Q50 72 80 66" stroke="#ef4444" stroke-width="1.5" fill="none" opacity="0.7"/>
-    <!-- neck -->
-    <rect x="43" y="60" width="14" height="10" fill="#8a6a5a"/>
-    <!-- wolf-like head — wider jaw -->
-    <ellipse cx="50" cy="50" rx="22" ry="22" fill="#7a6055"/>
-    <!-- dark fur texture -->
-    <ellipse cx="50" cy="38" rx="22" ry="12" fill="#2a1a14"/>
-    <ellipse cx="28" cy="46" rx="10" ry="14" fill="#2a1a14"/>
-    <ellipse cx="72" cy="46" rx="10" ry="14" fill="#2a1a14"/>
-    <!-- wolf ears -->
-    <polygon points="32,38 24,16 44,34" fill="#2a1a14"/>
-    <polygon points="68,38 76,16 56,34" fill="#2a1a14"/>
-    <polygon points="33,37 26,20 43,34" fill="#5a3a2a" opacity="0.5"/>
-    <polygon points="67,37 74,20 57,34" fill="#5a3a2a" opacity="0.5"/>
-    <!-- snout area lighter -->
-    <ellipse cx="50" cy="58" rx="14" ry="10" fill="#a08070"/>
-    <!-- ears side -->
-    <ellipse cx="28" cy="50" rx="4" ry="5" fill="#6a4a3a"/>
-    <ellipse cx="72" cy="50" rx="4" ry="5" fill="#6a4a3a"/>
-    <!-- eyes — glowing amber-red -->
-    <ellipse cx="41" cy="49" rx="6" ry="6" fill="#1a0a00"/>
-    <ellipse cx="59" cy="49" rx="6" ry="6" fill="#1a0a00"/>
-    <ellipse cx="42" cy="50" rx="4" ry="4.5" fill="#ef4444"/>
-    <ellipse cx="60" cy="50" rx="4" ry="4.5" fill="#ef4444"/>
-    <ellipse cx="42.5" cy="50" rx="1.5" ry="3.5" fill="#7f1d1d"/>
-    <ellipse cx="60.5" cy="50" rx="1.5" ry="3.5" fill="#7f1d1d"/>
-    <circle cx="42.5" cy="48.5" r="1" fill="#fca5a5" opacity="0.7"/>
-    <circle cx="60.5" cy="48.5" r="1" fill="#fca5a5" opacity="0.7"/>
-    <!-- red glow rings -->
-    <ellipse cx="42" cy="50" rx="6.5" ry="6.5" fill="none" stroke="#ef4444" stroke-width="0.8" opacity="0.3"/>
-    <ellipse cx="60" cy="50" rx="6.5" ry="6.5" fill="none" stroke="#ef4444" stroke-width="0.8" opacity="0.3"/>
-    <!-- heavy brow ridge -->
-    <path d="M34 44 Q42 40 48 43" stroke="#1a0a00" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M52 43 Q58 40 66 44" stroke="#1a0a00" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <!-- snout / nose -->
-    <ellipse cx="50" cy="57" rx="5" ry="3.5" fill="#3a2018"/>
-    <ellipse cx="50" cy="56" rx="3.5" ry="2.5" fill="#2a1008"/>
-    <!-- snarling mouth with fangs -->
-    <path d="M40 63 Q50 68 60 63" stroke="#5a3020" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <polygon points="44,63 42,70 46,63" fill="#f0e8e0"/>
-    <polygon points="56,63 54,70 58,63" fill="#f0e8e0"/>
-    <!-- battle scar -->
-    <path d="M36 46 L42 54" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-    <!-- shoulder spikes -->
-    <polygon points="22,68 16,56 26,64" fill="#3a2020"/>
-    <polygon points="78,68 84,56 74,64" fill="#3a2020"/>
-  </g>
+  <!-- right fang -->
+  <path d="M66 22 L72 82 L62 72 L56 88 L54 30 Z" fill="#e8e0d0"/>
+  <path d="M66 22 L72 82 L62 72 L56 88 L54 30 Z" fill="url(#fangR)"/>
+  <!-- blood drips -->
+  <path d="M38 72 Q37 78 38 84" stroke="#b91c1c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M62 72 Q63 78 62 84" stroke="#b91c1c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="38" cy="85" r="2.5" fill="#b91c1c"/>
+  <circle cx="62" cy="85" r="2.5" fill="#b91c1c"/>
+  <!-- gum line -->
+  <path d="M26 28 Q34 20 50 18 Q66 20 74 28" stroke="#8b0000" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- cracks on fang -->
+  <path d="M36 36 Q37 44 36 50" stroke="#aaa8a0" stroke-width=".8" fill="none" opacity=".4"/>
+  <path d="M64 36 Q63 44 64 50" stroke="#aaa8a0" stroke-width=".8" fill="none" opacity=".4"/>
 </svg>`
   },
 
   {
     id: 'selene',
-    name: 'Selene',
+    name: 'Moonblade',
     rarity: 'legendary',
-    price: 1000,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="100" height="115">
+    price: 2000,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#06060e" rx="6"/>
+  <rect width="100" height="100" fill="none" stroke="#d4a017" stroke-width="3" rx="6"/>
+  <!-- stars -->
+  <circle cx="14" cy="16" r="1.5" fill="#e8c44a" opacity=".8"/>
+  <circle cx="85" cy="20" r="1.2" fill="#e8c44a" opacity=".6"/>
+  <circle cx="90" cy="55" r="1" fill="#e8c44a" opacity=".5"/>
+  <circle cx="12" cy="72" r="1.3" fill="#e8c44a" opacity=".6"/>
+  <circle cx="80" cy="85" r="1.1" fill="#e8c44a" opacity=".5"/>
+  <!-- crescent moon -->
+  <circle cx="50" cy="44" r="28" fill="#e8c44a"/>
+  <circle cx="60" cy="38" r="22" fill="#06060e"/>
+  <!-- blade extending from crescent -->
+  <path d="M50 72 L46 90 L50 86 L54 90 Z" fill="#c8c0a0"/>
+  <path d="M50 72 L46 90 L50 86 L54 90 Z" fill="url(#moonbladeGrad)"/>
   <defs>
-    <clipPath id="hex-selene">
-      <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5"/>
-    </clipPath>
+    <linearGradient id="moonbladeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="white" stop-opacity=".4"/>
+      <stop offset="100%" stop-color="#888" stop-opacity=".2"/>
+    </linearGradient>
   </defs>
-  <!-- legendary star marker -->
-  <polygon points="50,0 51.5,3.5 55,3.5 52.5,5.8 53.5,9 50,7 46.5,9 47.5,5.8 45,3.5 48.5,3.5" fill="#ef4444"/>
-  <polygon points="50,4 93,27.5 93,74.5 50,98 7,74.5 7,27.5" fill="#1a1a2e" stroke="#ef4444" stroke-width="3"/>
-  <g clip-path="url(#hex-selene)">
-    <rect x="7" y="4" width="86" height="94" fill="#060612"/>
-    <!-- deep space bg -->
-    <circle cx="14" cy="12" r="0.7" fill="white" opacity="0.7"/>
-    <circle cx="82" cy="16" r="0.7" fill="white" opacity="0.7"/>
-    <circle cx="88" cy="42" r="0.5" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="11" cy="62" r="0.5" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="85" cy="78" r="0.6" fill="white" opacity="0.5"/>
-    <circle cx="18" cy="82" r="0.4" fill="white" opacity="0.5"/>
-    <!-- full moon glow -->
-    <circle cx="50" cy="20" r="14" fill="#1a1a30"/>
-    <circle cx="50" cy="20" r="12" fill="#e8dfc8" opacity="0.15"/>
-    <!-- celestial robes -->
-    <rect x="18" y="66" width="64" height="32" fill="#1e1b3a" rx="4"/>
-    <!-- robe star pattern -->
-    <circle cx="30" cy="78" r="1" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="50" cy="82" r="1" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="70" cy="76" r="1" fill="#a78bfa" opacity="0.6"/>
-    <circle cx="38" cy="88" r="0.8" fill="#7dd3fc" opacity="0.5"/>
-    <circle cx="62" cy="90" r="0.8" fill="#7dd3fc" opacity="0.5"/>
-    <!-- gold trim robe -->
-    <path d="M18 66 Q50 73 82 66" stroke="#d4a017" stroke-width="1.8" fill="none"/>
-    <!-- flowing silver white hair -->
-    <ellipse cx="50" cy="46" rx="25" ry="28" fill="#e8ecf8"/>
-    <ellipse cx="24" cy="62" rx="11" ry="26" fill="#dce4f4"/>
-    <ellipse cx="76" cy="62" rx="11" ry="26" fill="#dce4f4"/>
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="8" fill="#f0d8c0"/>
-    <!-- head -->
-    <ellipse cx="50" cy="51" rx="18" ry="20" fill="#f0d8c0"/>
-    <!-- hair top -->
-    <ellipse cx="50" cy="33" rx="18" ry="10" fill="#eceef8"/>
-    <!-- golden crescent crown -->
-    <path d="M32 36 Q26 22 36 14 Q28 26 38 32 Z" fill="#d4a017"/>
-    <path d="M38 32 Q42 28 44 30" stroke="#d4a017" stroke-width="1.5" fill="none"/>
-    <!-- small stars on crown -->
-    <circle cx="34" cy="22" r="1.5" fill="#fef08a"/>
-    <circle cx="38" cy="16" r="1" fill="#fef08a"/>
-    <!-- ears -->
-    <ellipse cx="32" cy="51" rx="4" ry="5" fill="#f0d8c0"/>
-    <ellipse cx="68" cy="51" rx="4" ry="5" fill="#f0d8c0"/>
-    <!-- eyes — deep violet, otherworldly -->
-    <ellipse cx="42" cy="50" rx="5.5" ry="5.5" fill="white"/>
-    <ellipse cx="58" cy="50" rx="5.5" ry="5.5" fill="white"/>
-    <ellipse cx="43" cy="51" rx="3.5" ry="4" fill="#7c3aed"/>
-    <ellipse cx="59" cy="51" rx="3.5" ry="4" fill="#7c3aed"/>
-    <circle cx="44" cy="50" r="1.4" fill="#2e1065"/>
-    <circle cx="60" cy="50" r="1.4" fill="#2e1065"/>
-    <circle cx="44.8" cy="49.2" r="0.8" fill="white"/>
-    <circle cx="60.8" cy="49.2" r="0.8" fill="white"/>
-    <!-- violet glow under eyes -->
-    <ellipse cx="43" cy="53.5" rx="4" ry="1.5" fill="#7c3aed" opacity="0.2"/>
-    <ellipse cx="59" cy="53.5" rx="4" ry="1.5" fill="#7c3aed" opacity="0.2"/>
-    <!-- eyebrows — elegant arched -->
-    <path d="M38 45 Q42 43 46 44.5" stroke="#8878c0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M54 44.5 Q58 43 62 45" stroke="#8878c0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- small delicate nose -->
-    <ellipse cx="50" cy="57" rx="2.5" ry="1.8" fill="#d8b898"/>
-    <!-- serene knowing smile -->
-    <path d="M44 63 Q50 66 56 63" stroke="#c0907a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-    <!-- moonstone necklace -->
-    <path d="M38 66 Q50 70 62 66" stroke="#d4a017" stroke-width="1.2" fill="none"/>
-    <circle cx="50" cy="70" r="3" fill="#c8d8f0"/>
-    <circle cx="50" cy="70" r="1.5" fill="#e8ecf8"/>
-  </g>
+  <!-- blade guard -->
+  <rect x="40" y="70" width="20" height="4" rx="2" fill="#d4a017"/>
+  <!-- moon glow -->
+  <circle cx="50" cy="44" r="28" fill="none" stroke="#d4a017" stroke-width="1.5" opacity=".5"/>
+  <!-- inner moon detail -->
+  <circle cx="38" cy="36" r="3" fill="#d4a017" opacity=".3"/>
+  <circle cx="34" cy="50" r="2" fill="#d4a017" opacity=".2"/>
+  <!-- shimmer -->
+  <ellipse cx="40" cy="32" rx="6" ry="4" fill="white" opacity=".12" transform="rotate(-15 40 32)"/>
 </svg>`
   }
 
@@ -1604,7 +1282,7 @@ function avatarCardHTML(av, opts = {}) {
   const size = opts.size || 100;
   const scale = size / 100;
   const cardW = Math.round(100 * scale);
-  const cardH = Math.round(115 * scale);
+  const cardH = Math.round(100 * scale);
   const priceLabel = av.price === 0
     ? `<span style="color:#10b981">● Free</span>`
     : `<span style="color:${rc.dot}">● </span><span style="color:#d4a017">${av.price} coins</span>`;
@@ -1614,7 +1292,7 @@ function avatarCardHTML(av, opts = {}) {
   return `
 <div class="avatar-card" data-id="${av.id}"
   style="display:inline-flex;flex-direction:column;align-items:center;gap:.4rem;cursor:pointer;${selectedBorder}">
-  <div style="width:${cardW}px;height:${cardH}px;transform:scale(${scale});transform-origin:top left;margin-bottom:${cardH - 115}px">
+  <div style="width:${cardW}px;height:${cardH}px;transform:scale(${scale});transform-origin:top left">
     ${av.svg}
   </div>
   <div style="font-family:'Creepster',cursive;color:#e8e8e8;font-size:.9rem;letter-spacing:.04em">${av.name}</div>
@@ -1819,7 +1497,7 @@ function animateAvatar(svgEl, rarity) {
       // clip shimmer to hex shape using CSS clip-path (percentage-based)
       const wrap = document.createElement('div');
       wrap.className = 'av-shimmer-wrap';
-      wrap.style.clipPath = 'polygon(50% 3.5%, 93% 24%, 93% 65%, 50% 85.2%, 7% 65%, 7% 24%)';
+      wrap.style.clipPath = 'inset(0 round 6px)';
       const bar = document.createElement('div');
       bar.className = 'av-shimmer-bar';
       bar.style.animationDelay = `${(Math.random() * 2).toFixed(1)}s`;
@@ -4928,6 +4606,7 @@ window.addEventListener('load', () => {
         <div style="display:flex;gap:.3rem;margin-top:.3rem">
           <button onclick="openAvatarStore()" style="flex:1;padding:.3rem .4rem;background:transparent;border:1px solid rgba(212,160,23,.35);color:var(--moon);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.72rem;transition:.2s" onmouseover="this.style.background='rgba(212,160,23,.1)'" onmouseout="this.style.background='transparent'">🎭 Store</button>
           <button onclick="openSpinWheel()" style="flex:1;padding:.3rem .4rem;background:transparent;border:1px solid rgba(185,28,28,.35);color:var(--blood-glow);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.72rem;transition:.2s" onmouseover="this.style.background='rgba(185,28,28,.1)'" onmouseout="this.style.background='transparent'">🎡 Spin</button>
+          <button onclick="openCoinPowers()" style="flex:1;padding:.3rem .4rem;background:transparent;border:1px solid rgba(212,160,23,.5);color:var(--moon-pale);border-radius:4px;cursor:pointer;font-family:inherit;font-size:.72rem;transition:.2s;font-weight:700" onmouseover="this.style.background='rgba(212,160,23,.15)'" onmouseout="this.style.background='transparent'">🪙 Powers</button>
         </div>
       </div>
       <h3 id="t_linfo">Game Info</h3>
