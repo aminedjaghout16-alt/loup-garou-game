@@ -11544,10 +11544,13 @@ window.showGameOver = function(result){
   // Update leaderboard stats
   if(result && gameState && gameState.players){
     const winners = result.winners || [];
-    const losingTeam = result.losingTeam || '';
     Object.entries(gameState.players).forEach(([playerId, player]) => {
       const won = winners.includes(playerId);
-      updatePlayerStats(player.name, won);
+      // Get player name - try multiple properties
+      const playerName = player.name || player.displayName || player.username || `Player${playerId.slice(0,4)}`;
+      if(playerName && playerName.trim()){
+        updatePlayerStats(playerName, won);
+      }
     });
   }
   
