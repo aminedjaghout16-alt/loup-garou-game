@@ -2531,6 +2531,14 @@ async function _equipAvatar(id) {
     } catch(e) { console.warn('[Store] Equip save failed', e); }
   }
 
+  // If currently in a room lobby, update avatarId in player node so all players see the change
+  if (typeof roomCode !== 'undefined' && roomCode &&
+      typeof myId !== 'undefined' && myId &&
+      typeof gameState !== 'undefined' && gameState?.status === 'setup' &&
+      typeof db !== 'undefined' && db) {
+    db.ref(`games/${roomCode}/players/${myId}/avatarId`).set(id).catch(()=>{});
+  }
+
   _renderFeatured();
   _renderGrid();
   _updateFooter();
@@ -11017,7 +11025,11 @@ function _getCircleAvatarHTML(playerId) {
   if (!avatarId || typeof AVATARS === 'undefined') return '';
   const av = AVATARS.find(a => a.id === avatarId);
   if (!av) return '';
-  return av.svg.replace('<svg ', '<svg data-av="1" data-rarity="'+av.rarity+'" style="width:100%;height:100%;display:block;border-radius:50%;" ');
+  // Reuse the lobby circle transformation so in-game avatars are also circular
+  if (typeof _wrCircleSVG === 'function') {
+    return _wrCircleSVG(av.svg, playerId).replace('<svg ', '<svg data-av="1" data-rarity="'+av.rarity+'" ');
+  }
+  return av.svg.replace('<svg ', '<svg data-av="1" data-rarity="'+av.rarity+'" style="width:100%;height:100%;display:block;" ');
 }
 
 // ── Populate avatar map from Firebase (async, background) ─
