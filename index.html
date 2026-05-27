@@ -218,7 +218,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .wr-card.wc-clickable{cursor:pointer}
 .wr-card.wc-clickable:hover{border-color:var(--blood-glow);box-shadow:0 0 12px rgba(185,28,28,.2)}
 /* avatar wrapper */
-.wr-av{width:52px;height:52px;border-radius:50%;border:2px solid rgba(212,160,23,.3);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative;flex-shrink:0;transition:border-color .2s;clip-path:circle(50% at 50% 50%)}
+.wr-av{width:56px;height:56px;border-radius:50%;border:2px solid rgba(212,160,23,.3);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative;flex-shrink:0;transition:border-color .2s}
 .wr-card.wc-host .wr-av{border-color:var(--moon)}
 .wr-card.wc-ready .wr-av{border-color:#10b981}
 .wr-av img{width:100%;height:100%;object-fit:cover;display:block}
@@ -10759,19 +10759,32 @@ function renderLobby(players) {
 }
 
 // ── Avatar helper ─────────────────────────────────────────────────────────
+function _wrCircleSVG(svg, pid) {
+  // Transform hex avatar SVG into a circle-cropped version for lobby cards
+  const uid = 'wrc-' + pid.replace(/[^a-z0-9]/gi, '');
+  let s = svg;
+  // 1. Square viewBox crop (hex content lives in 7,4 → 93,98; crop to 86x86 square)
+  s = s.replace(/viewBox="[^"]*"/, 'viewBox="7 4 86 86"');
+  // 2. Remove fixed width/height so CSS controls size
+  s = s.replace(/ width="\d+"/, '').replace(/ height="\d+"/, '');
+  // 3. Swap hex clipPath for a circle
+  s = s.replace(/<defs>[\s\S]*?<\/defs>/, '<defs><clipPath id="' + uid + '"><circle cx="50" cy="47" r="43"/></clipPath></defs>');
+  // 4. Point all clip-path refs to new circle
+  s = s.replace(/clip-path="url\(#[^)]+\)"/g, 'clip-path="url(#' + uid + ')"');
+  // 5. Remove hex border polygon (has stroke attribute)
+  s = s.replace(/<polygon[^>]*stroke[^/]*\/>/g, '');
+  // 6. Fill container
+  s = s.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
+  return s;
+}
+
 function _wrGetAvatarHTML(p) {
-  // 1. Use the existing _getCircleAvatarHTML if available (already handles border-radius:50%)
-  if (typeof _getCircleAvatarHTML === 'function') {
-    const html = _getCircleAvatarHTML(p.id);
-    if (html) return html;
-  } else {
-    // Fallback: read map directly if _getCircleAvatarHTML not yet defined
-    const map = window._equippedAvatarMap;
-    const avatarId = map && map[p.id];
-    if (avatarId && typeof AVATARS !== 'undefined') {
-      const av = AVATARS.find(a => a.id === avatarId);
-      if (av) return av.svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;border-radius:50%;" ');
-    }
+  // 1. Custom avatar from map
+  const map = window._equippedAvatarMap;
+  const avatarId = map && map[p.id];
+  if (avatarId && typeof AVATARS !== 'undefined') {
+    const av = AVATARS.find(a => a.id === avatarId);
+    if (av) return _wrCircleSVG(av.svg, p.id);
   }
   // 2. Google photo (own player)
   if (p.id === myId && typeof _googleUser !== 'undefined' && _googleUser?.photoURL) {
