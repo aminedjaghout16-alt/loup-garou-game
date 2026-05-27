@@ -7310,6 +7310,8 @@ function renderGame(){
         await maybeShowPhaseTransition(_seqPhase);
         // Step 3: Sequence done — show UI and start timer
         _nightToDayRunning=false;
+        // Reset vote history tracking for the new day
+        try{ if(_seqPhase==='day') initVoteHistory(); }catch(e){}
         document.getElementById('actionBtns').style.display='';
         renderPhase();
         applyGhostMode();
@@ -9315,6 +9317,9 @@ function doVote(targetId){
   const maireId=gameState.maire;
   const voteWeight=(myId===maireId)?2:1;
   const action={type:'vote',target:targetId,by:myId,ts:Date.now(),voteWeight};
+  // Record this vote in the local vote history (all clients track their own votes;
+  // the leader will collate and show the recap at end of day)
+  try{ recordVote(myId, targetId); }catch(e){}
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/dayVotes/${myId}`).set(action);
   } else if(gameState){
@@ -9335,7 +9340,7 @@ function checkDayVoteComplete(){
   const allVoted=alive.every(p=>!!dayVotes[p.id]);
   if(allVoted && alive.length>0){ 
     invalidateTimerKey();
-    resolveDayAndAdvance();
+    showVoteHistoryAndThenResolve();
   }
 }
 
@@ -9622,7 +9627,7 @@ function tick(){
     if(ph==='night'){
       if(isLeader && !_advancingStep){ _advancingStep=true; autoSkipTurn(); setTimeout(()=>{ _advancingStep=false; },800); }
     } else {
-      if(isLeader) resolveDayAndAdvance();
+      if(isLeader) showVoteHistoryAndThenResolve();
     }
   }
 }
@@ -11793,47 +11798,149 @@ window.showGameOver = function(result){
 // ── Vote history functions ──
 function initVoteHistory(){
   _currentVoteHistory = [];
-  _currentDayNumber = (typeof gameState !== 'undefined' && gameState?.day) || 1;
+  // Use the game's actual dayNum so it stays in sync
+  _currentDayNumber = (typeof gameState !== 'undefined' && gameState?.dayNum) || 1;
 }
 
 function recordVote(voterId, targetId){
   if(!gameState || !gameState.players) return;
   const voter = gameState.players[voterId];
   const target = gameState.players[targetId];
-  if(voter && target){
-    _currentVoteHistory.push({
-      voter: voter.name || `Player${String(voterId).slice(0,4)}`,
-      target: target.name || `Player${String(targetId).slice(0,4)}`,
-      timestamp: new Date().toLocaleTimeString(),
-      day: _currentDayNumber
-    });
+  if(!voter || !target) return;
+  const voterName = voter.name || `Player${String(voterId).slice(0,4)}`;
+  const targetName = target.name || `Player${String(targetId).slice(0,4)}`;
+  // Avoid duplicate entries (e.g. player changes their vote — update in place)
+  const existing = _currentVoteHistory.findIndex(v => v.voterId === voterId);
+  const entry = { voterId, voter: voterName, target: targetName, day: _currentDayNumber };
+  if(existing >= 0) _currentVoteHistory[existing] = entry;
+  else _currentVoteHistory.push(entry);
+}
+
+// ── showVoteHistoryAndThenResolve ────────────────────────────────────────────
+// Called by the leader (via checkDayVoteComplete or timer expiry) instead of
+// calling resolveDayAndAdvance() directly.  It:
+//   1. Builds the full vote list from gameState.dayVotes (Firebase or local)
+//   2. Shows the recap modal to ALL clients via a Firebase flag (or just locally
+//      for offline/IRL mode) — only the leader actually writes the flag.
+//   3. "Continue" button calls continueAfterVoteHistory() → resolveDayAndAdvance()
+// ─────────────────────────────────────────────────────────────────────────────
+let _voteHistoryPending = false; // guard against double-fire
+
+function showVoteHistoryAndThenResolve(){
+  if(!isLeader) return;
+  if(_voteHistoryPending) return;
+  _voteHistoryPending = true;
+
+  const dayVotes = gameState?.dayVotes || {};
+  const players  = gameState?.players  || {};
+  const gs       = gameState;
+  const day      = gs?.dayNum || _currentDayNumber;
+
+  // Build one line per vote
+  const lines = [];
+  Object.entries(dayVotes).forEach(([vid, action]) => {
+    if(action?.type === 'vote' && action.target){
+      const voter  = players[vid];
+      const target = players[action.target];
+      if(voter && target){
+        const mayorMark = (action.voteWeight||1) >= 2 ? ' 👑×2' : '';
+        lines.push(`${voter.name}${mayorMark} → ${target.name}`);
+      }
+    }
+  });
+
+  // Add crow accusation if present
+  const crowAccused = gs?.crowAccused;
+  if(crowAccused && players[crowAccused]){
+    const crowLabel = lang==='ar' ? 'الغراب اتهم' : lang==='fr' ? 'Le Corbeau accuse' : 'Crow accused';
+    lines.push(`🐦‍⬛ ${crowLabel}: ${players[crowAccused].name} (+2)`);
   }
+
+  if(lines.length > 0){
+    const header = lang==='ar' ? `📋 ملخص أصوات اليوم ${day}` : lang==='fr' ? `📋 Récap votes — Jour ${day}` : `📋 Vote recap — Day ${day}`;
+    const body   = lines.join(' | ');
+    const msg    = { n: '🗳 Vote Log', t: `${header}: ${body}`, ts: Date.now() };
+    if(fbOk && db && roomCode){
+      db.ref(`games/${roomCode}/chat`).push(msg);
+    } else if(gs){
+      if(!Array.isArray(gs.chat)) gs.chat = [];
+      gs.chat.push(msg);
+    }
+  }
+
+  _voteHistoryPending = false;
+  resolveDayAndAdvance();
 }
 
 function showVoteHistoryRecap(){
-  const modal = document.getElementById('voteHistoryModal');
-  const dayEl = document.getElementById('voteHistoryDay');
-  const summaryEl = document.getElementById('voteHistorySummary');
-  const entriesEl = document.getElementById('voteHistoryEntries');
+  const modal    = document.getElementById('voteHistoryModal');
+  const dayEl    = document.getElementById('voteHistoryDay');
+  const summaryEl= document.getElementById('voteHistorySummary');
+  const entriesEl= document.getElementById('voteHistoryEntries');
   if(!modal || !dayEl || !summaryEl || !entriesEl) return;
 
-  dayEl.textContent = `Day ${_currentDayNumber}`;
-  summaryEl.innerHTML = `<p>Total votes cast: <strong>${_currentVoteHistory.length}</strong></p>`;
+  const day = (typeof gameState !== 'undefined' && gameState?.dayNum) || _currentDayNumber;
+  const langStr = (typeof lang !== 'undefined') ? lang : 'en';
+
+  dayEl.textContent = langStr==='ar' ? `اليوم ${day}` : langStr==='fr' ? `Jour ${day}` : `Day ${day}`;
+
+  // Build tally to find who was eliminated
+  const tally = {};
+  const dayVotes = gameState?.dayVotes || {};
+  const crowAccused = gameState?.crowAccused || null;
+  Object.values(dayVotes).forEach(a=>{ if(a?.type==='vote'&&a.target) tally[a.target]=(tally[a.target]||0)+(a.voteWeight||1); });
+  if(crowAccused) tally[crowAccused]=(tally[crowAccused]||0)+2;
+  const sorted = Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  let eliminatedName = '';
+  if(sorted.length){
+    const maxV = sorted[0][1];
+    const tied = sorted.filter(([,v])=>v===maxV);
+    if(tied.length===1){
+      const ep = gameState?.players?.[tied[0][0]];
+      eliminatedName = ep?.name || '';
+    }
+  }
+
+  const totalLabel = langStr==='ar' ? 'إجمالي الأصوات:' : langStr==='fr' ? 'Total des votes :' : 'Total votes:';
+  const elimLabel  = langStr==='ar' ? 'المُقصى:' : langStr==='fr' ? 'Éliminé :' : 'Eliminated:';
+  const tieLabel   = langStr==='ar' ? 'تعادل — لا إقصاء' : langStr==='fr' ? 'Égalité — pas d\'élimination' : 'Tie — no elimination';
+  const skipLabel  = langStr==='ar' ? 'تم تخطي التصويت' : langStr==='fr' ? 'Vote ignoré' : 'Vote skipped';
+  const mayorNote  = langStr==='ar' ? '(عمدة — صوتان)' : langStr==='fr' ? '(Maire — 2 votes)' : '(Mayor — 2 votes)';
+  const voteWord   = langStr==='ar' ? 'صوت' : langStr==='fr' ? 'vote' : 'vote';
+  const votesWord  = langStr==='ar' ? 'أصوات' : langStr==='fr' ? 'votes' : 'votes';
+
+  let elimHTML = '';
+  if(sorted.length){
+    const maxV = sorted[0][1];
+    const tied = sorted.filter(([,v])=>v===maxV);
+    if(tied.length===1 && eliminatedName){
+      elimHTML = `<p>${elimLabel} <span class="executed">${eliminatedName}</span></p>`;
+    } else if(tied.length>1){
+      elimHTML = `<p>${tieLabel}</p>`;
+    }
+  } else {
+    elimHTML = `<p>${skipLabel}</p>`;
+  }
+
+  summaryEl.innerHTML = `<p>${totalLabel} <strong>${_currentVoteHistory.length}</strong></p>${elimHTML}`;
+
   entriesEl.innerHTML = _currentVoteHistory.length === 0
-    ? '<div style="text-align:center;padding:1rem;color:rgba(232,232,232,.4)">No votes recorded</div>'
+    ? `<div style="text-align:center;padding:1rem;color:rgba(232,232,232,.4)">${skipLabel}</div>`
     : _currentVoteHistory.map(v => `
         <div class="vh-entry">
-          <div class="vh-voter">${v.voter}</div>
+          <div class="vh-voter">${v.voter}${v.isMayor ? ` <span style="color:var(--moon);font-size:.7rem">${mayorNote}</span>` : ''}</div>
           <div class="vh-arrow">→</div>
           <div class="vh-target">${v.target}</div>
         </div>`).join('');
+
+  const continueLabel = langStr==='ar' ? 'متابعة إلى المرحلة التالية →' : langStr==='fr' ? 'Continuer →' : 'Continue to Night →';
+  const btn = modal.querySelector('.vh-continue');
+  if(btn) btn.textContent = continueLabel;
 
   modal.classList.remove('hidden');
 }
 
 function continueAfterVoteHistory(){
-  document.getElementById('voteHistoryModal').classList.add('hidden');
-  _currentVoteHistory = [];
-  _currentDayNumber += 1;
+  // No-op: vote recap now posts to chat automatically, no modal to dismiss
 }
 </script>
