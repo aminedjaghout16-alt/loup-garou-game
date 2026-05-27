@@ -11744,16 +11744,13 @@ function renderLeaderboard(filter){
     `).join('');
 }
 
-// Add leaderboard functionality to existing stats button
-setTimeout(() => {
-  const _origOpenProfileModal = window.openProfileModal;
-  window.openProfileModal = async function(){
-    // Show the leaderboard instead of the profile modal
-    toggleLeaderboard();
-    // Optionally still call original if needed
-    // await _origOpenProfileModal();
-  };
-}, 500);
+// Patch the existing openLeaderboard function to show our custom leaderboard
+const _origOpenLeaderboard = window.openLeaderboard;
+window.openLeaderboard = function(){
+  // Show our leaderboard with stats instead
+  toggleLeaderboard();
+};
+
 
 // ════════════════════════════════════════════
 // PHASE MUSIC STATE MACHINE (owned by renderGame)
