@@ -6723,6 +6723,20 @@ function _doStartWithPlayers(players){
     alert(lang==='ar'?'تحتاج لاعبَين على الأقل':lang==='fr'?'Minimum 2 joueurs':'Need at least 2 players');
     return;
   }
+  // ── Ready check: all non-host players must be ready ──
+  const readyPlayers = gameState?.readyPlayers || {};
+  const notReady = players.filter(p => p.id !== myId && !readyPlayers[p.id]);
+  if(notReady.length > 0){
+    const btn=document.getElementById('t_start');
+    if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
+    const names = notReady.map(p=>p.name).join(', ');
+    alert(
+      lang==='ar' ? `لم يستعد بعد: ${names}` :
+      lang==='fr' ? `Pas encore prêt(s) : ${names}` :
+      `Not ready yet: ${names}`
+    );
+    return;
+  }
   if(!cfg.roleCounts) cfg.roleCounts={};
   const _wc=cfg.roleCounts.werewolf??1;
   if(_wc>=n){
@@ -6924,8 +6938,23 @@ function renderGame(){
       _helperEl.style.background=_ok?'rgba(16,185,129,.15)':'rgba(212,160,23,.12)';
       _helperEl.style.border=_ok?'1px solid var(--green)':'1px solid var(--moon)';
       _helperEl.style.color=_ok?'var(--green)':'var(--moon-pale)';
+      // Ready check for start button
+      const _readyMap = gameState?.readyPlayers || {};
+      const _notReadyPlayers = players.filter(p => p.id !== myId && !_readyMap[p.id]);
+      const _allReady = _notReadyPlayers.length === 0;
+      const _startBtn = document.getElementById('t_start');
+      if(_startBtn){
+        _startBtn.disabled = !_allReady;
+        _startBtn.style.opacity = _allReady ? '1' : '0.45';
+        _startBtn.title = _allReady ? '' :
+          (lang==='ar' ? 'بعض اللاعبين لم يستعدوا بعد' :
+           lang==='fr' ? 'Certains joueurs ne sont pas prêts' :
+           'Some players are not ready yet');
+      }
       _helperEl.innerHTML=_ok
-        ?`✅ ${_conn} ${lang==='ar'?'لاعبين — جاهز للبدء!':lang==='fr'?'joueurs — prêt à démarrer !':'players ready — good to go!'}`
+        ? (_allReady
+            ? `✅ ${_conn} ${lang==='ar'?'لاعبين — جاهز للبدء!':lang==='fr'?'joueurs — prêt à démarrer !':'players — good to go!'}`
+            : `✅ ${lang==='ar'?'الأدوار تتطابق':lang==='fr'?'Rôles OK':'Roles match'} &nbsp;·&nbsp; ⏳ ${_notReadyPlayers.length} ${lang==='ar'?'لم يستعدوا':lang==='fr'?'pas prêt(s)':'not ready'}`)
         :`${lang==='ar'?'إجمالي الأدوار':lang==='fr'?'Total rôles':'Total roles'}: <strong>${_total}</strong> &nbsp;·&nbsp; ${lang==='ar'?'متصلون':lang==='fr'?'Connectés':'Connected'}: <strong>${_conn}</strong>`;
     }
   } else if(gameState.status==='playing'){
