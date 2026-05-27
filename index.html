@@ -218,10 +218,11 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .wr-card.wc-clickable{cursor:pointer}
 .wr-card.wc-clickable:hover{border-color:var(--blood-glow);box-shadow:0 0 12px rgba(185,28,28,.2)}
 /* avatar wrapper */
-.wr-av{width:52px;height:52px;border-radius:50%;border:2px solid rgba(212,160,23,.3);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative;flex-shrink:0;transition:border-color .2s}
+.wr-av{width:52px;height:52px;border-radius:50%;border:2px solid rgba(212,160,23,.3);background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative;flex-shrink:0;transition:border-color .2s;clip-path:circle(50% at 50% 50%)}
 .wr-card.wc-host .wr-av{border-color:var(--moon)}
 .wr-card.wc-ready .wr-av{border-color:#10b981}
-.wr-av img,.wr-av svg{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.wr-av img{width:100%;height:100%;object-fit:cover;display:block}
+.wr-av svg{width:100%;height:100%;display:block}
 /* crown overlay */
 .wr-crown{position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:.75rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
 /* name + badge */
@@ -6268,15 +6269,17 @@ function _updateGoogleUI(user){
   }
 }
 
+let _googleSignInPending = false;
 function doGoogleSignIn(){
+  if(_googleSignInPending) return; // prevent duplicate popup
   if(!_fbAuth){
-    // Firebase not ready yet — try init first
     initFBWithRetry(()=>{
       if(_fbAuth) doGoogleSignIn();
       else alert('Could not connect to Google. Please try again.');
     });
     return;
   }
+  _googleSignInPending = true;
   const provider=new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({prompt:'select_account'});
   _fbAuth.signInWithPopup(provider)
@@ -6285,10 +6288,13 @@ function doGoogleSignIn(){
       _updateGoogleUI(_googleUser);
     })
     .catch(err=>{
-      if(err.code!=='auth/popup-closed-by-user'){
+      if(err.code!=='auth/popup-closed-by-user' && err.code!=='auth/cancelled-popup-request'){
         console.error('Google sign-in error',err);
         alert('Sign-in failed: '+err.message);
       }
+    })
+    .finally(()=>{
+      _googleSignInPending = false;
     });
 }
 
@@ -10751,25 +10757,17 @@ function renderLobby(players) {
 
 // ── Avatar helper ─────────────────────────────────────────────────────────
 function _wrGetAvatarHTML(p) {
-  // 1. Custom equipped avatar from map (map may be defined later in the file)
-  const map = window._equippedAvatarMap;
-  const avatarId = map && map[p.id];
-  if (avatarId && typeof AVATARS !== 'undefined') {
-    const av = AVATARS.find(a => a.id === avatarId);
-    if (av) {
-      // Inject a circular clipPath that overrides the hex shape.
-      // We use a unique id per avatar to avoid clipPath id collisions.
-      const uid = 'wr-circ-' + p.id.replace(/[^a-z0-9]/gi,'');
-      const circleClip = `<defs><clipPath id="${uid}"><circle cx="50" cy="51" r="44"/></clipPath></defs>`;
-      // Replace existing <defs>...</defs> block (which contains the hex clipPath)
-      let svg = av.svg;
-      svg = svg.replace(/<defs>[\s\S]*?<\/defs>/, circleClip);
-      // Make every clip-path reference point to our circle
-      svg = svg.replace(/clip-path="url\(#[^)]+\)"/g, `clip-path="url(#${uid})"`);
-      // Remove the hex border polygon (first <polygon .../>)
-      svg = svg.replace(/<polygon[^/]*\/>/, '');
-      svg = svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
-      return svg;
+  // 1. Use the existing _getCircleAvatarHTML if available (already handles border-radius:50%)
+  if (typeof _getCircleAvatarHTML === 'function') {
+    const html = _getCircleAvatarHTML(p.id);
+    if (html) return html;
+  } else {
+    // Fallback: read map directly if _getCircleAvatarHTML not yet defined
+    const map = window._equippedAvatarMap;
+    const avatarId = map && map[p.id];
+    if (avatarId && typeof AVATARS !== 'undefined') {
+      const av = AVATARS.find(a => a.id === avatarId);
+      if (av) return av.svg.replace('<svg ', '<svg style="width:100%;height:100%;display:block;border-radius:50%;" ');
     }
   }
   // 2. Google photo (own player)
