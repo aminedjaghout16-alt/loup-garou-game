@@ -68,6 +68,43 @@
 body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);line-height:1.6;min-height:100vh;letter-spacing:.03em}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
 
+/* ── LEADERBOARD MODAL ── */
+#leaderboardModal{position:fixed;inset:0;z-index:220;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+#leaderboardModal.hidden{display:none!important}
+.lb-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.8rem 1.5rem;width:100%;max-width:500px;box-shadow:0 0 40px rgba(212,160,23,.15)}
+.lb-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.7rem;text-align:center;margin-bottom:1.2rem}
+.lb-filters{display:flex;gap:.5rem;margin-bottom:1rem;justify-content:center}
+.lb-filter-btn{padding:.4rem .8rem;background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s}
+.lb-filter-btn.active{background:var(--moon);color:var(--void);border-color:var(--moon)}
+.lb-entries{max-height:400px;overflow-y:auto}
+.lb-entry{display:flex;align-items:center;padding:.8rem;background:rgba(212,160,23,.06);border-left:3px solid rgba(212,160,23,.3);margin-bottom:.5rem;border-radius:5px;gap:.8rem}
+.lb-rank{font-family:'Creepster',cursive;font-size:1.3rem;color:var(--moon);min-width:30px;text-align:center;font-weight:700}
+.lb-info{flex:1}
+.lb-name{color:var(--moon-pale);font-weight:700;font-size:.95rem}
+.lb-record{font-size:.8rem;color:var(--ghost);opacity:.6;margin-top:.2rem}
+.lb-stats{text-align:right}
+.lb-winrate{color:var(--moon);font-size:.9rem;font-weight:700}
+.lb-coins{color:var(--ghost);opacity:.7;font-size:.8rem;margin-top:.2rem}
+.lb-close{width:100%;padding:.7rem;background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:7px;cursor:pointer;margin-top:1rem;font-family:inherit;transition:.2s}
+.lb-close:hover{background:rgba(212,160,23,.2);border-color:var(--moon)}
+
+/* ── VOTE HISTORY MODAL ── */
+#voteHistoryModal{position:fixed;inset:0;z-index:215;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+#voteHistoryModal.hidden{display:none!important}
+.vh-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.8rem 1.5rem;width:100%;max-width:500px;box-shadow:0 0 40px rgba(212,160,23,.15)}
+.vh-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.5rem;text-align:center;margin-bottom:.5rem}
+.vh-day{font-size:.9rem;color:var(--ghost);opacity:.5;text-align:center;margin-bottom:1rem}
+.vh-entries{max-height:350px;overflow-y:auto;margin-bottom:1rem}
+.vh-entry{display:flex;align-items:center;padding:.6rem;background:rgba(212,160,23,.06);border-left:3px solid rgba(212,160,23,.3);margin-bottom:.4rem;border-radius:5px;gap:.6rem;font-size:.85rem}
+.vh-voter{color:var(--moon-pale);font-weight:700;min-width:100px}
+.vh-arrow{color:var(--blood-glow);font-weight:700}
+.vh-target{color:var(--blood);font-weight:700}
+.vh-summary{text-align:center;padding:.8rem;background:rgba(212,160,23,.08);border-radius:7px;margin-bottom:1rem}
+.vh-summary p{font-size:.9rem;color:var(--ghost);margin:.3rem 0}
+.vh-summary .executed{color:var(--blood-glow);font-weight:700}
+.vh-continue{width:100%;padding:.7rem;background:var(--blood-glow);border:none;color:#fff;border-radius:7px;cursor:pointer;font-family:inherit;transition:.2s}
+.vh-continue:hover{background:var(--blood)}
+
 /* ── PROFILE MODAL ── */
 /* ══ MAIN MENU ══ */
 #mainMenu{position:fixed;inset:0;z-index:200;background:var(--void);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:2.5rem 1.5rem 1.5rem;overflow-y:auto}
@@ -11479,7 +11516,7 @@ window.doVote = function(targetId){
   return _origDoVote(targetId);
 };
 
-// ── Win / game-over SFX + stop music ────────────────────────────────────
+// ── Win / game-over SFX + stop music + UPDATE LEADERBOARD ────────────────
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
   AUDIO.stopMusic();
@@ -11487,10 +11524,127 @@ window.showGameOver = function(result){
   const newlyDeadCount = players.filter(p => !p.alive && _previousAlive && _previousAlive[p.id] === true).length;
   const winDelay = (newlyDeadCount * 4200) + 600;
   setTimeout(() => AUDIO.sfx('win'), winDelay);
+  
+  // Update leaderboard stats
+  if(result && gameState && gameState.players){
+    const winners = result.winners || [];
+    const losingTeam = result.losingTeam || '';
+    Object.entries(gameState.players).forEach(([playerId, player]) => {
+      const won = winners.includes(playerId);
+      updatePlayerStats(player.name, won);
+    });
+  }
+  
   return _origShowGameOver(result);
 };
 
+
 // ── (showGame audio patch merged into main menu patch above) ─────────────
+
+// ════════════════════════════════════════════
+// LEADERBOARD SYSTEM
+// ════════════════════════════════════════════
+const LEADERBOARD_LS_KEY = 'lg_leaderboard';
+const PLAYER_STATS_LS_KEY = 'lg_player_stats';
+
+function getPlayerStats(){
+  try{
+    return JSON.parse(localStorage.getItem(PLAYER_STATS_LS_KEY) || '{}');
+  }catch(e){
+    return {};
+  }
+}
+
+function savePlayerStats(stats){
+  try{
+    localStorage.setItem(PLAYER_STATS_LS_KEY, JSON.stringify(stats));
+  }catch(e){
+    console.log('Could not save player stats');
+  }
+}
+
+function updatePlayerStats(playerName, won){
+  const stats = getPlayerStats();
+  if(!stats[playerName]){
+    stats[playerName] = { wins: 0, losses: 0, lastUpdated: Date.now() };
+  }
+  if(won){
+    stats[playerName].wins += 1;
+  } else {
+    stats[playerName].losses += 1;
+  }
+  stats[playerName].lastUpdated = Date.now();
+  savePlayerStats(stats);
+}
+
+function toggleLeaderboard(){
+  const modal = document.getElementById('leaderboardModal');
+  modal.classList.toggle('hidden');
+  if(!modal.classList.contains('hidden')){
+    renderLeaderboard('all');
+  }
+}
+
+function renderLeaderboard(filter){
+  const stats = getPlayerStats();
+  const entries = Object.entries(stats).map(([name, data]) => {
+    const total = data.wins + data.losses;
+    const winRate = total > 0 ? ((data.wins / total) * 100).toFixed(1) : 0;
+    return { name, ...data, total, winRate };
+  });
+
+  // Sort based on filter
+  if(filter === 'wins'){
+    entries.sort((a, b) => b.wins - a.wins);
+  } else if(filter === 'winrate'){
+    entries.sort((a, b) => parseFloat(b.winRate) - parseFloat(a.winRate));
+  } else {
+    entries.sort((a, b) => b.lastUpdated - a.lastUpdated);
+  }
+
+  // Update filter buttons
+  document.querySelectorAll('.lb-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+    btn.onclick = () => renderLeaderboard(btn.dataset.filter);
+  });
+
+  // Render entries
+  const entriesContainer = document.getElementById('leaderboardEntries');
+  entriesContainer.innerHTML = entries.length === 0 
+    ? '<div style="text-align:center;padding:2rem;color:rgba(232,232,232,.4)">No stats yet. Play some games!</div>'
+    : entries.map((entry, idx) => `
+      <div class="lb-entry">
+        <div class="lb-rank">#${idx + 1}</div>
+        <div class="lb-info">
+          <div class="lb-name">${entry.name}</div>
+          <div class="lb-record">${entry.wins}W - ${entry.losses}L</div>
+        </div>
+        <div class="lb-stats">
+          <div class="lb-winrate">${entry.winRate}%</div>
+          <div class="lb-coins">${entry.wins} wins</div>
+        </div>
+      </div>
+    `).join('');
+}
+
+// Add leaderboard button to main menu
+setTimeout(() => {
+  const mainMenu = document.getElementById('mainMenu');
+  if(mainMenu && !document.getElementById('leaderboardMenuBtn')){
+    const leaderboardBtn = document.createElement('button');
+    leaderboardBtn.id = 'leaderboardMenuBtn';
+    leaderboardBtn.className = 'mn-btn';
+    leaderboardBtn.style.gridColumn = 'span 2';
+    leaderboardBtn.style.marginTop = '0.8rem';
+    leaderboardBtn.innerHTML = '<div class="mn-icon">🏆</div><div class="mn-label">Leaderboard</div>';
+    leaderboardBtn.onclick = toggleLeaderboard;
+    
+    const footer = mainMenu.querySelector('.mn-footer');
+    if(footer){
+      footer.parentNode.insertBefore(leaderboardBtn, footer);
+    }
+  }
+}, 500);
 
 // ════════════════════════════════════════════
 // PHASE MUSIC STATE MACHINE (owned by renderGame)
@@ -11570,5 +11724,27 @@ window.renderGame = function(){
 };
 </script>
 
-</body>
-</html>
+<!-- ── LEADERBOARD MODAL ── -->
+<div id="leaderboardModal" class="hidden">
+  <div class="lb-box">
+    <h2>🏆 Leaderboard</h2>
+    <div class="lb-filters">
+      <button class="lb-filter-btn active" data-filter="all">All Time</button>
+      <button class="lb-filter-btn" data-filter="wins">Most Wins</button>
+      <button class="lb-filter-btn" data-filter="winrate">Win Rate</button>
+    </div>
+    <div class="lb-entries" id="leaderboardEntries"></div>
+    <button class="lb-close" onclick="toggleLeaderboard()">Close</button>
+  </div>
+</div>
+
+<!-- ── VOTE HISTORY MODAL ── -->
+<div id="voteHistoryModal" class="hidden">
+  <div class="vh-box">
+    <h2>📋 Vote History</h2>
+    <div class="vh-day" id="voteHistoryDay"></div>
+    <div class="vh-summary" id="voteHistorySummary"></div>
+    <div class="vh-entries" id="voteHistoryEntries"></div>
+    <button class="vh-continue" onclick="continueAfterVoteHistory()">Continue to Next Phase</button>
+  </div>
+</div>
