@@ -6757,6 +6757,9 @@ function showGame(){
   buildRolesGrid();
   applyTranslations();
   if(typeof initAvatarStore==='function') initAvatarStore();
+  // Silently load store data so equipped avatar is ready for the lobby
+  // without requiring the player to open the shop first
+  if(typeof _loadStoreData==='function') _loadStoreData().catch(()=>{});
 }
 
 // ════════════════════════════════════════════
@@ -10996,12 +10999,12 @@ async function _loadAllPlayerAvatars() {
   if (!gameState || !gameState.players) return;
   const players = Object.values(gameState.players);
   await Promise.all(players.map(async p => {
-    // Only skip if we have a real avatar id cached — retry nulls (failed/no avatar)
-    if (_equippedAvatarMap[p.id]) return;
     if (p.id === myId) {
+      // Use locally loaded equippedAvatar — already fetched by _loadStoreData on join
       _equippedAvatarMap[p.id] = (typeof getEquippedAvatar === 'function') ? (getEquippedAvatar() || null) : null;
       return;
     }
+    // Always fetch fresh from Firebase for other players (never use stale null cache)
     if (!fbOk || !db) return;
     try {
       const snap = await db.ref('users/' + p.id + '/equippedAvatar').once('value');
