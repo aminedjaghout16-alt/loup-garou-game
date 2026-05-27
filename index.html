@@ -11637,31 +11637,55 @@ window.renderGame = function(){
 // LEADERBOARD & VOTE HISTORY SYSTEM
 // ════════════════════════════════════════════
 
-const LB_STATS_KEY = 'lg_player_stats_v2';
+const LB_STATS_KEY = 'lg_player_stats_v2';   // localStorage fallback for guests
 let _currentVoteHistory = [];
 let _currentDayNumber = 1;
 
-// ── localStorage helpers (renamed to avoid collision with Firebase savePlayerStats) ──
-function _lbGetStats(){
+// ── localStorage helpers (guest fallback, no collision with Firebase savePlayerStats) ──
+function _lbLocalGet(){
   try{ return JSON.parse(localStorage.getItem(LB_STATS_KEY) || '{}'); }
   catch(e){ return {}; }
 }
-
-function _lbSaveStats(stats){
+function _lbLocalSet(stats){
   try{ localStorage.setItem(LB_STATS_KEY, JSON.stringify(stats)); }
   catch(e){}
 }
-
-function _lbUpdatePlayer(playerName, won){
+function _lbLocalUpdate(playerName, won){
   if(!playerName || !playerName.trim()) return;
-  const stats = _lbGetStats();
-  if(!stats[playerName]){
-    stats[playerName] = { wins: 0, losses: 0, lastUpdated: Date.now() };
-  }
-  if(won){ stats[playerName].wins += 1; }
-  else    { stats[playerName].losses += 1; }
+  const stats = _lbLocalGet();
+  if(!stats[playerName]) stats[playerName] = { wins:0, losses:0, lastUpdated:0 };
+  if(won) stats[playerName].wins += 1;
+  else    stats[playerName].losses += 1;
   stats[playerName].lastUpdated = Date.now();
-  _lbSaveStats(stats);
+  _lbLocalSet(stats);
+}
+
+// ── Firebase leaderboard helpers ──
+// Each signed-in player is stored at leaderboard/{uid} = { name, wins, losses, lastUpdated }
+// This node is readable by all clients, so the leaderboard is global & synced.
+async function _lbFirebaseUpdate(playerName, won){
+  if(typeof _googleUser === 'undefined' || !_googleUser) return;
+  if(typeof db === 'undefined' || !db) return;
+  const uid = _googleUser.uid;
+  const name = playerName || _googleUser.displayName || _googleUser.email || uid.slice(0,8);
+  try{
+    await db.ref(`leaderboard/${uid}`).transaction(cur => {
+      const s = cur || { name, wins:0, losses:0, lastUpdated:0 };
+      s.name = name; // keep display name current
+      if(won) s.wins = (s.wins||0) + 1;
+      else    s.losses = (s.losses||0) + 1;
+      s.lastUpdated = Date.now();
+      return s;
+    });
+  }catch(e){ console.warn('[LB] Firebase update failed', e); }
+}
+
+async function _lbFirebaseRead(){
+  if(typeof db === 'undefined' || !db) return null;
+  try{
+    const snap = await db.ref('leaderboard').once('value');
+    return snap.val(); // { uid: { name, wins, losses, lastUpdated }, … } or null
+  }catch(e){ console.warn('[LB] Firebase read failed', e); return null; }
 }
 
 // ── Leaderboard UI ──
@@ -11676,29 +11700,51 @@ function toggleLeaderboard(){
 // Expose as openLeaderboard so the main-menu button works
 window.openLeaderboard = function(){ toggleLeaderboard(); };
 
-function renderLeaderboard(filter){
-  const stats = _lbGetStats();
-  const entries = Object.entries(stats).map(([name, data]) => {
-    const total = (data.wins || 0) + (data.losses || 0);
-    const winRate = total > 0 ? ((data.wins / total) * 100).toFixed(1) : '0.0';
-    return { name, wins: data.wins || 0, losses: data.losses || 0, total, winRate, lastUpdated: data.lastUpdated || 0 };
-  });
-
-  if(filter === 'wins'){
-    entries.sort((a, b) => b.wins - a.wins);
-  } else if(filter === 'winrate'){
-    entries.sort((a, b) => parseFloat(b.winRate) - parseFloat(a.winRate));
-  } else {
-    entries.sort((a, b) => b.lastUpdated - a.lastUpdated);
-  }
-
+async function renderLeaderboard(filter){
+  // Update active filter button immediately
   document.querySelectorAll('.lb-filter-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filter);
     btn.onclick = () => renderLeaderboard(btn.dataset.filter);
   });
 
-  const medals = ['🥇','🥈','🥉'];
   const entriesContainer = document.getElementById('leaderboardEntries');
+  entriesContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:rgba(232,232,232,.4)">Loading…</div>';
+
+  // Try Firebase first, fall back to localStorage
+  let rawData = await _lbFirebaseRead();
+  let entries;
+
+  if(rawData && Object.keys(rawData).length > 0){
+    entries = Object.values(rawData).map(data => {
+      const wins   = data.wins   || 0;
+      const losses = data.losses || 0;
+      const total  = wins + losses;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
+      return { name: data.name || '?', wins, losses, total, winRate, lastUpdated: data.lastUpdated || 0 };
+    });
+  } else {
+    // Guest fallback: localStorage
+    const local = _lbLocalGet();
+    entries = Object.entries(local).map(([name, data]) => {
+      const wins   = data.wins   || 0;
+      const losses = data.losses || 0;
+      const total  = wins + losses;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
+      return { name, wins, losses, total, winRate, lastUpdated: data.lastUpdated || 0 };
+    });
+  }
+
+  // Sort — All Time = most wins first (highest wins at top)
+  if(filter === 'winrate'){
+    entries.sort((a, b) => parseFloat(b.winRate) - parseFloat(a.winRate) || b.wins - a.wins);
+  } else if(filter === 'wins'){
+    entries.sort((a, b) => b.wins - a.wins || parseFloat(b.winRate) - parseFloat(a.winRate));
+  } else {
+    // 'all' = All Time: sort by wins desc, tie-break by win rate
+    entries.sort((a, b) => b.wins - a.wins || parseFloat(b.winRate) - parseFloat(a.winRate));
+  }
+
+  const medals = ['🥇','🥈','🥉'];
   entriesContainer.innerHTML = entries.length === 0
     ? '<div style="text-align:center;padding:2rem;color:rgba(232,232,232,.4)">No stats yet. Play some games!</div>'
     : entries.map((entry, idx) => `
@@ -11716,14 +11762,12 @@ function renderLeaderboard(filter){
     `).join('');
 }
 
-// ── Hook into showGameOver to record local stats ──
-// (The audio patch already wrapped showGameOver once; we wrap window.showGameOver
-//  so the chain is: our patch → audio patch → original showGameOver)
+// ── Hook into showGameOver to record stats ──
+// Chain: this patch → audio patch → original showGameOver
 const _lbOrigShowGameOver = window.showGameOver;
 window.showGameOver = function(result){
   try {
     if(result && gameState && gameState.players){
-      // result.winner is a team string: 'werewolf'|'village'|'angel'|'assassin'|…
       const winnerTeam = result.winner || '';
       const isSolo = ['angel','assassin','sectleader','fluteplayer'].includes(winnerTeam);
       Object.values(gameState.players).forEach(player => {
@@ -11735,13 +11779,14 @@ window.showGameOver = function(result){
         } else if(winnerTeam === 'werewolf'){
           won = (typeof ROLES_DEF !== 'undefined' && ROLES_DEF[player.role]?.team === 'werewolf');
         } else {
-          // village win — survivors win
-          won = !!player.alive;
+          won = !!player.alive; // village win — survivors win
         }
-        _lbUpdatePlayer(playerName, won);
+        // Write to Firebase (signed-in) AND localStorage (guest fallback)
+        _lbFirebaseUpdate(playerName, won);
+        _lbLocalUpdate(playerName, won);
       });
     }
-  } catch(e){ console.warn('LB stat update error', e); }
+  } catch(e){ console.warn('[LB] stat update error', e); }
   return _lbOrigShowGameOver(result);
 };
 
