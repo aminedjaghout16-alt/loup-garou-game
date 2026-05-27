@@ -664,6 +664,12 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .winner-close-btn{margin-top:1.5rem;padding:.7rem 2rem;font-family:'Creepster',cursive;font-size:1.1rem;letter-spacing:.08em;background:transparent;border:2px solid var(--moon);color:var(--moon);border-radius:6px;cursor:pointer;opacity:0;animation:winFadeUp .5s 2.2s ease forwards;transition:.2s}
 .winner-close-btn:hover{background:var(--moon);color:var(--void)}
 
+/* ── REMATCH BUTTON ── */
+.rematch-btn{display:block;margin:1.2rem auto 0;padding:.75rem 2.2rem;font-family:'Creepster',cursive;font-size:1.15rem;letter-spacing:.08em;background:linear-gradient(135deg,rgba(185,28,28,.4),rgba(120,0,0,.4));border:2px solid var(--blood-glow);color:#fff;border-radius:8px;cursor:pointer;transition:.2s;width:100%;max-width:360px}
+.rematch-btn:hover{background:linear-gradient(135deg,rgba(185,28,28,.7),rgba(120,0,0,.7));box-shadow:0 4px 18px rgba(185,28,28,.4)}
+.rematch-btn:disabled{opacity:.45;cursor:not-allowed}
+#rematchReadyStatus{margin-top:.8rem;text-align:center;font-size:.82rem;color:var(--ghost);opacity:.7;min-height:2.5rem}
+
 #phaseTransOverlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;pointer-events:none;overflow:hidden}
 #phaseTransOverlay.active{display:flex}
 .ptrans-bg{position:absolute;inset:0;background:var(--void);opacity:0}
@@ -5483,6 +5489,10 @@ function showGameOver(result){
           </div>`;
         }).join('')}
       </div>
+      <button class="rematch-btn" id="rematchBtn" onclick="handleRematch()">
+        ${lang==='ar'?'🔁 طلب إعادة اللعبة':lang==='fr'?'🔁 Revanche !':'🔁 Rematch!'}
+      </button>
+      <div id="rematchReadyStatus"></div>
     </div>`;
   playView.style.display='flex';
 }
@@ -5776,7 +5786,6 @@ function doReady(){
 
 function renderReadyStatus(readyPlayers){
   const el=document.getElementById('readyStatus');
-  if(!el) return;
   const players=Object.values(gameState?.players||{});
   const readyIds=Object.keys(readyPlayers);
   const readyCount=readyIds.length;
@@ -5789,11 +5798,35 @@ function renderReadyStatus(readyPlayers){
     html+=`<span style="padding:.2rem .5rem;border-radius:3px;font-size:.75rem;background:${isReady?'var(--green)':'var(--purple)'};color:${isReady?'#fff':'var(--ghost)'};border:1px solid ${isReady?'var(--green)':'var(--moon)'}">${p.name} ${isReady?'✓':'…'}</span>`;
   });
   html+='</div>';
-  el.innerHTML=html;
+  if(el) el.innerHTML=html;
+
+  // Mirror into the rematch ready status area on the score sheet
+  const rematchStatus=document.getElementById('rematchReadyStatus');
+  if(rematchStatus) rematchStatus.innerHTML=html;
+
+  // Disable rematch button for this player once they've clicked
+  const rematchBtn=document.getElementById('rematchBtn');
+  if(rematchBtn && myId && readyIds.includes(myId)){
+    rematchBtn.disabled=true;
+    rematchBtn.textContent=lang==='ar'?'✓ في انتظار الآخرين…':lang==='fr'?'✓ En attente des autres…':'✓ Waiting for others…';
+  }
 
   // If all ready and I'm leader, restart the game (guard _gameOver to prevent double-trigger)
   if(isLeader && !_gameOver && readyCount>=totalCount && totalCount>0){
     doRestart();
+  }
+}
+
+function handleRematch(){
+  const btn=document.getElementById('rematchBtn');
+  if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'✓ في انتظار الآخرين…':lang==='fr'?'✓ En attente des autres…':'✓ Waiting for others…'; }
+  doReady();
+  // If Firebase, start listening for readyPlayers updates to render who's ready
+  if(fbOk&&db&&roomCode){
+    db.ref(`games/${roomCode}/readyPlayers`).on('value',snap=>{
+      const rp=snap.val()||{};
+      renderReadyStatus(rp);
+    });
   }
 }
 
