@@ -11473,9 +11473,19 @@ document.addEventListener('touchstart', function(e){
   if(t) AUDIO.sfx('click');
 }, { capture: true, passive: true });
 
-// ── Phase SFX only — music is owned entirely by the renderGame hook below ─
+// ── Phase SFX + VOTE HISTORY RECAP ─────────────────────────────────────
 const _origMaybeShowPhaseTransition = maybeShowPhaseTransition;
 window.maybeShowPhaseTransition = function(newPhase, delayMs){
+  // Show vote recap when transitioning FROM day phase
+  if(window._audioSfxLastPhase === 'day' && newPhase && newPhase !== 'day'){
+    // Delay the phase transition to show vote recap first
+    setTimeout(() => {
+      showVoteHistoryRecap();
+    }, 300);
+    // Don't call original yet, we'll call it after recap
+    return;
+  }
+  
   const result = _origMaybeShowPhaseTransition(newPhase, delayMs);
   // SFX only — no music calls here (renderGame owns music)
   if(newPhase && newPhase !== window._audioSfxLastPhase){
@@ -11483,6 +11493,8 @@ window.maybeShowPhaseTransition = function(newPhase, delayMs){
     AUDIO.stopLoginAmbient();
     if(newPhase === 'day')   AUDIO.sfx('phaseDay');
     if(newPhase === 'night') AUDIO.sfx('phaseNight');
+    // Initialize vote history for new day
+    if(newPhase === 'day') initVoteHistory();
   }
   return result;
 };
@@ -11509,10 +11521,14 @@ window.showDeathAnimation = function(name, role){
   return _origShowDeathAnimation(name, role);
 };
 
-// ── Vote SFX ─────────────────────────────────────────────────────────────
+// ── Vote SFX + TRACK VOTE HISTORY ────────────────────────────────────
 const _origDoVote = doVote;
 window.doVote = function(targetId){
   AUDIO.sfx('vote');
+  // Record the vote for history
+  if(gameState && gameState.myPlayerId){
+    recordVote(gameState.myPlayerId, targetId);
+  }
   return _origDoVote(targetId);
 };
 
@@ -11540,6 +11556,107 @@ window.showGameOver = function(result){
 
 
 // ── (showGame audio patch merged into main menu patch above) ─────────────
+
+// ════════════════════════════════════════════
+// VOTE HISTORY SYSTEM
+// ════════════════════════════════════════════
+const VOTE_HISTORY_LS_KEY = 'lg_vote_history';
+
+let _currentVoteHistory = [];
+let _currentDayNumber = 1;
+
+function initVoteHistory(){
+  _currentVoteHistory = [];
+  _currentDayNumber = (gameState?.day || 1);
+}
+
+function recordVote(voterId, targetId){
+  if(!gameState || !gameState.players) return;
+  
+  const voter = gameState.players[voterId];
+  const target = gameState.players[targetId];
+  
+  if(voter && target){
+    _currentVoteHistory.push({
+      voter: voter.name,
+      voterId: voterId,
+      target: target.name,
+      targetId: targetId,
+      timestamp: new Date().toLocaleTimeString(),
+      day: _currentDayNumber
+    });
+  }
+}
+
+function getVoteCounts(){
+  const counts = {};
+  _currentVoteHistory.forEach(vote => {
+    counts[vote.targetId] = (counts[vote.targetId] || 0) + 1;
+  });
+  return counts;
+}
+
+function getMostVoted(){
+  const counts = getVoteCounts();
+  if(Object.keys(counts).length === 0) return null;
+  
+  const maxVotes = Math.max(...Object.values(counts));
+  const targets = Object.entries(counts)
+    .filter(([_, v]) => v === maxVotes)
+    .map(([id, _]) => id);
+  
+  return { targetIds: targets, voteCount: maxVotes };
+}
+
+function showVoteHistoryRecap(){
+  const modal = document.getElementById('voteHistoryModal');
+  if(!modal) return;
+  
+  const dayEl = document.getElementById('voteHistoryDay');
+  const summaryEl = document.getElementById('voteHistorySummary');
+  const entriesEl = document.getElementById('voteHistoryEntries');
+  
+  if(!dayEl || !summaryEl || !entriesEl) return;
+  
+  // Day info
+  dayEl.textContent = `Day ${_currentDayNumber}`;
+  
+  // Summary
+  const voteCount = getVoteCounts();
+  const mostVoted = getMostVoted();
+  let summaryHtml = `<p>Total votes cast: <strong>${_currentVoteHistory.length}</strong></p>`;
+  
+  if(mostVoted){
+    const targetName = gameState.players[mostVoted.targetIds[0]]?.name || 'Unknown';
+    summaryHtml += `<p>Most voted: <span class="executed">${targetName}</span> (${mostVoted.voteCount} votes)</p>`;
+  }
+  
+  summaryEl.innerHTML = summaryHtml;
+  
+  // Entries
+  if(_currentVoteHistory.length === 0){
+    entriesEl.innerHTML = '<div style="text-align:center;padding:1rem;color:rgba(232,232,232,.4)">No votes recorded</div>';
+  } else {
+    entriesEl.innerHTML = _currentVoteHistory.map((vote, idx) => `
+      <div class="vh-entry">
+        <div class="vh-voter">${vote.voter}</div>
+        <div class="vh-arrow">→</div>
+        <div class="vh-target">${vote.target}</div>
+      </div>
+    `).join('');
+  }
+  
+  modal.classList.remove('hidden');
+}
+
+function continueAfterVoteHistory(){
+  const modal = document.getElementById('voteHistoryModal');
+  modal.classList.add('hidden');
+  _currentVoteHistory = [];
+  _currentDayNumber += 1;
+  // Call the original phase transition
+  _origMaybeShowPhaseTransition(gameState?.phase === 'day' ? 'night' : 'day', 0);
+}
 
 // ════════════════════════════════════════════
 // LEADERBOARD SYSTEM
@@ -11627,24 +11744,18 @@ function renderLeaderboard(filter){
     `).join('');
 }
 
-// Add leaderboard button to main menu
+// Add leaderboard functionality to existing stats button
 setTimeout(() => {
-  const mainMenu = document.getElementById('mainMenu');
-  if(mainMenu && !document.getElementById('leaderboardMenuBtn')){
-    const leaderboardBtn = document.createElement('button');
-    leaderboardBtn.id = 'leaderboardMenuBtn';
-    leaderboardBtn.className = 'mn-btn';
-    leaderboardBtn.style.gridColumn = 'span 2';
-    leaderboardBtn.style.marginTop = '0.8rem';
-    leaderboardBtn.innerHTML = '<div class="mn-icon">🏆</div><div class="mn-label">Leaderboard</div>';
-    leaderboardBtn.onclick = toggleLeaderboard;
-    
-    const footer = mainMenu.querySelector('.mn-footer');
-    if(footer){
-      footer.parentNode.insertBefore(leaderboardBtn, footer);
-    }
+  const statsBtn = document.getElementById('t_viewstats');
+  if(statsBtn){
+    const originalOnclick = statsBtn.onclick;
+    statsBtn.onclick = function(){
+      // Call original if it exists, then show leaderboard
+      if(typeof originalOnclick === 'function') originalOnclick();
+      toggleLeaderboard();
+    };
   }
-}, 500);
+}, 1000);
 
 // ════════════════════════════════════════════
 // PHASE MUSIC STATE MACHINE (owned by renderGame)
