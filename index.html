@@ -6663,6 +6663,13 @@ async function enterRoom(){
     await ref.child(`players/${myId}`).set(
       {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
     );
+    // After store data loads, patch avatarId in case it was null at join time
+    if(typeof _loadStoreData==='function'){
+      _loadStoreData().then(()=>{
+        const av=(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null;
+        if(av) ref.child(`players/${myId}/avatarId`).set(av).catch(()=>{});
+      }).catch(()=>{});
+    }
     // During setup: remove on disconnect so lobby stays clean.
     // Switched to flag-only once game starts (see live listener below).
     ref.child(`players/${myId}`).onDisconnect().remove();
@@ -10715,6 +10722,11 @@ function renderLobby(players) {
   const amLeader   = isLeader || gameState?.leader === myId;
   const readyPlayers = gameState?.readyPlayers || {};
   grid.innerHTML   = '';
+
+  // Sync avatarIds from fresh gameState into map (catches post-join patches)
+  players.forEach(p => {
+    if (p.avatarId) window._equippedAvatarMap && (window._equippedAvatarMap[p.id] = p.avatarId);
+  });
 
   players.forEach((p, i) => {
     const isHost  = gameState?.leader === p.id;
