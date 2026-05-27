@@ -6656,7 +6656,7 @@ async function enterRoom(){
     }
     // Add self
     await ref.child(`players/${myId}`).set(
-      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}
+      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null)}
     );
     // During setup: remove on disconnect so lobby stays clean.
     // Switched to flag-only once game starts (see live listener below).
@@ -6742,7 +6742,7 @@ function offlineEnter(){
   console.log('Offline mode');
   gameState={
     code:roomCode, leader:myId, status:'setup', phase:'setup',
-    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now()}},
+    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null)}},
     config:cfg, chat:[], createdAt:Date.now()
   };
   showGame();
@@ -11006,8 +11006,11 @@ async function _loadAllPlayerAvatars() {
     }
     // Always fetch fresh from Firebase for other players (never use stale null cache)
     if (!fbOk || !db) return;
+    // Use stored uid field first, fall back to p.id (which equals uid for Google users)
+    const lookupUid = p.uid || p.id;
+    if (!lookupUid || lookupUid.startsWith('p_')) return; // guest, no avatar
     try {
-      const snap = await db.ref('users/' + p.id + '/equippedAvatar').once('value');
+      const snap = await db.ref('users/' + lookupUid + '/equippedAvatar').once('value');
       _equippedAvatarMap[p.id] = snap.val() || null;
     } catch(e) { _equippedAvatarMap[p.id] = null; }
   }));
