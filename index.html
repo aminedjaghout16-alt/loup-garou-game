@@ -10535,52 +10535,91 @@ function renderLobby(players) {
 
   const grid = document.getElementById('lobbyGrid');
   if (!grid) return;
-  const amLeader   = isLeader || gameState?.leader === myId;
+  const amLeader    = isLeader || gameState?.leader === myId;
   const readyPlayers = gameState?.readyPlayers || {};
-  grid.innerHTML   = '';
 
   // Sync avatarIds from fresh gameState into map (catches post-join patches)
   players.forEach(p => {
     if (p.avatarId) window._equippedAvatarMap && (window._equippedAvatarMap[p.id] = p.avatarId);
   });
 
+  // ── Diff update: patch existing cards, add new ones, remove stale ones ──
+  // This avoids wiping grid.innerHTML which causes the flicker.
+  const existingCards = {};
+  grid.querySelectorAll('.wr-card[data-pid]').forEach(el => {
+    existingCards[el.dataset.pid] = el;
+  });
+  const seenIds = new Set();
+
   players.forEach((p, i) => {
     const isHost  = gameState?.leader === p.id;
     const isMe    = p.id === myId;
     const isReady = isHost || !!readyPlayers[p.id];
+    seenIds.add(p.id);
 
-    // Build card classes
     let cls = 'wr-card';
-    if (isHost)  cls += ' wc-host';
-    else if (isReady) cls += ' wc-ready';
-    if (isMe)    cls += ' wc-me';
+    if (isHost)        cls += ' wc-host';
+    else if (isReady)  cls += ' wc-ready';
+    if (isMe)          cls += ' wc-me';
     if (amLeader && !isMe) cls += ' wc-clickable';
 
-    // Avatar
-    const avatarHTML = _wrGetAvatarHTML(p);
-
-    // Badge
     const badge = isHost
       ? '<span class="wr-badge wb-host">👑 Host</span>'
       : isReady
         ? '<span class="wr-badge wb-ready">✓ Ready</span>'
         : '<span class="wr-badge wb-wait">Waiting</span>';
 
-    const card = document.createElement('div');
-    card.className = cls;
-    card.style.animationDelay = (i * 0.05) + 's';
-    card.dataset.pid = p.id;
-    card.innerHTML = `
-      ${isHost ? '<div class="wr-crown">👑</div>' : ''}
-      <div class="wr-av">${avatarHTML}</div>
-      <div class="wr-name">${p.name}${isMe ? ' (you)' : ''}</div>
-      ${badge}`;
+    const existingCard = existingCards[p.id];
 
-    // Host tap → context menu
-    if (amLeader && !isMe) {
-      card.addEventListener('click', (e) => wrOpenCtx(e, p));
+    if (existingCard) {
+      // Card already exists — update only what changed, no DOM removal/re-add
+      if (existingCard.className !== cls) existingCard.className = cls;
+
+      // Update badge in-place
+      const badgeEl = existingCard.querySelector('.wr-badge');
+      if (badgeEl && badgeEl.outerHTML !== badge) badgeEl.outerHTML = badge;
+
+      // Update name in case it changed
+      const nameEl = existingCard.querySelector('.wr-name');
+      const nameText = p.name + (isMe ? ' (you)' : '');
+      if (nameEl && nameEl.textContent !== nameText) nameEl.textContent = nameText;
+
+      // Re-attach click listener for host context menu (cheap, idempotent via clone)
+      if (amLeader && !isMe) {
+        const fresh = existingCard.cloneNode(true);
+        fresh.addEventListener('click', (e) => wrOpenCtx(e, p));
+        existingCard.replaceWith(fresh);
+        existingCards[p.id] = fresh;
+      }
+
+      // Keep card in correct order
+      if (grid.children[i] !== existingCards[p.id]) {
+        grid.appendChild(existingCards[p.id]);
+      }
+    } else {
+      // New player — build and insert card
+      const avatarHTML = _wrGetAvatarHTML(p);
+      const card = document.createElement('div');
+      card.className = cls;
+      card.style.animationDelay = (i * 0.05) + 's';
+      card.dataset.pid = p.id;
+      card.innerHTML = `
+        ${isHost ? '<div class="wr-crown">👑</div>' : ''}
+        <div class="wr-av">${avatarHTML}</div>
+        <div class="wr-name">${p.name}${isMe ? ' (you)' : ''}</div>
+        ${badge}`;
+      if (amLeader && !isMe) {
+        card.addEventListener('click', (e) => wrOpenCtx(e, p));
+      }
+      // Insert at correct position
+      const refNode = grid.children[i] || null;
+      grid.insertBefore(card, refNode);
     }
-    grid.appendChild(card);
+  });
+
+  // Remove cards for players who left
+  Object.keys(existingCards).forEach(pid => {
+    if (!seenIds.has(pid)) existingCards[pid].remove();
   });
 
   // Ready button
