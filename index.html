@@ -11746,16 +11746,14 @@ function renderLeaderboard(filter){
 
 // Add leaderboard functionality to existing stats button
 setTimeout(() => {
-  const statsBtn = document.getElementById('t_viewstats');
-  if(statsBtn){
-    const originalOnclick = statsBtn.onclick;
-    statsBtn.onclick = function(){
-      // Call original if it exists, then show leaderboard
-      if(typeof originalOnclick === 'function') originalOnclick();
-      toggleLeaderboard();
-    };
-  }
-}, 1000);
+  const _origOpenProfileModal = window.openProfileModal;
+  window.openProfileModal = async function(){
+    // Show the leaderboard instead of the profile modal
+    toggleLeaderboard();
+    // Optionally still call original if needed
+    // await _origOpenProfileModal();
+  };
+}, 500);
 
 // ════════════════════════════════════════════
 // PHASE MUSIC STATE MACHINE (owned by renderGame)
