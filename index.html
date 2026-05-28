@@ -7029,6 +7029,10 @@ function renderGame(){
     }
   } else if(gameState.status==='playing'){
     document.getElementById('setupView').style.display='none';
+    // If playView still has the score sheet / rematch button from last game, rebuild it
+    if(document.getElementById('rematchBtn')){
+      _resetPlayView();
+    }
     document.getElementById('playView').style.display='flex';
     document.getElementById('hStatus').textContent=tr('st_playing');
     document.getElementById('hPhase').textContent=gameState.phase==='night'?tr('ph_night'):tr('ph_day');
