@@ -836,31 +836,29 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 #voiceSettingsBtn{background:none;border:none;color:var(--ghost);font-size:1rem;cursor:pointer;padding:2px 4px;opacity:.6;transition:.15s}
 #voiceSettingsBtn:hover{opacity:1}
 
-/* ── FIX: Z-INDEX LAYERING ── */
+/* ══ Z-INDEX FIXES: modals always on top ══ */
 #leaderboardModal{z-index:9999!important}
 #voteHistoryModal{z-index:9998!important}
 #coinPowersModal{z-index:9997!important}
-#mainMenu{z-index:9996!important}
-#roomCreateModal{z-index:9995!important}
-#publicRoomsModal{z-index:9994!important}
-#profileModal{z-index:9993!important}
+#profileModal{z-index:9996!important}
+#mainMenu{z-index:9995!important}
+#roomCreateModal{z-index:9994!important}
+#codeReveal{z-index:9994!important}
+#publicRoomsModal{z-index:9993!important}
 #loginScreen{z-index:9992!important}
-#gameScreen{z-index:100!important}
-#pttBtn{z-index:9999!important}
-#voiceBar{z-index:9999!important}
-.right-panel{z-index:10!important;position:relative}
-.left-panel{z-index:10!important;position:relative}
-button{position:relative;z-index:11!important}
+#voiceBar{z-index:9990!important}
+#pttBtn{z-index:9991!important;position:relative}
+#audioPanel{z-index:9989!important}
+#gameScreen{z-index:10!important}
+.right-panel{position:relative;z-index:10!important}
+.left-panel{position:relative;z-index:10!important}
 
-/* ── FIX: CHAT TEXT OVERFLOW ── */
-.chat-msgs{overflow-y:auto!important;overflow-x:hidden!important;word-wrap:break-word;word-break:break-word;scrollbar-width:thin;scrollbar-color:var(--moon) var(--void)}
-.chat-msgs::-webkit-scrollbar{width:5px}
-.chat-msgs::-webkit-scrollbar-track{background:var(--void)}
-.chat-msgs::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
-.cm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:normal}
+/* ══ CHAT TEXT OVERFLOW FIXES ══ */
+.chat-msgs{overflow-y:auto!important;overflow-x:hidden!important;word-wrap:break-word;word-break:break-word}
+.cm{max-width:100%;overflow:hidden;word-wrap:break-word;word-break:break-word}
 .cm .cn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cm .ct{max-width:100%;overflow:hidden;word-wrap:break-word;word-break:break-word}
-.cm,.chat-inp,.chat-hdr,.right-panel,.left-panel{position:relative;box-sizing:border-box}
+.cm .ct{max-width:100%;overflow:hidden;word-wrap:break-word;word-break:break-word;white-space:normal}
+.chat-msgs,.chat-inp,.chat-hdr,.right-panel,.left-panel{box-sizing:border-box}
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -3575,22 +3573,23 @@ async function initVoiceChat(){
   document.getElementById('voiceBar').classList.add('visible');
   document.getElementById('voiceConnStatus').textContent = 'Ready';
 
-  // PTT button — FIX: null-check + mouse/touch/pointer events
+  // PTT button — robust: mouse + touch + pointer, null-checked
   const btn = document.getElementById('pttBtn');
   if(btn){
     btn.disabled = false;
     btn.removeAttribute('disabled');
-    btn.addEventListener('mousedown',  (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); });
-    btn.addEventListener('mouseup',    (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); });
-    btn.addEventListener('mouseleave', (e)=>{ if(_pttActive) _stopSpeaking(); });
-    btn.addEventListener('touchstart', (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); }, { passive:false });
-    btn.addEventListener('touchend',   (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); }, { passive:false });
-    btn.addEventListener('pointerdown',(e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); });
-    btn.addEventListener('pointerup',  (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); });
-    btn.addEventListener('pointerleave',(e)=>{ if(_pttActive) _stopSpeaking(); });
-    _voiceLog('PTT button initialized successfully');
+    btn.addEventListener('mousedown',   (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); });
+    btn.addEventListener('mouseup',     (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); });
+    btn.addEventListener('mouseleave',  ()=>{ if(_pttActive) _stopSpeaking(); });
+    btn.addEventListener('touchstart',  (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); }, { passive:false });
+    btn.addEventListener('touchend',    (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); }, { passive:false });
+    btn.addEventListener('touchcancel', ()=>{ if(_pttActive) _stopSpeaking(); });
+    btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); });
+    btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); });
+    btn.addEventListener('pointerleave',()=>{ if(_pttActive) _stopSpeaking(); });
+    _voiceLog('PTT button ready');
   } else {
-    _voiceLog('ERROR: pttBtn element not found!');
+    _voiceLog('ERROR: pttBtn not found');
   }
 
   // Spacebar PTT
@@ -3604,21 +3603,17 @@ async function initVoiceChat(){
   await _joinCorrectChannels();
   _listenSpeakingIndicators();
 
-  // FIX: Page visibility handler — suppress Agora hidden-tab warnings & stop PTT on tab switch
-  document.addEventListener('visibilitychange', async function(){
+  // Page visibility: stop PTT when tab hidden, suppress Agora warnings
+  document.addEventListener('visibilitychange', async ()=>{
     if(document.hidden){
-      if(_voiceEnabled && _pttActive){ _voiceLog('Page hidden - pausing voice'); await _stopSpeaking(); }
+      if(_pttActive) await _stopSpeaking();
       if(typeof AgoraRTC !== 'undefined'){ try{ AgoraRTC.setLogLevel(0); }catch(e){} }
     } else {
-      _voiceLog('Page visible - resuming voice');
       if(typeof AgoraRTC !== 'undefined'){ try{ AgoraRTC.setLogLevel(4); }catch(e){} }
     }
   });
-  window.addEventListener('blur', async function(){
-    if(_voiceEnabled && _pttActive){ _voiceLog('Window lost focus - stopping voice'); await _stopSpeaking(); }
-  });
-  window.addEventListener('focus', function(){ _voiceLog('Window regained focus'); });
-  window.addEventListener('beforeunload', async function(){ if(_voiceEnabled) await _leaveAllChannels(); });
+  window.addEventListener('blur', async ()=>{ if(_pttActive) await _stopSpeaking(); });
+  window.addEventListener('beforeunload', async ()=>{ if(_voiceEnabled) await _leaveAllChannels(); });
 }
 
 function _isTyping(e){
@@ -4749,7 +4744,7 @@ window.addEventListener('load', () => {
 <body>
 <!-- VOICE CHAT BAR -->
 <div id="voiceBar">
-  <button id="pttBtn" title="Hold to talk (Space)" disabled>🎤</button>
+  <button id="pttBtn" title="Hold to talk (Space)">🎤</button>
   <div style="display:flex;flex-direction:column;gap:2px">
     <div id="voiceChannelLabel">Connecting…</div>
     <div id="voiceConnStatus"></div>
