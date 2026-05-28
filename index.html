@@ -818,6 +818,23 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .audio-slider::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--moon);cursor:pointer;box-shadow:0 0 4px rgba(212,160,23,.5)}
 .audio-mute{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--moon);border-radius:4px;padding:0 .35rem;font-size:.75rem;cursor:pointer;height:20px;line-height:1;font-family:inherit;transition:.15s}
 .audio-mute:hover{background:rgba(212,160,23,.15)}
+
+/* ══════════════════════════════════════════
+   VOICE CHAT STYLES
+══════════════════════════════════════════ */
+#voiceBar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:9999;display:none;align-items:center;gap:10px;background:rgba(10,10,26,.92);border:1.5px solid rgba(185,28,28,.4);border-radius:40px;padding:8px 18px;box-shadow:0 4px 24px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
+#voiceBar.visible{display:flex}
+#pttBtn{width:54px;height:54px;border-radius:50%;border:2px solid var(--blood-glow);background:rgba(185,28,28,.2);cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;transition:.15s;user-select:none;-webkit-user-select:none;touch-action:none}
+#pttBtn.active{background:rgba(185,28,28,.75);border-color:#ff4444;box-shadow:0 0 18px rgba(255,68,68,.6);transform:scale(1.08)}
+#pttBtn:disabled{opacity:.35;cursor:not-allowed}
+#voiceChannelLabel{font-size:.7rem;color:var(--ghost);text-align:center;min-width:70px;letter-spacing:.05em}
+#voiceMicStatus{font-size:.75rem;color:var(--moon-pale);display:flex;align-items:center;gap:4px}
+#voiceConnStatus{font-size:.62rem;color:var(--ghost);opacity:.6}
+.pc-speaking-ring{position:absolute;inset:-4px;border-radius:50%;border:3px solid #22c55e;box-shadow:0 0 12px rgba(34,197,94,.7);animation:speakPulse .8s ease-in-out infinite;pointer-events:none;z-index:5}
+@keyframes speakPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.06)}}
+.pc-speaking-name{color:#22c55e!important;text-shadow:0 0 8px rgba(34,197,94,.5)}
+#voiceSettingsBtn{background:none;border:none;color:var(--ghost);font-size:1rem;cursor:pointer;padding:2px 4px;opacity:.6;transition:.15s}
+#voiceSettingsBtn:hover{opacity:1}
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -3441,7 +3458,407 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised with match reward fix)
-// Drop this entire block into index.html just before </body>,
+// Drop this entire block into index.html just before 
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   AGORA VOICE CHAT
+   Channels:
+     alive   — all living players (day + night open)
+     wolves  — werewolves only, night only
+     dead    — dead players; also receive alive channel read-only
+   Push-to-talk: hold #pttBtn or SPACE to unmute
+   Speaking indicator: Firebase games/{room}/speaking/{myId} = true/false
+══════════════════════════════════════════════════════════════════ */
+
+// ── CONFIG ─────────────────────────────────────────────────────────
+// Replace with your Agora App ID (get one free at console.agora.io)
+const AGORA_APP_ID = 'YOUR_AGORA_APP_ID_HERE';
+
+// ── STATE ──────────────────────────────────────────────────────────
+let _agoraInited   = false;
+let _agoraClients  = {};   // { alive: AgoraRTCClient, wolves: ..., dead: ... }
+let _agoraTracks   = {};   // { alive: [mic,null], wolves: ..., dead: ... }
+let _agoraJoined   = {};   // { alive: bool, wolves: bool, dead: bool }
+let _agoraUid      = {};   // uid returned per channel
+let _pttActive     = false;
+let _voiceEnabled  = false;
+let _currentChannels = []; // which channels I'm active in right now
+let _speakingRef   = null; // Firebase ref for my speaking state
+let _speakingListener = null;
+let _localMicTrack = null;
+let _wolfMicTrack  = null;
+let _deadMicTrack  = null;
+let _remoteUsers   = {};   // uid → { channel, audioTrack }
+let _publishedTo   = null; // which channel my mic is currently published to
+
+// ── HELPERS ────────────────────────────────────────────────────────
+function _voiceLog(...a){ console.log('[Voice]', ...a); }
+
+function _isWolfPlayer(){
+  if(!myRole || !gameState) return false;
+  return typeof isWolfRole === 'function' ? isWolfRole(myRole, gameState) : false;
+}
+
+function _amAlive(){
+  return gameState?.players?.[myId]?.alive !== false;
+}
+
+function _voiceChannelName(type){
+  // Scope channels to this room so different rooms don't bleed
+  return `${roomCode}_${type}`;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────
+async function initVoiceChat(){
+  if(_agoraInited) return;
+  if(!roomCode || !myId || typeof AgoraRTC === 'undefined'){
+    _voiceLog('Agora SDK not loaded or room not ready');
+    return;
+  }
+  if(AGORA_APP_ID === 'YOUR_AGORA_APP_ID_HERE'){
+    _voiceLog('Agora App ID not configured — voice chat disabled');
+    document.getElementById('voiceBar').classList.remove('visible');
+    return;
+  }
+  _agoraInited = true;
+  AgoraRTC.setLogLevel(4); // suppress verbose logs
+
+  // Create clients for each channel
+  for(const ch of ['alive','wolves','dead']){
+    const client = AgoraRTC.createClient({ mode:'rtc', codec:'vp8' });
+    _agoraClients[ch] = client;
+    _agoraJoined[ch] = false;
+
+    client.on('user-published', async (user, mediaType)=>{
+      if(mediaType !== 'audio') return;
+      await client.subscribe(user, 'audio');
+      const track = user.audioTrack;
+      if(track){
+        track.play();
+        if(!_remoteUsers[user.uid]) _remoteUsers[user.uid] = {};
+        _remoteUsers[user.uid][ch] = track;
+      }
+    });
+
+    client.on('user-unpublished', (user)=>{
+      if(_remoteUsers[user.uid]) delete _remoteUsers[user.uid][ch];
+    });
+  }
+
+  _voiceEnabled = true;
+  document.getElementById('voiceBar').classList.add('visible');
+  document.getElementById('voiceConnStatus').textContent = 'Ready';
+
+  // PTT button
+  const btn = document.getElementById('pttBtn');
+  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); _startSpeaking(); });
+  btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); _stopSpeaking(); });
+  btn.addEventListener('pointerleave',(e)=>{ if(_pttActive) _stopSpeaking(); });
+
+  // Spacebar PTT
+  document.addEventListener('keydown',(e)=>{
+    if(e.code==='Space' && !e.repeat && !_isTyping(e)) _startSpeaking();
+  });
+  document.addEventListener('keyup',(e)=>{
+    if(e.code==='Space' && !_isTyping(e)) _stopSpeaking();
+  });
+
+  await _joinCorrectChannels();
+  _listenSpeakingIndicators();
+}
+
+function _isTyping(e){
+  const t = e.target?.tagName;
+  return t==='INPUT' || t==='TEXTAREA' || e.target?.isContentEditable;
+}
+
+// ── JOIN / LEAVE CHANNELS ─────────────────────────────────────────
+async function _joinCorrectChannels(){
+  if(!_voiceEnabled || !roomCode || !myId) return;
+
+  const phase  = gameState?.phase;
+  const status = gameState?.status;
+  if(!status || status==='setup' || status.startsWith('gameover')) {
+    await _leaveAllChannels();
+    _updateVoiceUI();
+    return;
+  }
+
+  const amAlive  = _amAlive();
+  const amWolf   = _isWolfPlayer();
+  const isNight  = phase === 'night';
+  const isDay    = phase === 'day';
+
+  // Decide which channels to join
+  const wantAlive  = amAlive && isDay;          // alive players hear/talk on day
+  const wantAliveNight = amAlive && !amWolf;    // alive non-wolves: hear alive at night (listen only)
+  const wantWolves = amWolf && isNight;         // wolves: private channel at night
+  const wantDead   = !amAlive;                  // dead players: always on dead channel
+
+  // Always join alive channel if alive (for receiving), wolves if wolf+night, dead if dead
+  const joinAlive  = amAlive;   // join always when alive (mute handled by PTT)
+  const joinWolves = amWolf;    // wolves always joined to their channel
+  const joinDead   = !amAlive;
+
+  // Join/leave alive
+  if(joinAlive && !_agoraJoined['alive'])  await _joinChannel('alive');
+  if(!joinAlive && _agoraJoined['alive'])  await _leaveChannel('alive');
+
+  // Join/leave wolves
+  if(joinWolves && !_agoraJoined['wolves']) await _joinChannel('wolves');
+  if(!joinWolves && _agoraJoined['wolves']) await _leaveChannel('wolves');
+
+  // Join/leave dead
+  if(joinDead && !_agoraJoined['dead'])   await _joinChannel('dead');
+  if(!joinDead && _agoraJoined['dead'])   await _leaveChannel('dead');
+
+  // Dead players also receive the alive channel (listen-only — they don't publish there)
+  if(!amAlive && !_agoraJoined['alive'])  await _joinChannel('alive');
+
+  _updateVoiceUI();
+}
+
+async function _joinChannel(ch){
+  if(!_agoraClients[ch] || _agoraJoined[ch]) return;
+  try {
+    const uid = await _agoraClients[ch].join(AGORA_APP_ID, _voiceChannelName(ch), null);
+    _agoraUid[ch] = uid;
+    _agoraJoined[ch] = true;
+    _voiceLog(`Joined ${ch} as uid ${uid}`);
+  } catch(e){ _voiceLog(`Join ${ch} failed:`, e); }
+}
+
+async function _leaveChannel(ch){
+  if(!_agoraJoined[ch]) return;
+  try {
+    // Unpublish mic if we published to this channel
+    if(_publishedTo === ch) await _unpublishMic(ch);
+    await _agoraClients[ch].leave();
+    _agoraJoined[ch] = false;
+    _voiceLog(`Left ${ch}`);
+  } catch(e){ _voiceLog(`Leave ${ch} failed:`, e); }
+}
+
+async function _leaveAllChannels(){
+  for(const ch of ['alive','wolves','dead']) await _leaveChannel(ch);
+}
+
+// ── PTT: SPEAKING ─────────────────────────────────────────────────
+async function _startSpeaking(){
+  if(_pttActive || !_voiceEnabled) return;
+  _pttActive = true;
+
+  // Decide which channel to publish to based on current state
+  const ch = _getSpeakChannel();
+  if(!ch){ _pttActive=false; return; }
+
+  document.getElementById('pttBtn').classList.add('active');
+
+  try {
+    if(!_localMicTrack){
+      _localMicTrack = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig:'music_standard' });
+    }
+    if(!_agoraJoined[ch]) await _joinChannel(ch);
+    await _agoraClients[ch].publish([_localMicTrack]);
+    _publishedTo = ch;
+    _voiceLog('Publishing to', ch);
+    _setSpeaking(true);
+  } catch(e){
+    _voiceLog('Start speaking error:', e);
+    _pttActive = false;
+    document.getElementById('pttBtn').classList.remove('active');
+  }
+}
+
+async function _stopSpeaking(){
+  if(!_pttActive) return;
+  _pttActive = false;
+  document.getElementById('pttBtn').classList.remove('active');
+  _setSpeaking(false);
+  if(_publishedTo) await _unpublishMic(_publishedTo);
+}
+
+async function _unpublishMic(ch){
+  try {
+    if(_localMicTrack && _agoraJoined[ch]){
+      await _agoraClients[ch].unpublish([_localMicTrack]);
+    }
+  } catch(e){ _voiceLog('Unpublish error:', e); }
+  _publishedTo = null;
+}
+
+function _getSpeakChannel(){
+  // Which channel should this player speak on?
+  const amAlive = _amAlive();
+  const amWolf  = _isWolfPlayer();
+  const isNight = gameState?.phase === 'night';
+
+  if(!amAlive) return 'dead';              // dead → dead channel always
+  if(amWolf && isNight) return 'wolves';   // wolf at night → wolf channel
+  return 'alive';                          // everyone else → alive channel
+}
+
+// ── SPEAKING INDICATORS VIA FIREBASE ─────────────────────────────
+function _setSpeaking(isSpeaking){
+  if(!fbOk || !db || !roomCode || !myId) return;
+  try {
+    db.ref(`games/${roomCode}/speaking/${myId}`).set(isSpeaking ? true : null);
+  } catch(e){}
+}
+
+function _listenSpeakingIndicators(){
+  if(!fbOk || !db || !roomCode) return;
+  if(_speakingListener) db.ref(`games/${roomCode}/speaking`).off('value', _speakingListener);
+  _speakingListener = db.ref(`games/${roomCode}/speaking`).on('value', snap=>{
+    const speaking = snap.val() || {};
+    // Update player circle nodes
+    document.querySelectorAll('[id^="pcnode_"]').forEach(node=>{
+      const pid = node.id.replace('pcnode_','');
+      const ring = node.querySelector('.pc-speaking-ring');
+      const nameEl = node.querySelector('.pc-name');
+      if(speaking[pid]){
+        if(!ring){
+          const r = document.createElement('div');
+          r.className = 'pc-speaking-ring';
+          const wrap = node.querySelector('.pc-avatar-wrap');
+          if(wrap) wrap.appendChild(r);
+        }
+        if(nameEl) nameEl.classList.add('pc-speaking-name');
+      } else {
+        if(ring) ring.remove();
+        if(nameEl) nameEl.classList.remove('pc-speaking-name');
+      }
+    });
+  });
+}
+
+// ── MUTE RULES: enforce who hears who ────────────────────────────
+function _applyMuteRules(){
+  if(!_voiceEnabled || !gameState) return;
+  const amAlive = _amAlive();
+  const amWolf  = _isWolfPlayer();
+  const isNight = gameState?.phase === 'night';
+
+  // On alive channel: mute remote alive players at night if I'm wolf (I hear wolf channel instead)
+  // Dead players hear alive channel but can't speak there — no muting needed (they just don't publish)
+  // Wolf channel: only wolves are in it, so no muting needed there
+  // This is mostly handled by channel membership, but for extra safety mute alive channel remotes at night for wolves
+  Object.entries(_remoteUsers).forEach(([uid, chMap])=>{
+    if(chMap['alive']){
+      const shouldMute = amWolf && isNight;
+      if(shouldMute) chMap['alive'].setVolume(0);
+      else chMap['alive'].setVolume(100);
+    }
+  });
+}
+
+// ── UI ────────────────────────────────────────────────────────────
+function _updateVoiceUI(){
+  if(!_voiceEnabled) return;
+  const btn = document.getElementById('pttBtn');
+  const label = document.getElementById('voiceChannelLabel');
+  const status = document.getElementById('voiceConnStatus');
+
+  const amAlive = _amAlive();
+  const amWolf  = _isWolfPlayer();
+  const isNight = gameState?.phase === 'night';
+  const gs = gameState?.status;
+
+  if(!gs || gs==='setup' || (gs && gs.startsWith('gameover'))){
+    btn.disabled = true;
+    label.textContent = 'Game not active';
+    return;
+  }
+
+  btn.disabled = false;
+
+  if(!amAlive){
+    label.textContent = lang==='ar'?'💀 قناة الموتى':lang==='fr'?'💀 Canal Morts':'💀 Dead Channel';
+    status.textContent = lang==='ar'?'تسمع الأحياء':lang==='fr'?'Vous entendez les vivants':'Hearing alive players';
+  } else if(amWolf && isNight){
+    label.textContent = lang==='ar'?'🐺 قناة الذئاب':lang==='fr'?'🐺 Canal Loups':'🐺 Wolf Channel';
+    status.textContent = lang==='ar'?'سري':lang==='fr'?'Privé':'Private';
+  } else {
+    label.textContent = lang==='ar'?'🎙️ دردشة صوتية':lang==='fr'?'🎙️ Chat Vocal':'🎙️ Voice Chat';
+    status.textContent = lang==='ar'?'اضغط للكلام':lang==='fr'?'Maintenir pour parler':'Hold to talk';
+  }
+}
+
+// ── RESET ON REMATCH ──────────────────────────────────────────────
+async function resetVoiceChat(){
+  _setSpeaking(false);
+  await _leaveAllChannels();
+  if(_localMicTrack){ _localMicTrack.close(); _localMicTrack=null; }
+  _agoraInited = false;
+  _pttActive = false;
+  _publishedTo = null;
+  document.getElementById('pttBtn').classList.remove('active');
+}
+
+// ── HOOK INTO GAME EVENTS ─────────────────────────────────────────
+// Called whenever game state changes (phase, alive status, etc.)
+function onVoiceGameStateChange(){
+  if(!_voiceEnabled || !gameState) return;
+  _joinCorrectChannels();
+  _applyMuteRules();
+  _updateVoiceUI();
+}
+
+// Patch renderGame to also update voice
+const _origRenderGame = typeof renderGame === 'function' ? renderGame : null;
+// We hook in after page load since renderGame is defined later
+window.addEventListener('load', ()=>{
+  // Delay to let all game JS initialize
+  setTimeout(()=>{
+    if(typeof renderGame === 'function'){
+      const _rg = renderGame;
+      window.renderGame = function(){
+        _rg.apply(this, arguments);
+        onVoiceGameStateChange();
+      };
+      // Also hook renderPlayerList for speaking indicators
+      if(typeof renderPlayerList === 'function'){
+        const _rpl = renderPlayerList;
+        window.renderPlayerList = function(){
+          _rpl.apply(this, arguments);
+          _listenSpeakingIndicators();
+        };
+      }
+    }
+  }, 800);
+});
+
+// Start voice chat when the player enters a game room
+// Hook into showGame (called when Firebase room is joined)
+const _origShowGame = window.showGame;
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    if(typeof showGame === 'function'){
+      const _sg = showGame;
+      window.showGame = function(){
+        _sg.apply(this, arguments);
+        setTimeout(initVoiceChat, 600);
+      };
+    }
+  }, 900);
+});
+
+// Clean up on game end / rematch
+const _origHandleRematch = window.handleRematch;
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    if(typeof handleRematch === 'function'){
+      const _hr = handleRematch;
+      window.handleRematch = async function(){
+        await resetVoiceChat();
+        _hr.apply(this, arguments);
+      };
+    }
+  }, 1000);
+});
+</script>
+
+</body>,
 // after all other scripts (Firebase, avatars.js, avatar-store.js,
 // spin-wheel.js, avatar-animations.js).
 //
@@ -4272,8 +4689,19 @@ window.addEventListener('load', () => {
 });
 
 </script>
+<!-- Agora Voice Chat SDK -->
+<script src="AgoraRTC_N.js"></script>
 </head>
 <body>
+<!-- VOICE CHAT BAR -->
+<div id="voiceBar">
+  <button id="pttBtn" title="Hold to talk (Space)" disabled>🎤</button>
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div id="voiceChannelLabel">Connecting…</div>
+    <div id="voiceConnStatus"></div>
+  </div>
+  <button id="voiceSettingsBtn" title="Voice settings">⚙️</button>
+</div>
 
 <!-- ══ LOGIN ══ -->
 <!-- ══════════════════════════════════════
