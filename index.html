@@ -835,6 +835,32 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .pc-speaking-name{color:#22c55e!important;text-shadow:0 0 8px rgba(34,197,94,.5)}
 #voiceSettingsBtn{background:none;border:none;color:var(--ghost);font-size:1rem;cursor:pointer;padding:2px 4px;opacity:.6;transition:.15s}
 #voiceSettingsBtn:hover{opacity:1}
+
+/* ── FIX: Z-INDEX LAYERING ── */
+#leaderboardModal{z-index:9999!important}
+#voteHistoryModal{z-index:9998!important}
+#coinPowersModal{z-index:9997!important}
+#mainMenu{z-index:9996!important}
+#roomCreateModal{z-index:9995!important}
+#publicRoomsModal{z-index:9994!important}
+#profileModal{z-index:9993!important}
+#loginScreen{z-index:9992!important}
+#gameScreen{z-index:100!important}
+#pttBtn{z-index:9999!important}
+#voiceBar{z-index:9999!important}
+.right-panel{z-index:10!important;position:relative}
+.left-panel{z-index:10!important;position:relative}
+button{position:relative;z-index:11!important}
+
+/* ── FIX: CHAT TEXT OVERFLOW ── */
+.chat-msgs{overflow-y:auto!important;overflow-x:hidden!important;word-wrap:break-word;word-break:break-word;scrollbar-width:thin;scrollbar-color:var(--moon) var(--void)}
+.chat-msgs::-webkit-scrollbar{width:5px}
+.chat-msgs::-webkit-scrollbar-track{background:var(--void)}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
+.cm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:normal}
+.cm .cn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm .ct{max-width:100%;overflow:hidden;word-wrap:break-word;word-break:break-word}
+.cm,.chat-inp,.chat-hdr,.right-panel,.left-panel{position:relative;box-sizing:border-box}
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -3549,22 +3575,50 @@ async function initVoiceChat(){
   document.getElementById('voiceBar').classList.add('visible');
   document.getElementById('voiceConnStatus').textContent = 'Ready';
 
-  // PTT button
+  // PTT button — FIX: null-check + mouse/touch/pointer events
   const btn = document.getElementById('pttBtn');
-  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); _startSpeaking(); });
-  btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); _stopSpeaking(); });
-  btn.addEventListener('pointerleave',(e)=>{ if(_pttActive) _stopSpeaking(); });
+  if(btn){
+    btn.disabled = false;
+    btn.removeAttribute('disabled');
+    btn.addEventListener('mousedown',  (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); });
+    btn.addEventListener('mouseup',    (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); });
+    btn.addEventListener('mouseleave', (e)=>{ if(_pttActive) _stopSpeaking(); });
+    btn.addEventListener('touchstart', (e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); }, { passive:false });
+    btn.addEventListener('touchend',   (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); }, { passive:false });
+    btn.addEventListener('pointerdown',(e)=>{ e.preventDefault(); e.stopPropagation(); _startSpeaking(); });
+    btn.addEventListener('pointerup',  (e)=>{ e.preventDefault(); e.stopPropagation(); _stopSpeaking(); });
+    btn.addEventListener('pointerleave',(e)=>{ if(_pttActive) _stopSpeaking(); });
+    _voiceLog('PTT button initialized successfully');
+  } else {
+    _voiceLog('ERROR: pttBtn element not found!');
+  }
 
   // Spacebar PTT
   document.addEventListener('keydown',(e)=>{
-    if(e.code==='Space' && !e.repeat && !_isTyping(e)) _startSpeaking();
+    if(e.code==='Space' && !e.repeat && !_isTyping(e)){ e.preventDefault(); _startSpeaking(); }
   });
   document.addEventListener('keyup',(e)=>{
-    if(e.code==='Space' && !_isTyping(e)) _stopSpeaking();
+    if(e.code==='Space' && !_isTyping(e)){ e.preventDefault(); _stopSpeaking(); }
   });
 
   await _joinCorrectChannels();
   _listenSpeakingIndicators();
+
+  // FIX: Page visibility handler — suppress Agora hidden-tab warnings & stop PTT on tab switch
+  document.addEventListener('visibilitychange', async function(){
+    if(document.hidden){
+      if(_voiceEnabled && _pttActive){ _voiceLog('Page hidden - pausing voice'); await _stopSpeaking(); }
+      if(typeof AgoraRTC !== 'undefined'){ try{ AgoraRTC.setLogLevel(0); }catch(e){} }
+    } else {
+      _voiceLog('Page visible - resuming voice');
+      if(typeof AgoraRTC !== 'undefined'){ try{ AgoraRTC.setLogLevel(4); }catch(e){} }
+    }
+  });
+  window.addEventListener('blur', async function(){
+    if(_voiceEnabled && _pttActive){ _voiceLog('Window lost focus - stopping voice'); await _stopSpeaking(); }
+  });
+  window.addEventListener('focus', function(){ _voiceLog('Window regained focus'); });
+  window.addEventListener('beforeunload', async function(){ if(_voiceEnabled) await _leaveAllChannels(); });
 }
 
 function _isTyping(e){
