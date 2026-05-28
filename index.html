@@ -5880,14 +5880,24 @@ function doRestart(){
   const players=Object.values(gameState?.players||{});
   if(players.length<2) return;
 
-  // Reset state and assign new random roles
+  // Full reset — wipe all stale state from the previous game
   _gameOver=false;
   _gameStartedAt=null;
   _previousAlive={};
   _lastStepId=null;
   _advancingStep=false;
-  _lastPhase=null; _phaseTransBlocked=false; _nightToDayRunning=false;
-  myRole=null; // SECURITY: clear stale role so no old-game role data leaks into new-game visibility checks
+  _lastPhase=null;
+  _phaseTransBlocked=false;
+  _nightToDayRunning=false;
+  _hunterPending=false;
+  if(_hunterTimerInterval){clearInterval(_hunterTimerInterval);_hunterTimerInterval=null;}
+  if(timerTO){clearTimeout(timerTO);timerTO=null;}
+  _lastTimerKey=null;
+  _currentDayNumber=1;
+  _currentVoteHistory=[];
+  _voteHistoryPending=false;
+  _circlePopupOpen=null;
+  myRole=null; // SECURITY: clear stale role so no old-game role data leaks
 
   // Restore playView DOM so renderGame() can find phaseTitle, actionBtns, playerList etc.
   _resetPlayView();
@@ -6502,9 +6512,25 @@ async function enterRoom(){
         }
       }
       // Show game start animation for non-leaders when game transitions to playing
-      if(!isLeader && _prevStatus==='setup' && gameState?.status==='playing'){
-        myRole=null; // SECURITY: clear stale role before new game role is assigned
-        _gameStartedAt = Date.now(); // record local start time
+      if(!isLeader && (_prevStatus==='setup'||(_prevStatus&&_prevStatus.startsWith('gameover'))) && gameState?.status==='playing'){
+        // Full client-side reset — wipe all stale state from the previous game
+        myRole=null;
+        _gameOver=false;
+        _gameStartedAt=Date.now();
+        _previousAlive={};
+        _lastStepId=null;
+        _advancingStep=false;
+        _lastPhase=null;
+        _phaseTransBlocked=false;
+        _nightToDayRunning=false;
+        _hunterPending=false;
+        if(_hunterTimerInterval){clearInterval(_hunterTimerInterval);_hunterTimerInterval=null;}
+        if(timerTO){clearTimeout(timerTO);timerTO=null;}
+        _lastTimerKey=null;
+        _currentDayNumber=1;
+        _currentVoteHistory=[];
+        _voteHistoryPending=false;
+        _circlePopupOpen=null;
         renderGame();
         showGameStartAnimation(()=>{});
         _prevStatus=gameState?.status;
