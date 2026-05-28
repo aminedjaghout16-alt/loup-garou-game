@@ -575,12 +575,12 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .pstatus.dead{background:var(--red)}
 
 /* Right chat */
-.right-panel{flex:0 0 210px;background:rgba(13,13,36,.45);border:1px solid var(--moon);border-radius:8px;padding:1.1rem;display:flex;flex-direction:column;backdrop-filter:blur(4px)}
+.right-panel{flex:0 0 210px;background:rgba(13,13,36,.45);border:1px solid var(--moon);border-radius:8px;padding:1.1rem;display:flex;flex-direction:column;backdrop-filter:blur(4px);overflow:hidden;max-width:210px}
 .chat-hdr{color:var(--moon);font-family:'Creepster',cursive;font-size:.95rem;margin-bottom:.7rem}
-.chat-msgs{flex:1;overflow-y:auto;margin-bottom:.7rem;min-height:60px}
-.cm{margin-bottom:.55rem;padding:.42rem .55rem;background:var(--purple);border-left:3px solid var(--moon);border-radius:2px;font-size:.8rem}
-.cm .cn{color:var(--moon-pale);font-weight:700}
-.cm .ct{color:var(--ghost);margin-top:.15rem}
+.chat-msgs{flex:1;overflow-y:auto;overflow-x:hidden;margin-bottom:.7rem;min-height:60px;word-wrap:break-word;word-break:break-word}
+.cm{margin-bottom:.55rem;padding:.42rem .55rem;background:var(--purple);border-left:3px solid var(--moon);border-radius:2px;font-size:.8rem;max-width:100%;overflow:hidden;word-wrap:break-word}
+.cm .cn{color:var(--moon-pale);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.cm .ct{color:var(--ghost);margin-top:.15rem;word-wrap:break-word;word-break:break-word;overflow:hidden}
 .chat-inp{display:flex;gap:.35rem}
 .chat-inp input{flex:1;padding:.45rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;font-family:inherit;font-size:.82rem}
 .chat-inp button{padding:.45rem .7rem;background:var(--blood-glow);border:none;color:#fff;border-radius:3px;cursor:pointer;font-size:.85rem}
@@ -822,11 +822,11 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 /* ══════════════════════════════════════════
    VOICE CHAT STYLES
 ══════════════════════════════════════════ */
-#voiceBar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:9999;display:none;align-items:center;gap:10px;background:rgba(10,10,26,.92);border:1.5px solid rgba(185,28,28,.4);border-radius:40px;padding:8px 18px;box-shadow:0 4px 24px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
+#voiceBar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;background:rgba(10,10,26,.92);border:1.5px solid rgba(185,28,28,.4);border-radius:40px;padding:8px 18px;box-shadow:0 4px 24px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
 #voiceBar.visible{display:flex}
-#pttBtn{width:54px;height:54px;border-radius:50%;border:2px solid var(--blood-glow);background:rgba(185,28,28,.2);cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;transition:.15s;user-select:none;-webkit-user-select:none;touch-action:none}
+#pttBtn{width:54px;height:54px;border-radius:50%;border:2px solid var(--blood-glow);background:rgba(185,28,28,.2);cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;transition:.15s;user-select:none;-webkit-user-select:none;touch-action:none;opacity:1!important;pointer-events:auto!important}
 #pttBtn.active{background:rgba(185,28,28,.75);border-color:#ff4444;box-shadow:0 0 18px rgba(255,68,68,.6);transform:scale(1.08)}
-#pttBtn:disabled{opacity:.35;cursor:not-allowed}
+#pttBtn:disabled{opacity:1!important;cursor:pointer!important}
 #voiceChannelLabel{font-size:.7rem;color:var(--ghost);text-align:center;min-width:70px;letter-spacing:.05em}
 #voiceMicStatus{font-size:.75rem;color:var(--moon-pale);display:flex;align-items:center;gap:4px}
 #voiceConnStatus{font-size:.62rem;color:var(--ghost);opacity:.6}
@@ -835,45 +835,6 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .pc-speaking-name{color:#22c55e!important;text-shadow:0 0 8px rgba(34,197,94,.5)}
 #voiceSettingsBtn{background:none;border:none;color:var(--ghost);font-size:1rem;cursor:pointer;padding:2px 4px;opacity:.6;transition:.15s}
 #voiceSettingsBtn:hover{opacity:1}
-
-/* ════ FIX PART 3: Z-INDEX AND TEXT OVERFLOW FIXES ════ */
-
-/* ── Z-INDEX FIX - Increase modal z-index to be higher than all content ── */
-#leaderboardModal{z-index:9999!important}
-#voteHistoryModal{z-index:9998!important}
-#coinPowersModal{z-index:9997!important}
-#mainMenu{z-index:9996!important}
-#roomCreateModal{z-index:9995!important}
-#publicRoomsModal{z-index:9994!important}
-#profileModal{z-index:9993!important}
-#loginScreen{z-index:9992!important}
-#gameScreen{z-index:100!important}
-
-/* ── CHAT TEXT OVERFLOW FIX - Ensure chat messages don't overflow ── */
-.chat-msgs{overflow-y:auto!important;overflow-x:hidden!important;word-wrap:break-word;word-break:break-word}
-.cm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:normal}
-.cm .cn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cm .ct{max-width:100%;overflow:hidden;word-wrap:break-word;word-break:break-word}
-
-/* ── RIGHT AND LEFT PANEL Z-INDEX ── */
-.right-panel{z-index:10!important;position:relative}
-.left-panel{z-index:10!important;position:relative}
-
-/* ── ENSURE BUTTONS ARE CLICKABLE ON TOP OF PANELS ── */
-button{position:relative;z-index:11!important}
-#pttBtn{z-index:9999!important}
-#voiceBar{z-index:9999!important}
-
-/* ── TEXT CONTAINER FIXES - Prevent text from escaping containers ── */
-.cm,.chat-inp,.chat-hdr,.right-panel,.left-panel{position:relative;box-sizing:border-box}
-
-/* ── FORCE SCROLLBAR ON CHAT MESSAGES ── */
-.chat-msgs{scrollbar-width:thin;scrollbar-color:var(--moon) var(--void)}
-.chat-msgs::-webkit-scrollbar{width:5px}
-.chat-msgs::-webkit-scrollbar-track{background:var(--void)}
-.chat-msgs::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
-
-/* ════ END FIX PART 3 ════ */
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -3588,75 +3549,19 @@ async function initVoiceChat(){
   document.getElementById('voiceBar').classList.add('visible');
   document.getElementById('voiceConnStatus').textContent = 'Ready';
 
-  // PTT button - with null check and all event types (FIX PART 2)
+  // PTT button
   const btn = document.getElementById('pttBtn');
-  if(btn){
-    // Remove disabled state so button is clickable
-    btn.disabled = false;
-    btn.removeAttribute('disabled');
-    
-    // Desktop/mouse events
-    btn.addEventListener('mousedown', (e)=>{ 
-      e.preventDefault(); 
-      e.stopPropagation();
-      _startSpeaking(); 
-    });
-    btn.addEventListener('mouseup', (e)=>{ 
-      e.preventDefault(); 
-      e.stopPropagation();
-      _stopSpeaking(); 
-    });
-    btn.addEventListener('mouseleave', (e)=>{ 
-      if(_pttActive) _stopSpeaking(); 
-    });
-    
-    // Touch events (mobile)
-    btn.addEventListener('touchstart', (e)=>{ 
-      e.preventDefault(); 
-      e.stopPropagation();
-      _startSpeaking(); 
-    }, { passive: false });
-    btn.addEventListener('touchend', (e)=>{ 
-      e.preventDefault(); 
-      e.stopPropagation();
-      _stopSpeaking(); 
-    }, { passive: false });
-    
-    // Pointer events (fallback for older browsers)
-    btn.addEventListener('pointerdown', (e)=>{ 
-      e.preventDefault(); 
-      e.stopPropagation();
-      _startSpeaking(); 
-    });
-    btn.addEventListener('pointerup', (e)=>{ 
-      e.preventDefault(); 
-      e.stopPropagation();
-      _stopSpeaking(); 
-    });
-    btn.addEventListener('pointerleave', (e)=>{ 
-      if(_pttActive) _stopSpeaking(); 
-    });
-    
-    _voiceLog('PTT button initialized successfully');
-  } else {
-    _voiceLog('ERROR: pttBtn element not found!');
-  }
+  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); _startSpeaking(); });
+  btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); _stopSpeaking(); });
+  btn.addEventListener('pointerleave',(e)=>{ if(_pttActive) _stopSpeaking(); });
 
-  // Spacebar PTT - with better typing detection
-  document.addEventListener('keydown', (e)=>{
-    if(e.code==='Space' && !e.repeat && !_isTyping(e)){
-      e.preventDefault();
-      _startSpeaking();
-    }
+  // Spacebar PTT
+  document.addEventListener('keydown',(e)=>{
+    if(e.code==='Space' && !e.repeat && !_isTyping(e)) _startSpeaking();
   });
-  document.addEventListener('keyup', (e)=>{
-    if(e.code==='Space' && !_isTyping(e)){
-      e.preventDefault();
-      _stopSpeaking();
-    }
+  document.addEventListener('keyup',(e)=>{
+    if(e.code==='Space' && !_isTyping(e)) _stopSpeaking();
   });
-
-  _voiceLog('Voice chat event listeners attached');
 
   await _joinCorrectChannels();
   _listenSpeakingIndicators();
@@ -3666,52 +3571,6 @@ function _isTyping(e){
   const t = e.target?.tagName;
   return t==='INPUT' || t==='TEXTAREA' || e.target?.isContentEditable;
 }
-
-// ════ FIX PART 1: PAGE VISIBILITY HANDLER ════
-// Fixes: "Agora-SDK [DEBUG]: current web page is hidden" error
-document.addEventListener('visibilitychange', async function(){
-  if(document.hidden){
-    // Page is hidden - pause voice
-    if(_voiceEnabled && _pttActive){
-      _voiceLog('Page hidden - pausing voice chat');
-      await _stopSpeaking();
-    }
-    // Set Agora log level to suppress warnings
-    if(typeof AgoraRTC !== 'undefined'){
-      try {
-        AgoraRTC.setLogLevel(0); // Silent mode
-      } catch(e) { /* ignore */ }
-    }
-  } else {
-    // Page is visible again - resume
-    _voiceLog('Page visible - resuming voice chat');
-    if(typeof AgoraRTC !== 'undefined'){
-      try {
-        AgoraRTC.setLogLevel(4); // Resume normal logging
-      } catch(e) { /* ignore */ }
-    }
-  }
-});
-
-// Also handle page blur/focus for better UX
-window.addEventListener('blur', async function(){
-  if(_voiceEnabled && _pttActive){
-    _voiceLog('Window lost focus - stopping voice');
-    await _stopSpeaking();
-  }
-});
-
-window.addEventListener('focus', function(){
-  _voiceLog('Window regained focus');
-});
-
-// Handle page unload (closing the tab)
-window.addEventListener('beforeunload', async function(){
-  if(_voiceEnabled){
-    await _leaveAllChannels();
-  }
-});
-// ════ END FIX PART 1 ════
 
 // ── JOIN / LEAVE CHANNELS ─────────────────────────────────────────
 async function _joinCorrectChannels(){
@@ -4836,7 +4695,7 @@ window.addEventListener('load', () => {
 <body>
 <!-- VOICE CHAT BAR -->
 <div id="voiceBar">
-  <button id="pttBtn" title="Hold to talk (Space)" disabled>🎤</button>
+  <button id="pttBtn" title="Hold to talk (Space)">🎤</button>
   <div style="display:flex;flex-direction:column;gap:2px">
     <div id="voiceChannelLabel">Connecting…</div>
     <div id="voiceConnStatus"></div>
