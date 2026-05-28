@@ -6478,12 +6478,12 @@ async function enterRoom(){
         if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles=Object.values(cfg.roles);
         if(!cfg.roleCounts) cfg.roleCounts={werewolf:1,villager:1};
       }
-      // Derive leader status from Firebase data
-      if(gameState?.leader===myId) isLeader=true;
+      // Derive leader status from Firebase data — always sync, never sticky
+      isLeader=(gameState?.leader===myId);
       // ── Leader failover ────────────────────────────────────────────────
       // If the current leader is disconnected, the connected player with the
       // earliest joinedAt automatically takes over (deterministic, no election).
-      if(gameState && gameState.status !== 'setup'){
+      if(gameState){
         const currentLeaderId = gameState.leader;
         const leaderData = gameState.players?.[currentLeaderId];
         const leaderGone = leaderData?.disconnected || !leaderData;
