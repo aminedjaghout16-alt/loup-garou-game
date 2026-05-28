@@ -5492,7 +5492,7 @@ function showGameOver(result){
       <button class="rematch-btn" id="rematchBtn" onclick="handleRematch()">
         ${lang==='ar'?'🔁 طلب إعادة اللعبة':lang==='fr'?'🔁 Revanche !':'🔁 Rematch!'}
       </button>
-      <div id="rematchReadyStatus"></div>
+
     </div>`;
   playView.style.display='flex';
 }
@@ -5799,71 +5799,71 @@ function renderReadyStatus(readyPlayers){
   });
   html+='</div>';
   if(el) el.innerHTML=html;
-
-  // Mirror into the rematch ready status area on the score sheet
-  const rematchStatus=document.getElementById('rematchReadyStatus');
-  if(rematchStatus) rematchStatus.innerHTML=html;
-
-  // Disable rematch button for this player once they've clicked
-  const rematchBtn=document.getElementById('rematchBtn');
-  if(rematchBtn && myId && readyIds.includes(myId)){
-    rematchBtn.disabled=true;
-    rematchBtn.textContent=lang==='ar'?'✓ في انتظار الآخرين…':lang==='fr'?'✓ En attente des autres…':'✓ Waiting for others…';
-  }
-
-  // If all ready and I'm leader, restart the game (guard _gameOver to prevent double-trigger)
-  if(isLeader && !_gameOver && readyCount>=totalCount && totalCount>0){
-    doRestart();
-  }
 }
 
 function handleRematch(){
   const btn=document.getElementById('rematchBtn');
-  if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'✓ في انتظار الآخرين…':lang==='fr'?'✓ En attente des autres…':'✓ Waiting for others…'; }
+  if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'⏳ جارٍ العودة للغرفة…':lang==='fr'?'⏳ Retour au salon…':'⏳ Returning to lobby…'; }
 
   if(fbOk&&db&&roomCode){
-    // Clear any stale readyPlayers (e.g. from lobby), then write only this player
-    db.ref(`games/${roomCode}/readyPlayers`).remove().then(()=>{
-      db.ref(`games/${roomCode}/readyPlayers/${myId}`).set({name:myName,ts:Date.now()});
+    // Reset game back to setup/waiting state — all clients auto-navigate via their Firebase listener
+    const upd={};
+    upd[`games/${roomCode}/status`]='setup';
+    upd[`games/${roomCode}/leader`]=myId;  // whoever clicks rematch becomes the new leader
+    isLeader=true;
+    upd[`games/${roomCode}/phase`]=null;
+    upd[`games/${roomCode}/readyPlayers`]=null;
+    upd[`games/${roomCode}/nightTurn`]=null;
+    upd[`games/${roomCode}/nightActions`]=null;
+    upd[`games/${roomCode}/dayVotes`]=null;
+    upd[`games/${roomCode}/witchPotions`]=null;
+    upd[`games/${roomCode}/maire`]=null;
+    upd[`games/${roomCode}/maireCandidates`]=null;
+    upd[`games/${roomCode}/maireVotes`]=null;
+    upd[`games/${roomCode}/maireSkipDay`]=null;
+    upd[`games/${roomCode}/teamChat`]=null;
+    upd[`games/${roomCode}/tricksterUsed`]=null;
+    upd[`games/${roomCode}/puppeteerTarget`]=null;
+    upd[`games/${roomCode}/spiderWeb`]=null;
+    upd[`games/${roomCode}/blackCatPowerLoss`]=null;
+    upd[`games/${roomCode}/angelActive`]=null;
+    upd[`games/${roomCode}/assassinTargets`]=null;
+    upd[`games/${roomCode}/actorCards`]=null;
+    upd[`games/${roomCode}/judgeUsed`]=null;
+    upd[`games/${roomCode}/gypsyBlackCloud`]=null;
+    upd[`games/${roomCode}/gypsyFullMoon`]=null;
+    upd[`games/${roomCode}/butcherDisguise`]=null;
+    upd[`games/${roomCode}/sectRecruits`]=null;
+    upd[`games/${roomCode}/elderLives`]=null;
+    upd[`games/${roomCode}/rustyInfectedWolf`]=null;
+    upd[`games/${roomCode}/foxPowerLost`]=null;
+    upd[`games/${roomCode}/wolffatherUsed`]=null;
+    upd[`games/${roomCode}/alphawolfUsed`]=null;
+    upd[`games/${roomCode}/wildchildModel`]=null;
+    upd[`games/${roomCode}/loversIds`]=null;
+    upd[`games/${roomCode}/littleGirlPeeks`]=null;
+    upd[`games/${roomCode}/littleGirlCaught`]=null;
+    upd[`games/${roomCode}/bearSignal`]=null;
+    upd[`games/${roomCode}/crowAccused`]=null;
+    // Reset all players alive flag but keep them in the room
+    const players=Object.values(gameState?.players||{});
+    players.forEach(p=>{
+      upd[`games/${roomCode}/players/${p.id}/alive`]=true;
+      upd[`games/${roomCode}/players/${p.id}/role`]=null;
+      upd[`games/${roomCode}/players/${p.id}/idiotRevealed`]=null;
     });
-    // Listen for all players clicking rematch
-    db.ref(`games/${roomCode}/readyPlayers`).on('value',snap=>{
-      const rp=snap.val()||{};
-      renderRematchStatus(rp);
-    });
+    db.ref().update(upd).catch(err=>console.error('Rematch error:',err));
+    // Everyone's Firebase listener fires on status→'setup' and re-renders the waiting room
   } else {
-    // Offline / IRL mode
+    // Offline / IRL fallback: just reset local state
     if(gameState){
-      gameState.readyPlayers={};
-      gameState.readyPlayers[myId]={name:myName,ts:Date.now()};
-      renderRematchStatus(gameState.readyPlayers);
+      _gameOver=false;
+      gameState.status='setup';
+      gameState.phase=null;
       const players=Object.values(gameState.players||{});
-      if(Object.keys(gameState.readyPlayers).length>=players.length) doRestart();
+      players.forEach(p=>{ gameState.players[p.id].alive=true; gameState.players[p.id].role=null; });
+      renderGame();
     }
-  }
-}
-
-function renderRematchStatus(readyPlayers){
-  const players=Object.values(gameState?.players||{});
-  const readyIds=Object.keys(readyPlayers);
-  const readyCount=readyIds.length;
-  const totalCount=players.length;
-
-  let html=`<div style="margin-bottom:.4rem">${readyCount}/${totalCount} ${lang==='ar'?'جاهزون للإعادة':lang==='fr'?'prêts pour la revanche':'ready for rematch'}</div>`;
-  html+='<div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap">';
-  players.forEach(p=>{
-    const isReady=readyIds.includes(p.id);
-    html+=`<span style="padding:.2rem .5rem;border-radius:3px;font-size:.75rem;background:${isReady?'var(--green)':'var(--purple)'};color:${isReady?'#fff':'var(--ghost)'};border:1px solid ${isReady?'var(--green)':'var(--moon)'}">${p.name} ${isReady?'✓':'…'}</span>`;
-  });
-  html+='</div>';
-
-  const rematchStatus=document.getElementById('rematchReadyStatus');
-  if(rematchStatus) rematchStatus.innerHTML=html;
-
-  // Once all players have clicked rematch, leader starts the game
-  if(isLeader && readyCount>=totalCount && totalCount>0){
-    if(fbOk&&db&&roomCode) db.ref(`games/${roomCode}/readyPlayers`).off();
-    doRestart();
   }
 }
 
