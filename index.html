@@ -3458,8 +3458,6 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised with match reward fix)
-// Drop this entire block into index.html just before 
-<script>
 /* ══════════════════════════════════════════════════════════════════
    AGORA VOICE CHAT
    Channels:
@@ -3805,7 +3803,6 @@ function onVoiceGameStateChange(){
 }
 
 // Patch renderGame to also update voice
-const _origRenderGame = typeof renderGame === 'function' ? renderGame : null;
 // We hook in after page load since renderGame is defined later
 window.addEventListener('load', ()=>{
   // Delay to let all game JS initialize
@@ -3830,7 +3827,6 @@ window.addEventListener('load', ()=>{
 
 // Start voice chat when the player enters a game room
 // Hook into showGame (called when Firebase room is joined)
-const _origShowGame = window.showGame;
 window.addEventListener('load', ()=>{
   setTimeout(()=>{
     if(typeof showGame === 'function'){
@@ -4289,6 +4285,10 @@ async function _persistCoins() {
 // UI — persistent coin badge (top-left)
 // ─────────────────────────────────────────────────────────────────
 function _renderCoinBadge() {
+  // Hide badge on login screen to avoid text appearing on the background
+  const loginEl = document.getElementById('loginScreen');
+  const onLoginScreen = loginEl && !loginEl.classList.contains('hidden');
+
   let badge = document.getElementById('coinBadge');
   if (!badge) {
     badge = document.createElement('div');
@@ -4297,12 +4297,11 @@ function _renderCoinBadge() {
       'position:fixed',
       'top:.8rem',
       'left:.8rem',
-      'z-index:500',
+      'z-index:600',
       'background:var(--abyss)',
       'border:1px solid var(--moon)',
       'border-radius:20px',
       'padding:.3rem .75rem',
-      'display:flex',
       'align-items:center',
       'gap:.35rem',
       'font-family:"Creepster",cursive',
@@ -4323,11 +4322,16 @@ function _renderCoinBadge() {
     document.body.appendChild(badge);
   }
 
+  // Show/hide based on current screen
+  badge.style.display = onLoginScreen ? 'none' : 'flex';
+
   const val = document.getElementById('coinBadgeVal');
   if (val) val.textContent = _fmtCoins(_coinBalance);
 
-  badge.style.transform = 'scale(1.18)';
-  setTimeout(() => { badge.style.transform = 'scale(1)'; }, 220);
+  if (!onLoginScreen) {
+    badge.style.transform = 'scale(1.18)';
+    setTimeout(() => { badge.style.transform = 'scale(1)'; }, 220);
+  }
 }
 
 function _fmtCoins(n) {
@@ -10707,6 +10711,8 @@ function showMainMenu(){
   mm.classList.remove('hidden');
   mm.scrollTop = 0;
   _mnRefresh();
+  // Refresh coin badge visibility now that login screen is hidden
+  if (typeof _renderCoinBadge === 'function') _renderCoinBadge();
 }
 
 // ── Patch showGame to always hide menu + handle audio ──
@@ -10716,24 +10722,17 @@ showGame = function(){
   AUDIO.stopLoginAmbient();
   AUDIO.startLobbyAmbient();
   _origShowGame();
+  // Refresh coin badge visibility (login screen now hidden)
+  if (typeof _renderCoinBadge === 'function') _renderCoinBadge();
 };
 
 // ── Patch _updateGoogleUI: after sign-in go to main menu ──
-const _origUpdateUI = _updateGoogleUI;
-_updateGoogleUI = function(user){
-  _origUpdateUI(user);
-  if(user){
-    const login = document.getElementById('loginScreen');
-    if(login && !login.classList.contains('hidden')){
-      login.classList.add('hidden');
-      showMainMenu();
-    }
-  }
-};
+// ── _updateGoogleUI patch: merged below with avatar patch (see line ~11500) ──
 
 // ── Patch doGuestPlay: go to main menu ──
-const _origGuestPlay = doGuestPlay;
+const _origGuestPlay = typeof doGuestPlay === 'function' ? doGuestPlay : null;
 doGuestPlay = function(){
+  if (_origGuestPlay) _origGuestPlay();
   document.getElementById('loginScreen').classList.add('hidden');
   showMainMenu();
 };
@@ -11484,14 +11483,20 @@ if (typeof _origEquipAvatar === 'function') {
   };
 }
 
-// ── Hook into _updateGoogleUI to show avatar after sign-in ─
-const _orig_updateGoogleUI = window._updateGoogleUI;
-// We rely on the existing _updateGoogleUI patch that already runs.
-// After it sets googleAvatar src, we swap the element.
+// ── Hook into _updateGoogleUI: navigate to main menu + show avatar ──
 const _origUpdateGoogleUIFull = _updateGoogleUI;
 window._updateGoogleUI = function(user) {
   _origUpdateGoogleUIFull(user);
-  if (user) setTimeout(_updateProfilePicWithAvatar, 300);
+  if (user) {
+    // Navigate away from login screen on sign-in
+    const login = document.getElementById('loginScreen');
+    if (login && !login.classList.contains('hidden')) {
+      login.classList.add('hidden');
+      showMainMenu();
+    }
+    // Update profile pic with equipped avatar
+    setTimeout(_updateProfilePicWithAvatar, 300);
+  }
 };
 
 // ── On page load: try to update profile pic ──────────────
@@ -11858,9 +11863,9 @@ function _applyMusicState(ph, stepId){
 }
 
 // ── Patch renderGame to drive the music state machine ────────────────────
-const _origRenderGame = renderGame;
+const _origRenderGameAudio = renderGame;
 window.renderGame = function(){
-  _origRenderGame();
+  _origRenderGameAudio();
   if(!gameState) return;
 
   const status  = gameState.status;
