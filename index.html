@@ -6237,6 +6237,24 @@ function handleRematch(){
   const btn=document.getElementById('rematchBtn');
   if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'⏳ جارٍ العودة للغرفة…':lang==='fr'?'⏳ Retour au salon…':'⏳ Returning to lobby…'; }
 
+  // Reset all local timer + phase state so ALL clients (not just leader) get a clean slate
+  _gameOver=false;
+  _lastStepId=null;
+  _advancingStep=false;
+  _lastPhase=null;
+  _phaseTransBlocked=false;
+  _nightToDayRunning=false;
+  _hunterPending=false;
+  if(_hunterTimerInterval){clearInterval(_hunterTimerInterval);_hunterTimerInterval=null;}
+  if(timerTO){clearTimeout(timerTO);timerTO=null;}
+  _lastTimerKey=null;  // CRITICAL: prevents stale key blocking new-game timer
+  _currentDayNumber=1;
+  _currentVoteHistory=[];
+  _voteHistoryPending=false;
+  _circlePopupOpen=null;
+  myRole=null;
+  _previousAlive={};
+
   if(fbOk&&db&&roomCode){
     // Reset game back to setup/waiting state — all clients auto-navigate via their Firebase listener
     const upd={};
@@ -6244,6 +6262,9 @@ function handleRematch(){
     upd[`games/${roomCode}/leader`]=myId;  // whoever clicks rematch becomes the new leader
     isLeader=true;
     upd[`games/${roomCode}/phase`]=null;
+    upd[`games/${roomCode}/phaseStart`]=null;
+    upd[`games/${roomCode}/dayNum`]=null;
+    upd[`games/${roomCode}/startedAt`]=null;
     upd[`games/${roomCode}/readyPlayers`]=null;
     upd[`games/${roomCode}/nightTurn`]=null;
     upd[`games/${roomCode}/nightActions`]=null;
@@ -6254,6 +6275,7 @@ function handleRematch(){
     upd[`games/${roomCode}/maireVotes`]=null;
     upd[`games/${roomCode}/maireSkipDay`]=null;
     upd[`games/${roomCode}/teamChat`]=null;
+    upd[`games/${roomCode}/seerVisions`]=null;
     upd[`games/${roomCode}/tricksterUsed`]=null;
     upd[`games/${roomCode}/puppeteerTarget`]=null;
     upd[`games/${roomCode}/spiderWeb`]=null;
@@ -6264,9 +6286,12 @@ function handleRematch(){
     upd[`games/${roomCode}/judgeUsed`]=null;
     upd[`games/${roomCode}/gypsyBlackCloud`]=null;
     upd[`games/${roomCode}/gypsyFullMoon`]=null;
+    upd[`games/${roomCode}/gypsySpiritismUsed`]=null;
     upd[`games/${roomCode}/butcherDisguise`]=null;
     upd[`games/${roomCode}/sectRecruits`]=null;
     upd[`games/${roomCode}/elderLives`]=null;
+    upd[`games/${roomCode}/elderDead`]=null;
+    upd[`games/${roomCode}/elderVotedOut`]=null;
     upd[`games/${roomCode}/rustyInfectedWolf`]=null;
     upd[`games/${roomCode}/foxPowerLost`]=null;
     upd[`games/${roomCode}/wolffatherUsed`]=null;
@@ -6277,6 +6302,9 @@ function handleRematch(){
     upd[`games/${roomCode}/littleGirlCaught`]=null;
     upd[`games/${roomCode}/bearSignal`]=null;
     upd[`games/${roomCode}/crowAccused`]=null;
+    upd[`games/${roomCode}/gravediggerUsedOn`]=null;
+    upd[`games/${roomCode}/necromancerUsedOn`]=null;
+    upd[`games/${roomCode}/thiefCards`]=null;
     // Reset all players alive flag but keep them in the room
     const players=Object.values(gameState?.players||{});
     players.forEach(p=>{
@@ -6289,9 +6317,9 @@ function handleRematch(){
   } else {
     // Offline / IRL fallback: just reset local state
     if(gameState){
-      _gameOver=false;
       gameState.status='setup';
       gameState.phase=null;
+      gameState.seerVisions=null;
       const players=Object.values(gameState.players||{});
       players.forEach(p=>{ gameState.players[p.id].alive=true; gameState.players[p.id].role=null; });
       renderGame();
@@ -6386,6 +6414,13 @@ function doRestart(){
     upd[`games/${roomCode}/littleGirlCaught`]=null;
     upd[`games/${roomCode}/bearSignal`]=null;
     upd[`games/${roomCode}/crowAccused`]=null;
+    upd[`games/${roomCode}/seerVisions`]=null;
+    upd[`games/${roomCode}/elderDead`]=null;
+    upd[`games/${roomCode}/elderVotedOut`]=null;
+    upd[`games/${roomCode}/gypsySpiritismUsed`]=null;
+    upd[`games/${roomCode}/gravediggerUsedOn`]=null;
+    upd[`games/${roomCode}/necromancerUsedOn`]=null;
+    upd[`games/${roomCode}/thiefCards`]=null;
     db.ref().update(upd).then(()=>{
       setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
     }).catch(err=>{
@@ -7426,6 +7461,23 @@ function renderGame(){
   }
 
   if(gameState.status==='setup'){
+    // Reset local game state for ALL clients on every setup transition (rematch/new game)
+    if(_gameOver || _lastPhase === 'night' || _lastPhase === 'day'){
+      _gameOver=false;
+      _lastStepId=null;
+      _advancingStep=false;
+      _lastPhase=null;
+      _phaseTransBlocked=false;
+      _nightToDayRunning=false;
+      _hunterPending=false;
+      if(_hunterTimerInterval){clearInterval(_hunterTimerInterval);_hunterTimerInterval=null;}
+      if(timerTO){clearTimeout(timerTO);timerTO=null;}
+      _lastTimerKey=null;
+      _currentDayNumber=1;
+      _circlePopupOpen=null;
+      myRole=null;
+      _previousAlive={};
+    }
     document.getElementById('setupView').style.display='block';
     document.getElementById('playView').style.display='none';
     document.getElementById('hStatus').textContent=tr('st_setup');
@@ -9823,11 +9875,12 @@ function invalidateTimerKey(){
   _lastTimerKey = null;
 }
 function startTimerIfNeeded(){
-  // Build a key representing what the timer is currently counting for
+  // Build a key representing what the timer is currently counting for.
+  // Include dayNum in both cases so night 2 witch !== night 1 witch for non-leaders.
   const ph = gameState?.phase;
   const turnId = gameState?.nightTurn?.stepId;
-  const dayNum = gameState?.dayNum;
-  const key = ph==='night' ? ('night:'+turnId) : ('day:'+dayNum);
+  const dayNum = gameState?.dayNum || 1;
+  const key = ph==='night' ? ('night:'+dayNum+':'+turnId) : ('day:'+dayNum);
   if(key !== _lastTimerKey){
     _lastTimerKey = key;
     startTimer();
