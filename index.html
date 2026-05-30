@@ -3621,13 +3621,18 @@ async function _joinCorrectChannels(){
 }
 
 async function _joinChannel(ch){
-  if(!_agoraClients[ch] || _agoraJoined[ch]) return;
+  if(!_agoraClients[ch]) return false;
+  if(_agoraJoined[ch]) return true;
   try {
     const uid = await _agoraClients[ch].join(AGORA_APP_ID, _voiceChannelName(ch), null);
     _agoraUid[ch] = uid;
     _agoraJoined[ch] = true;
     _voiceLog(`Joined ${ch} as uid ${uid}`);
-  } catch(e){ _voiceLog(`Join ${ch} failed:`, e); }
+    return true;
+  } catch(e){
+    _voiceLog(`Join ${ch} failed:`, e);
+    return false;
+  }
 }
 
 async function _leaveChannel(ch){
@@ -3660,7 +3665,13 @@ async function _startSpeaking(){
     if(!_localMicTrack){
       _localMicTrack = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig:'music_standard' });
     }
-    if(!_agoraJoined[ch]) await _joinChannel(ch);
+    const joined = _agoraJoined[ch] || await _joinChannel(ch);
+    if(!joined){
+      _voiceLog('Could not join channel', ch);
+      _pttActive = false;
+      document.getElementById('pttBtn').classList.remove('active');
+      return;
+    }
     await _agoraClients[ch].publish([_localMicTrack]);
     _publishedTo = ch;
     _voiceLog('Publishing to', ch);
