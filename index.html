@@ -3660,8 +3660,12 @@ async function _leaveAllChannels(){
 }
 
 // ── PTT: SPEAKING ─────────────────────────────────────────────────
+let _startSpeakingPromise = null; // guard against concurrent _startSpeaking calls
+
 async function _startSpeaking(){
   if(_pttActive || !_voiceEnabled) return;
+  // If a previous start is still in flight, wait for it then bail
+  if(_startSpeakingPromise){ await _startSpeakingPromise; return; }
   _pttActive = true;
 
   // Glow immediately so the button feels responsive
@@ -3670,26 +3674,35 @@ async function _startSpeaking(){
   // Default to 'alive' channel if gameState isn't fully loaded yet
   const ch = _getSpeakChannel() || 'alive';
 
-  try {
-    if(!_localMicTrack){
-      _localMicTrack = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig:'music_standard' });
-    }
-    const joined = _agoraJoined[ch] || await _joinChannel(ch);
-    if(!joined){
-      _voiceLog('Could not join channel', ch);
+  _startSpeakingPromise = (async () => {
+    try {
+      // Create track if missing or if the previous one was closed (e.g. after reset)
+      if(!_localMicTrack || _localMicTrack._isClosed){
+        _localMicTrack = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig:'music_standard' });
+      }
+      const joined = _agoraJoined[ch] || await _joinChannel(ch);
+      if(!joined){
+        _voiceLog('Could not join channel', ch);
+        _pttActive = false;
+        document.getElementById('pttBtn').classList.remove('active');
+        return;
+      }
+      // Don't publish if user released button while we were awaiting
+      if(!_pttActive) return;
+      // Guard against double-publish
+      if(_publishedTo){ _voiceLog('Already published to', _publishedTo); return; }
+      await _agoraClients[ch].publish([_localMicTrack]);
+      _publishedTo = ch;
+      _voiceLog('Publishing to', ch);
+      _setSpeaking(true);
+    } catch(e){
+      _voiceLog('Start speaking error:', e);
       _pttActive = false;
       document.getElementById('pttBtn').classList.remove('active');
-      return;
     }
-    await _agoraClients[ch].publish([_localMicTrack]);
-    _publishedTo = ch;
-    _voiceLog('Publishing to', ch);
-    _setSpeaking(true);
-  } catch(e){
-    _voiceLog('Start speaking error:', e);
-    _pttActive = false;
-    document.getElementById('pttBtn').classList.remove('active');
-  }
+  })();
+  await _startSpeakingPromise;
+  _startSpeakingPromise = null;
 }
 
 async function _stopSpeaking(){
@@ -3697,6 +3710,8 @@ async function _stopSpeaking(){
   _pttActive = false;
   document.getElementById('pttBtn').classList.remove('active');
   _setSpeaking(false);
+  // If start is still in flight, wait for it so we unpublish cleanly
+  if(_startSpeakingPromise) await _startSpeakingPromise;
   if(_publishedTo) await _unpublishMic(_publishedTo);
 }
 
@@ -3809,11 +3824,15 @@ function _updateVoiceUI(){
 // ── RESET ON REMATCH ──────────────────────────────────────────────
 async function resetVoiceChat(){
   _setSpeaking(false);
+  // Wait for any in-flight start before leaving, to avoid unpublish-on-closed-track errors
+  if(_startSpeakingPromise) await _startSpeakingPromise;
   await _leaveAllChannels();
   if(_localMicTrack){ _localMicTrack.close(); _localMicTrack=null; }
   _agoraInited = false;
   _pttActive = false;
   _publishedTo = null;
+  _startSpeakingPromise = null;
+  _joiningPromises = {};
   document.getElementById('pttBtn').classList.remove('active');
 }
 
