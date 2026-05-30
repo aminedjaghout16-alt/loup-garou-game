@@ -11727,8 +11727,7 @@ const AUDIO = (function(){
       if(!_loginTrack) return;
       _loginStopped = true;
       const a = _loginTrack;
-      _loginTrack = null;
-      _fadeOut(a, ()=>{ a.src=''; });
+      _fadeOut(a, ()=>{ a.src=''; _loginTrack = null; });
     },
 
     startLobbyAmbient(){
@@ -11745,8 +11744,7 @@ const AUDIO = (function(){
     stopLobbyAmbient(){
       if(!_lobbyTrack) return;
       const a = _lobbyTrack;
-      _lobbyTrack = null;
-      _fadeOut(a, ()=>{ a.src=''; });
+      _fadeOut(a, ()=>{ a.src=''; _lobbyTrack = null; });
     },
 
     sfx: _playSfx,
