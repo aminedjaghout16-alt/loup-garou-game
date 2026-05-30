@@ -6059,6 +6059,11 @@ function maybeShowHunterShot(deadPlayerId, callback){
       if(gameState?.nightActions?._hunterShot || gameState?.players?.[deadPlayerId]?.hunterSkipped){
         clearInterval(poll);
         if(wo) wo.classList.remove('active');
+        // Leader checks win condition now that hunter shot is confirmed
+        if(isLeader && gameState?.nightActions?._hunterShot){
+          const shotTargetId = gameState.nightActions._hunterShot.target;
+          if(checkHunterWinCondition(shotTargetId)) return; // game over — don't call callback
+        }
         callback();
       }
     },500);
@@ -9923,6 +9928,7 @@ let _lastTimerKey = null;
 function invalidateTimerKey(){
   // Stop running tick immediately so it cannot fire on the new step
   if(timerTO){ clearTimeout(timerTO); timerTO=null; }
+  if(window._timerWarningSfx){ window._timerWarningSfx.pause(); window._timerWarningSfx=null; }
   _lastTimerKey = null;
 }
 function startTimerIfNeeded(){
@@ -9957,10 +9963,19 @@ function tick(){
   if(!start){ timerTO=setTimeout(tick,1000); return; }
   const rem=Math.max(0,Math.ceil(dur-(Date.now()-start)/1000));
   document.getElementById('phaseTimer').textContent=rem;
-  if(rem===10) AUDIO.sfx('timerWarning');
+  if(rem===10) {
+    if(window._timerWarningSfx){ window._timerWarningSfx.pause(); window._timerWarningSfx=null; }
+    const src = '/sounds/tomas_herudek-heartbeat-slow-quiet-and-simple-529662.mp3';
+    const a = new Audio(src);
+    a.volume = AUDIO.getSfxVol ? AUDIO.getSfxVol() : 0.8;
+    a.play().catch(()=>{});
+    window._timerWarningSfx = a;
+  }
   if(rem>0){
     timerTO=setTimeout(tick,1000);
   } else {
+    // Timer expired — stop heartbeat sound
+    if(window._timerWarningSfx){ window._timerWarningSfx.pause(); window._timerWarningSfx=null; }
     // Timer expired for this turn
     if(ph==='night'){
       if(isLeader && !_advancingStep){ _advancingStep=true; autoSkipTurn(); setTimeout(()=>{ _advancingStep=false; },800); }
@@ -11799,6 +11814,7 @@ const AUDIO = (function(){
     },
 
     sfx: _playSfx,
+    getSfxVol(){ return _sfxMuted ? 0 : _sfxVol; },
 
     resetLoginLock(){
       _loginStopped = false;
