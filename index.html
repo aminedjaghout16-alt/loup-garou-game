@@ -11180,7 +11180,7 @@ function renderLobby(players) {
       }
     } else {
       // New player — build and insert card
-      if (_prevLobbyCount > 0 && p.id !== myId && typeof AUDIO !== 'undefined') AUDIO.sfx('playerJoins');
+      if (_prevLobbyCount > 0 && !isMe && typeof AUDIO !== 'undefined') AUDIO.sfx('playerJoins');
       const avatarHTML = _wrGetAvatarHTML(p);
       const card = document.createElement('div');
       card.className = cls;
@@ -11583,8 +11583,8 @@ const AUDIO = (function(){
   let _fadeIds = [];
 
   const MUSIC_FILES = {
-    night:  '/sounds/cyberwave-orchestra-suspense-sci-fi-underscore-music-loop-300215.mp3',
-    day:    '/sounds/leberch-horror-loop-313735.mp3',
+    night:  '/sounds/freesound_community-night-ambience-17064.mp3',
+    day:    '',
     wolves: '/sounds/howling-man_82bpm_C_major.wav',
     lobby:  '',
   };
@@ -11593,14 +11593,12 @@ const AUDIO = (function(){
     death:      '/sounds/freesound_crunchpixstudio-rpg-sword-attack-combo-3-388917.mp3',
     vote:       '/sounds/freesound_community-stamp-81635.mp3',
     phaseDay:   '/sounds/universfield-single-church-bell-2-352062.mp3',
-    phaseNight: '/sounds/freesound_community-night-ambience-17064.mp3',
+    phaseNight: '',
     win:        '/sounds/freesound_community-medieval-fanfare-6826.mp3',
     click:      '/sounds/audley_fergine-ui-mouse-click-366460.mp3',
     timerWarning: '/sounds/tomas_herudek-heartbeat-slow-quiet-and-simple-529662.mp3',
     playerJoins:  '/sounds/dragon-studio-opening-door-450444.mp3',
   };
-  const _sfxCache = {};
-
   function _clearFades(){ _fadeIds.forEach(id=>clearInterval(id)); _fadeIds=[]; }
 
   function _makeTrack(src){
@@ -11670,8 +11668,7 @@ const AUDIO = (function(){
     if(!src) return;
     const vol = _sfxMuted ? 0 : _sfxVol;
     if(!vol) return;
-    if(!_sfxCache[key]) _sfxCache[key] = new Audio(src);
-    const a = _sfxCache[key].cloneNode();
+    const a = new Audio(src);
     a.volume = vol;
     a.play().catch(()=>{});
   }
