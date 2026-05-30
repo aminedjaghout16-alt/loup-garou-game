@@ -3629,7 +3629,18 @@ async function _joinChannel(ch){
   if(_joiningPromises[ch]) return _joiningPromises[ch];
   _joiningPromises[ch] = (async () => {
     try {
-      const uid = await _agoraClients[ch].join(AGORA_APP_ID, _voiceChannelName(ch), null);
+      // Fetch a signed token from our serverless function.
+      // Falls back to null if the endpoint isn't deployed yet (works when
+      // Agora Console has token auth disabled / "No certificate" mode).
+      let token = null;
+      try {
+        const channelName = _voiceChannelName(ch);
+        const res = await fetch(`/api/agora-token?channel=${encodeURIComponent(channelName)}&uid=0`);
+        if(res.ok){ const data = await res.json(); token = data.token || null; }
+        else { _voiceLog(`Token fetch HTTP ${res.status} — joining without token`); }
+      } catch(te){ _voiceLog('Token fetch failed, joining without token:', te.message); }
+
+      const uid = await _agoraClients[ch].join(AGORA_APP_ID, _voiceChannelName(ch), token);
       _agoraUid[ch] = uid;
       _agoraJoined[ch] = true;
       _voiceLog(`Joined ${ch} as uid ${uid}`);
