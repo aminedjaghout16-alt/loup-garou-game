@@ -3837,10 +3837,18 @@ async function resetVoiceChat(){
 }
 
 // ── HOOK INTO GAME EVENTS ─────────────────────────────────────────
-// Called whenever game state changes (phase, alive status, etc.)
+// Only re-evaluate channels when phase/status/alive actually changes
+let _lastVoiceKey = null;
 function onVoiceGameStateChange(){
   if(!_voiceEnabled || !gameState) return;
-  _joinCorrectChannels();
+
+  // Build a key that captures everything that affects channel membership
+  const aliveNow = gameState?.players?.[myId]?.alive !== false;
+  const key = `${gameState?.status}|${gameState?.phase}|${aliveNow}`;
+  if(key !== _lastVoiceKey){
+    _lastVoiceKey = key;
+    _joinCorrectChannels();
+  }
   _applyMuteRules();
   _updateVoiceUI();
 }
