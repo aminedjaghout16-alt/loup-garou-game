@@ -11586,7 +11586,8 @@ const AUDIO = (function(){
     night:  '/sounds/freesound_community-night-ambience-17064.mp3',
     day:    '',
     wolves: '/sounds/howling-man_82bpm_C_major.wav',
-    lobby:  '',
+    lobby:  '/sounds/cyberwave-orchestra-suspense-sci-fi-underscore-music-loop-300215.mp3',
+    login:  '/sounds/cyberwave-orchestra-suspense-sci-fi-underscore-music-loop-300215.mp3',
   };
   const SFX_FILES = {
     roleReveal: '/sounds/freesound_community-flipcard-91468.mp3',
@@ -11641,6 +11642,7 @@ const AUDIO = (function(){
       _fadeOut(_dayTrack);
       _fadeOut(_wolvesTrack);
       _fadeOut(_lobbyTrack);
+      _fadeOut(_loginTrack);
       if(!_nightTrack) _nightTrack = _makeTrack(MUSIC_FILES.night);
       _fadeIn(_nightTrack, vol);
 
@@ -11718,7 +11720,7 @@ const AUDIO = (function(){
 
     startLoginAmbient(){
       if(_loginStopped || _loginTrack) return;
-      _loginTrack = _makeTrack(MUSIC_FILES.night);
+      _loginTrack = _makeTrack(MUSIC_FILES.login);
       _fadeIn(_loginTrack, Math.min(0.3, _musicVol * 0.6));
     },
     stopLoginAmbient(){
@@ -11731,6 +11733,12 @@ const AUDIO = (function(){
 
     startLobbyAmbient(){
       if(_lobbyTrack) return;
+      // Stop login track first to avoid overlap — same song, different instance
+      if(_loginTrack){
+        const a = _loginTrack;
+        _loginTrack = null;
+        _fadeOut(a, ()=>{ a.src=''; });
+      }
       _lobbyTrack = _makeTrack(MUSIC_FILES.lobby);
       _fadeIn(_lobbyTrack, _musicVol);
     },
