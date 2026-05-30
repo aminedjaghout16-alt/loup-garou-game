@@ -7286,9 +7286,9 @@ function _doStartWithPlayers(players){
     alert(lang==='ar'?'تحتاج لاعبَين على الأقل':lang==='fr'?'Minimum 2 joueurs':'Need at least 2 players');
     return;
   }
-  // ── Ready check: all non-host players must be ready ──
+  // ── Ready check: all non-host, connected players must be ready ──
   const readyPlayers = gameState?.readyPlayers || {};
-  const notReady = players.filter(p => p.id !== myId && !readyPlayers[p.id]);
+  const notReady = players.filter(p => p.id !== myId && !readyPlayers[p.id] && !p.disconnected);
   if(notReady.length > 0){
     const btn=document.getElementById('t_start');
     if(btn){ btn.disabled=false; btn.textContent=tr('t_start'); }
@@ -7520,7 +7520,7 @@ function renderGame(){
       _helperEl.style.color=_ok?'var(--green)':'var(--moon-pale)';
       // Ready check for start button
       const _readyMap = gameState?.readyPlayers || {};
-      const _notReadyPlayers = players.filter(p => p.id !== myId && !_readyMap[p.id]);
+      const _notReadyPlayers = players.filter(p => p.id !== myId && !_readyMap[p.id] && !p.disconnected);
       const _allReady = _notReadyPlayers.length === 0;
       const _startBtn = document.getElementById('t_start');
       if(_startBtn){
