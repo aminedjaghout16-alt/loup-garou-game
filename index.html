@@ -6113,14 +6113,14 @@ function hunterShoot(targetId, callback){
       // Write hunter shot record
       db.ref(`games/${roomCode}/nightActions/_hunterShot`).set({target:targetId,by:myId,ts:Date.now()});
       // Check for instant win (hunter kills last wolf)
-      setTimeout(()=>checkHunterWinCondition(), 100);
+      setTimeout(()=>checkHunterWinCondition(targetId), 100);
     });
   } else if(gameState){
     if(gameState.players[targetId]) gameState.players[targetId].alive=false;
     if(!gameState.nightActions) gameState.nightActions={};
     gameState.nightActions._hunterShot={target:targetId,by:myId,ts:Date.now()};
     // Check for instant win (hunter kills last wolf)
-    setTimeout(()=>checkHunterWinCondition(), 100);
+    setTimeout(()=>checkHunterWinCondition(targetId), 100);
   }
   // Show death anim for target, then continue
   setTimeout(()=>showDeathAnimation(targetName, targetRole), 200);
@@ -6139,12 +6139,13 @@ function hunterSkip(callback){
   if(typeof callback==='function') callback();
 }
 
-function checkHunterWinCondition(){
+function checkHunterWinCondition(justKilledId){
   // Check if hunter just killed the last wolf - village wins instantly
   if(!isLeader) return;
   if(!gameState) return;
   const players=Object.values(gameState.players||{});
-  const alive=players.filter(p=>p.alive);
+  // Treat justKilledId as dead even if Firebase hasn't updated locally yet
+  const alive=players.filter(p=>p.alive && p.id !== justKilledId);
   const wolvesAlive=alive.filter(p=>isWolfRole(p.role,gameState));
   
   // If no werewolves left (and at least one villager alive), village wins immediately
