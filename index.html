@@ -6149,28 +6149,33 @@ function checkHunterWinCondition(){
   
   // If no werewolves left (and at least one villager alive), village wins immediately
   if(wolvesAlive.length===0 && alive.length>0){
-    const upd={};
-    upd[`games/${roomCode}/status`]='gameover:village';
-    if(fbOk&&db&&roomCode){
-      db.ref().update(upd);
-    } else {
-      gameState.status='gameover:village';
-      renderGame();
-    }
+    // Delay gameover write so death animation plays first (animation fires at +200ms and lasts ~4400ms)
+    setTimeout(()=>{
+      const upd={};
+      upd[`games/${roomCode}/status`]='gameover:village';
+      if(fbOk&&db&&roomCode){
+        db.ref().update(upd);
+      } else {
+        gameState.status='gameover:village';
+        renderGame();
+      }
+    }, 4800);
     return true;
   }
   
   // Also check if werewolves equal or outnumber villagers - werewolves win
   const nonWolvesAlive=alive.filter(p=>!isWolfRole(p.role,gameState));
   if(wolvesAlive.length>0 && wolvesAlive.length>=nonWolvesAlive.length){
-    const upd={};
-    upd[`games/${roomCode}/status`]='gameover:werewolf';
-    if(fbOk&&db&&roomCode){
-      db.ref().update(upd);
-    } else {
-      gameState.status='gameover:werewolf';
-      renderGame();
-    }
+    setTimeout(()=>{
+      const upd={};
+      upd[`games/${roomCode}/status`]='gameover:werewolf';
+      if(fbOk&&db&&roomCode){
+        db.ref().update(upd);
+      } else {
+        gameState.status='gameover:werewolf';
+        renderGame();
+      }
+    }, 4800);
     return true;
   }
   
@@ -7134,6 +7139,19 @@ function runDisconnectWatcher(){
           db.ref(`games/${roomCode}/players/${p.id}`).update({
             alive: false,
             diedFromDisconnect: true
+          }).then(()=>{
+            // Check win condition after death animation (~4800ms)
+            setTimeout(()=>{
+              if(!isLeader || !gameState) return;
+              const _alive = Object.values(gameState.players||{}).filter(q=>q.alive);
+              const _wolves = _alive.filter(q=>isWolfRole(q.role,gameState));
+              const _nonWolves = _alive.filter(q=>!isWolfRole(q.role,gameState));
+              if(_wolves.length===0 && _alive.length>0){
+                db.ref(`games/${roomCode}/status`).set('gameover:village');
+              } else if(_wolves.length>0 && _wolves.length>=_nonWolves.length){
+                db.ref(`games/${roomCode}/status`).set('gameover:werewolf');
+              }
+            }, 4800);
           });
         }
         console.log(`💀 Player ${p.id} (${p.name}) timed out — marked dead`);
@@ -9384,6 +9402,8 @@ function resolveNightAndAdvance(){
     else if(_wolvesAfter.length===0&&_aliveAfter.length>0) _winResult='village';
   }
   if(_winResult) upd[`games/${roomCode}/status`]='gameover:'+_winResult;
+  // Store win result separately so we can delay the gameover write
+  const _nightWinResult = _winResult;
 
   // Sect Leader win: check if all alive players are recruited
   if(!_winResult){
@@ -9412,7 +9432,16 @@ function resolveNightAndAdvance(){
   }
 
   if(fbOk&&db&&roomCode){
-    db.ref().update(upd);
+    // Remove gameover status from upd — write it separately after death animations
+    delete upd[`games/${roomCode}/status`];
+    db.ref().update(upd).then(()=>{
+      if(_nightWinResult){
+        // Delay gameover so death animations (~4800ms) finish before game-over screen shows
+        setTimeout(()=>{
+          db.ref(`games/${roomCode}/status`).set('gameover:'+_nightWinResult);
+        }, 4800);
+      }
+    });
   } else {
     killSet.forEach(id=>{ if(gs.players[id]) gs.players[id].alive=false; });
     // Apply role changes from upd
@@ -9836,6 +9865,10 @@ function resolveDayAndAdvance(){
     if(wolvesD.length>0&&wolvesD.length>=nonWolvesD.length) winD={winner:'werewolf'};
     else if(wolvesD.length===0&&aliveD.length>0) winD={winner:'village'};
     if(winD) upd[`games/${roomCode}/status`]='gameover:'+(winD.winner);
+    // Store win for delayed write
+    const _dayWinResult = winD ? winD.winner : null;
+    // Remove gameover from upd — write separately after death animations
+    if(_dayWinResult) delete upd[`games/${roomCode}/status`];
 
     // Check if eliminated player is a hunter (who needs to shoot)
     let eliminatedId=null;
@@ -9850,7 +9883,12 @@ function resolveDayAndAdvance(){
     _phaseTransBlocked=true;
 
     db.ref().update(upd,()=>{
-      if(!winD) setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+      if(_dayWinResult){
+        // Delay gameover so death animations (~4800ms) finish before game-over screen
+        setTimeout(()=>{ db.ref(`games/${roomCode}/status`).set('gameover:'+_dayWinResult); }, 4800);
+      } else {
+        setTimeout(()=>{ if(isLeader) advanceNightTurn(0); },800);
+      }
     });
   } else {
     // Apply eliminations locally
