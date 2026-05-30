@@ -3650,11 +3650,11 @@ async function _startSpeaking(){
   if(_pttActive || !_voiceEnabled) return;
   _pttActive = true;
 
-  // Decide which channel to publish to based on current state
-  const ch = _getSpeakChannel();
-  if(!ch){ _pttActive=false; return; }
-
+  // Glow immediately so the button feels responsive
   document.getElementById('pttBtn').classList.add('active');
+
+  // Default to 'alive' channel if gameState isn't fully loaded yet
+  const ch = _getSpeakChannel() || 'alive';
 
   try {
     if(!_localMicTrack){
@@ -3766,9 +3766,9 @@ function _updateVoiceUI(){
   const isNight = gameState?.phase === 'night';
   const gs = gameState?.status;
 
-  if(!gs || gs==='setup' || (gs && gs.startsWith('gameover'))){
+  if(gs && gs.startsWith('gameover')){
     btn.disabled = true;
-    label.textContent = 'Game not active';
+    label.textContent = 'Game over';
     return;
   }
 
