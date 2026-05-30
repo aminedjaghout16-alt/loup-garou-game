@@ -6237,6 +6237,9 @@ function handleRematch(){
   const btn=document.getElementById('rematchBtn');
   if(btn){ btn.disabled=true; btn.textContent=lang==='ar'?'⏳ جارٍ العودة للغرفة…':lang==='fr'?'⏳ Retour au salon…':'⏳ Returning to lobby…'; }
 
+  // Reset _lobbyReady so ready button renders correctly after rematch
+  try { _lobbyReady = false; } catch(e) {}
+
   // Reset all local timer + phase state so ALL clients (not just leader) get a clean slate
   _gameOver=false;
   _lastStepId=null;
@@ -6259,8 +6262,11 @@ function handleRematch(){
     // Reset game back to setup/waiting state — all clients auto-navigate via their Firebase listener
     const upd={};
     upd[`games/${roomCode}/status`]='setup';
-    upd[`games/${roomCode}/leader`]=myId;  // whoever clicks rematch becomes the new leader
-    isLeader=true;
+    // Keep original leader; only take over if they've left the room
+    const _players=Object.values(gameState?.players||{});
+    const _currentLeader=gameState?.leader;
+    const _leaderStillHere=_players.some(p=>p.id===_currentLeader && !p.disconnected);
+    if(!_leaderStillHere){ upd[`games/${roomCode}/leader`]=myId; isLeader=true; }
     upd[`games/${roomCode}/phase`]=null;
     upd[`games/${roomCode}/phaseStart`]=null;
     upd[`games/${roomCode}/dayNum`]=null;
@@ -6311,6 +6317,9 @@ function handleRematch(){
       upd[`games/${roomCode}/players/${p.id}/alive`]=true;
       upd[`games/${roomCode}/players/${p.id}/role`]=null;
       upd[`games/${roomCode}/players/${p.id}/idiotRevealed`]=null;
+      upd[`games/${roomCode}/players/${p.id}/hunterSkipped`]=null;
+      upd[`games/${roomCode}/players/${p.id}/disconnected`]=false;
+      upd[`games/${roomCode}/players/${p.id}/disconnectedAt`]=null;
     });
     db.ref().update(upd).catch(err=>console.error('Rematch error:',err));
     // Everyone's Firebase listener fires on status→'setup' and re-renders the waiting room
@@ -6371,6 +6380,9 @@ function doRestart(){
       upd[`games/${roomCode}/players/${p.id}/role`]=roles[i];
       upd[`games/${roomCode}/players/${p.id}/alive`]=true;
       upd[`games/${roomCode}/players/${p.id}/idiotRevealed`]=null;
+      upd[`games/${roomCode}/players/${p.id}/hunterSkipped`]=null;
+      upd[`games/${roomCode}/players/${p.id}/disconnected`]=false;
+      upd[`games/${roomCode}/players/${p.id}/disconnectedAt`]=null;
     });
     upd[`games/${roomCode}/status`]='playing';
     upd[`games/${roomCode}/phase`]='night';
@@ -11748,6 +11760,10 @@ const AUDIO = (function(){
     },
 
     sfx: _playSfx,
+
+    resetLoginLock(){
+      _loginStopped = false;
+    },
   };
 })();
 
@@ -11834,6 +11850,18 @@ window.showGameStartAnimation = function(onDone){
   return _origShowGameStartAnimation(onDone);
 };
 
+// ── Reset audio state on rematch so music state machine starts fresh ──────
+const _origHandleRematchAudio = handleRematch;
+window.handleRematch = function(){
+  // Reset music state machine
+  _musicPhase  = null;
+  _musicStepId = null;
+  window._audioSfxLastPhase = null;
+  // Reset login ambient lock so lobby can play again
+  AUDIO.resetLoginLock();
+  return _origHandleRematchAudio.apply(this, arguments);
+};
+
 // ── Role reveal SFX ──────────────────────────────────────────────────────
 const _origShowRoleRevealAnimation = showRoleRevealAnimation;
 window.showRoleRevealAnimation = function(onDone){
@@ -11916,10 +11944,10 @@ function _applyMusicState(ph, stepId){
   // Phase change (night→day, day→night, lobby→night, etc.)
   if(desired !== _musicPhase){
     _musicPhase = desired;
-    if(desired === 'night')     AUDIO.setPhase('night');
-    else if(desired === 'day')  AUDIO.setPhase('day');
-    else if(desired === 'lobby') AUDIO.startLobbyAmbient();
-    else if(!desired)           AUDIO.stopMusic();
+    if(desired === 'night')      AUDIO.setPhase('night');
+    else if(desired === 'day')   AUDIO.setPhase('day');
+    else if(desired === 'lobby'){ AUDIO.stopMusic(); AUDIO.startLobbyAmbient(); }
+    else if(!desired)            AUDIO.stopMusic();
   }
 }
 
@@ -11936,7 +11964,7 @@ window.renderGame = function(){
   if(status === 'playing'){
     _applyMusicState(ph, stepId);
   } else if(status === 'setup'){
-    // In lobby — ensure lobby music plays
+    // In lobby — ensure lobby music plays (handles rematch too)
     if(_musicPhase !== 'lobby'){
       _musicPhase = 'lobby';
       AUDIO.stopMusic();
