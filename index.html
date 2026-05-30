@@ -9906,6 +9906,7 @@ function tick(){
   if(!start){ timerTO=setTimeout(tick,1000); return; }
   const rem=Math.max(0,Math.ceil(dur-(Date.now()-start)/1000));
   document.getElementById('phaseTimer').textContent=rem;
+  if(rem===10) AUDIO.sfx('timerWarning');
   if(rem>0){
     timerTO=setTimeout(tick,1000);
   } else {
@@ -11130,6 +11131,7 @@ function renderLobby(players) {
     existingCards[el.dataset.pid] = el;
   });
   const seenIds = new Set();
+  const _prevLobbyCount = Object.keys(existingCards).length;
 
   players.forEach((p, i) => {
     const isHost  = gameState?.leader === p.id;
@@ -11178,6 +11180,7 @@ function renderLobby(players) {
       }
     } else {
       // New player — build and insert card
+      if (_prevLobbyCount > 0 && p.id !== myId && typeof AUDIO !== 'undefined') AUDIO.sfx('playerJoins');
       const avatarHTML = _wrGetAvatarHTML(p);
       const card = document.createElement('div');
       card.className = cls;
@@ -11590,9 +11593,11 @@ const AUDIO = (function(){
     death:      '/sounds/freesound_crunchpixstudio-rpg-sword-attack-combo-3-388917.mp3',
     vote:       '/sounds/freesound_community-stamp-81635.mp3',
     phaseDay:   '/sounds/universfield-single-church-bell-2-352062.mp3',
-    phaseNight: '',
+    phaseNight: '/sounds/freesound_community-night-ambience-17064.mp3',
     win:        '/sounds/freesound_community-medieval-fanfare-6826.mp3',
     click:      '/sounds/audley_fergine-ui-mouse-click-366460.mp3',
+    timerWarning: '/sounds/tomas_herudek-heartbeat-slow-quiet-and-simple-529662.mp3',
+    playerJoins:  '/sounds/dragon-studio-opening-door-450444.mp3',
   };
   const _sfxCache = {};
 
