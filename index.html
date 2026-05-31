@@ -3499,7 +3499,7 @@ async function initVoiceChat(){
     const res = await fetch('/api/create-room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomCode, max_participants: 50 })
+      body: JSON.stringify({ roomCode })
     });
     if(!res.ok){
       const errText = await res.text().catch(()=>'');
