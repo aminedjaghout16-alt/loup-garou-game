@@ -5849,20 +5849,25 @@ function checkHunterWinCondition(justKilledId){
 // GHOST SPECTATOR — dead players see ghosted UI
 // ════════════════════════════════════════════
 function applyGhostMode(){
-  const me=gameState?.players?.[myId];
   const pv=document.getElementById('playView');
-  const ab=document.getElementById('actionBtns');
-  if(!pv||!me) return;
-  if(!me.alive && gameState?.status==='playing'){
+  if(!pv) return;
+  const isSpec = window._isSpectator === true;
+  const me=gameState?.players?.[myId];
+  const isDeadPlayer = me && !me.alive && gameState?.status==='playing';
+  if(isSpec || isDeadPlayer){
     pv.classList.add('spectating');
-    // Inject spectator badge if not already there
     if(!document.getElementById('spectatorBadge')){
       const badge=document.createElement('div');
       badge.id='spectatorBadge';
       badge.className='spectator-badge';
-      badge.textContent=lang==='ar'?'👻 أنت تتفرج — لقد خرجت من اللعبة':lang==='fr'?'👻 Vous spectez — vous êtes éliminé':'👻 Spectating — you have been eliminated';
+      if(isSpec)
+        badge.textContent=lang==='ar'?'\u{1F441}\uFE0F \u0623\u0646\u062A \u062A\u062A\u0641\u0631\u062C \u0641\u0642\u0637':lang==='fr'?'\uD83D\uDC41\uFE0F Mode spectateur':'\uD83D\uDC41\uFE0F Spectating — you were not in this game';
+      else
+        badge.textContent=lang==='ar'?'\uD83D\uDC7B \u0623\u0646\u062A \u062A\u062A\u0641\u0631\u062C \u2014 \u0644\u0642\u062F \u062E\u0631\u062C\u062A \u0645\u0646 \u0627\u0644\u0644\u0639\u0628\u0629':lang==='fr'?'\uD83D\uDC7B Vous spectez \u2014 vous \u00EAtes \u00E9limin\u00E9':'\uD83D\uDC7B Spectating \u2014 you have been eliminated';
       pv.insertBefore(badge, pv.firstChild);
     }
+    const ab=document.getElementById('actionBtns');
+    if(ab && isSpec) ab.style.display='none';
   } else {
     pv.classList.remove('spectating');
     const b=document.getElementById('spectatorBadge');
@@ -6608,17 +6613,22 @@ async function enterRoom(){
     const _gameIsPlaying = _snapVal?.status === 'playing';
     const _existingMe = _snapVal?.players?.[myId];
     if(_gameIsPlaying && !_existingMe){
-      // Newcomer joining a running game → spectator only (alive:false, no role)
-      await ref.child(`players/${myId}`).set(
-        {id:myId,name:myName,alive:false,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null),spectator:true}
+      // Newcomer joining a running game → write to spectators node, NOT players
+      // This keeps them invisible to all game logic, win conditions, and player lists
+      window._isSpectator = true;
+      await db.ref(`games/${roomCode}/spectators/${myId}`).set(
+        {id:myId,name:myName,joinedAt:Date.now(),uid:(_googleUser?.uid||null),photoURL:(_googleUser?.photoURL||null)}
       );
+      db.ref(`games/${roomCode}/spectators/${myId}`).onDisconnect().remove();
     } else if(_gameIsPlaying && _existingMe){
       // Real rejoin — only update connection metadata, preserve role/alive
+      window._isSpectator = false;
       await ref.child(`players/${myId}`).update(
         {disconnected:false, disconnectedAt:null, name:myName, uid:(_googleUser?.uid||null)}
       );
     } else {
       // Lobby (setup) — normal join
+      window._isSpectator = false;
       await ref.child(`players/${myId}`).set(
         {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
       );
@@ -7144,8 +7154,9 @@ function assignRoles(n){
 // ════════════════════════════════════════════
 function renderGame(){
   if(!gameState) return;
-  const players=gameState.players?Object.values(gameState.players):[];
-  document.getElementById('hPlayers').textContent=players.length;
+  // Exclude pure spectators (not in players node at all) from all game logic
+  const players=(gameState.players?Object.values(gameState.players):[]).filter(p=>!p.spectator);
+  document.getElementById('hPlayers').textContent=players.filter(p=>p.alive).length;
   document.getElementById('hRoom').textContent=roomCode||'';
 
   // Handle gameover status written by leader
@@ -7327,7 +7338,11 @@ function renderGame(){
     // (checkWinCondition block moved to the gameover handler at top of renderGame)
 
     const me=gameState.players?.[myId];
-    if(me?.role){
+    if(window._isSpectator){
+      document.getElementById('rEmoji').textContent='👁️';
+      document.getElementById('rName').textContent=lang==='ar'?'متفرج':lang==='fr'?'Spectateur':'Spectator';
+      document.getElementById('rDesc').textContent=lang==='ar'?'أنت تشاهد هذه اللعبة فقط':lang==='fr'?'Vous regardez cette partie':' You are watching this game';
+    } else if(me?.role){
       myRole=me.role;
       const rd=ROLES_DEF[myRole];
       document.getElementById('rEmoji').textContent=rd?.e||'❓';
