@@ -3473,6 +3473,8 @@ let _vcMuted   = true;   // start muted
 let _vcInited  = false;
 let _vcJoining = false;  // prevent duplicate join attempts
 let _vcRemoteAudios = {}; // sessionId → HTMLAudioElement for remote participants
+let _vcFailCount   = 0;   // consecutive API failures (for backoff)
+let _vcNextRetryAt = 0;   // timestamp before which failsafe will not retry
 
 async function initVoiceChat(){
   // Show bar immediately regardless of Daily status
@@ -3497,7 +3499,7 @@ async function initVoiceChat(){
     const res = await fetch('/api/create-room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomCode })
+      body: JSON.stringify({ roomCode, max_participants: 50 })
     });
     if(!res.ok){
       const errText = await res.text().catch(()=>'');
@@ -3513,6 +3515,8 @@ async function initVoiceChat(){
     _vc.on('joined-meeting', () => {
       _vcInited = true;
       _vcJoining = false;
+      _vcFailCount   = 0;   // reset backoff on success
+      _vcNextRetryAt = 0;
       _vcSetStatus('🎙 Connected');
       console.log('[Voice] Joined Daily room successfully');
     });
@@ -3601,6 +3605,8 @@ async function initVoiceChat(){
     console.error('[Voice] join failed:', e);
     _vcInited  = false;
     _vcJoining = false;
+    _vcFailCount = (_vcFailCount || 0) + 1;
+    _vcNextRetryAt = Date.now() + Math.min(30000, 5000 * _vcFailCount); // backoff: 5s, 10s, 15s… up to 30s
     if(_vc){ try{ _vc.destroy(); }catch(x){} _vc = null; }
     // Show specific error message instead of generic "Voice unavailable"
     const reason = e.message || 'Unknown error';
@@ -12277,7 +12283,9 @@ setInterval(function(){
       if(typeof _vcShowBar === 'function') _vcShowBar();
     }
     // If bar is showing but voice is disconnected, attempt reconnect
+    // — but only after the backoff cooldown has elapsed
     if(!_vcInited && !_vcJoining && typeof roomCode !== 'undefined' && roomCode && typeof myId !== 'undefined' && myId){
+      if(Date.now() < _vcNextRetryAt) return; // still in cooldown
       console.log('[Voice] Failsafe: voice disconnected while in-game, reconnecting...');
       if(typeof initVoiceChat === 'function') initVoiceChat();
     }
