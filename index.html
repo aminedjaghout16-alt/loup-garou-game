@@ -6694,7 +6694,7 @@ async function enterRoom(){
       }
       runDisconnectWatcher(); // ← disconnect/reconnect engine
       // ── Sync playerCount to publicRooms so the server browser stays accurate ──
-      if(gameState && gameState.status === 'setup' && isLeader && typeof db !== 'undefined' && db){
+      if(gameState && (gameState.status === 'setup' || gameState.status === 'playing') && isLeader && typeof db !== 'undefined' && db){
         const alivePlayers = Object.values(gameState.players || {}).filter(p => !p.disconnected);
         const count = alivePlayers.length || 1;
         db.ref(`publicRooms/${roomCode}/playerCount`).set(count).catch(()=>{});
@@ -10717,9 +10717,9 @@ async function crEnter(){
       await db.ref(`publicRooms/${roomCode}`).set({
         code:roomCode, name:document.getElementById('rcRoomName')?.value?.trim()||'Game Room',
         host:myName, hostUid:myId, maxPlayers:_rcMax,
-        playerCount:1, status:'waiting', createdAt:Date.now()
+        playerCount:1, status:'setup', createdAt:Date.now()
       });
-      db.ref(`publicRooms/${roomCode}`).onDisconnect().remove();
+      db.ref(`publicRooms/${roomCode}`).onDisconnect().update({status:'offline'});
     }catch(e){}
   }
   initFBWithRetry(()=>enterRoom());
@@ -10754,7 +10754,7 @@ function _prStart(){
   document.getElementById('prList').innerHTML='<div class="pr-loading">Loading rooms…</div>';
   _prListener = db.ref('publicRooms').orderByChild('createdAt').on('value', snap=>{
     const rooms=[];
-    snap.forEach(c=>{ const r=c.val(); if(r&&r.status==='waiting') rooms.push(r); });
+    snap.forEach(c=>{ const r=c.val(); if(r&&(r.status==='waiting'||r.status==='setup'||r.status==='playing')) rooms.push(r); });
     rooms.sort((a,b)=>b.createdAt-a.createdAt);
     _prRender(rooms);
   }, ()=>{
@@ -10780,19 +10780,25 @@ function _prRender(rooms){
   }
   rooms.forEach(r=>{
     const full=r.playerCount>=r.maxPlayers;
+    const inProgress=r.status==='playing';
     const isMe=r.hostUid===myId;
     const ageMs=Date.now()-(r.createdAt||Date.now());
     const age=ageMs<60000?'just now':ageMs<3600000?Math.floor(ageMs/60000)+'m ago':Math.floor(ageMs/3600000)+'h ago';
     const card=document.createElement('div');
     card.className='pr-card';
+    const statusPip = inProgress
+      ? `<span class="pr-card-pip" style="color:#facc15">🟡 In Progress</span>`
+      : `<span class="pr-card-pip ${full?'full':'open'}">${full?'🔴':'🟢'} ${r.playerCount||1}/${r.maxPlayers}</span>`;
+    const joinLabel = isMe ? 'Enter' : inProgress ? 'Rejoin' : full ? 'Full' : 'Join';
+    const joinDisabled = (full && !isMe && !inProgress) ? 'disabled' : '';
     card.innerHTML=`
       <div class="pr-card-info">
         <div class="pr-card-name">${r.name||'Game Room'}</div>
         <div class="pr-card-meta">Host: ${r.host||'?'} · <span style="color:var(--moon);font-family:'Creepster',cursive">${r.code}</span> · ${age}</div>
       </div>
-      <span class="pr-card-pip ${full?'full':'open'}">${full?'🔴':'🟢'} ${r.playerCount||1}/${r.maxPlayers}</span>
-      <button class="pr-join-btn" ${full&&!isMe?'disabled':''} onclick="_prJoin('${r.code}')">
-        ${isMe?'Enter':full?'Full':'Join'}
+      ${statusPip}
+      <button class="pr-join-btn" ${joinDisabled} onclick="_prJoin('${r.code}')">
+        ${joinLabel}
       </button>`;
     list.appendChild(card);
   });
@@ -11088,11 +11094,11 @@ renderGame = function(){
   }
 };
 
-// Remove public room listing when game starts
+// Update public room listing when game starts (mark as playing, don't remove)
 const _origDoStartGame = doStartGame;
 doStartGame = function(){
   if(typeof db!=='undefined'&&db&&roomCode){
-    db.ref(`publicRooms/${roomCode}`).remove().catch(()=>{});
+    db.ref(`publicRooms/${roomCode}`).update({status:'playing'}).catch(()=>{});
   }
   _origDoStartGame();
 };
