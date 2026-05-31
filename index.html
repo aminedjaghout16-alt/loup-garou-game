@@ -3763,18 +3763,7 @@ function onVoiceGameStateChange(){
   _updateVoiceUI();
 }
 
-// Start voice chat when the player enters a game room
-window.addEventListener('load', ()=>{
-  setTimeout(()=>{
-    if(typeof showGame === 'function'){
-      const _sg = showGame;
-      window.showGame = function(){
-        _sg.apply(this, arguments);
-        setTimeout(initVoiceChat, 600);
-      };
-    }
-  }, 900);
-});
+// initVoiceChat is now called directly in the showGame patch below
 
 // Patch renderGame to also update voice
 window.addEventListener('load', ()=>{
@@ -10801,6 +10790,8 @@ showGame = function(){
   _origShowGame();
   // Refresh coin badge visibility (login screen now hidden)
   if (typeof _renderCoinBadge === 'function') _renderCoinBadge();
+  // Start Daily.co voice chat
+  setTimeout(function(){ if(typeof initVoiceChat === 'function') initVoiceChat(); }, 600);
 };
 
 // ── Patch _updateGoogleUI: after sign-in go to main menu ──
