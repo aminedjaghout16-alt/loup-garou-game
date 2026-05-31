@@ -820,21 +820,27 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .audio-mute:hover{background:rgba(212,160,23,.15)}
 
 /* ══════════════════════════════════════════
-   VOICE CHAT STYLES
+   VOICE CHAT BAR
 ══════════════════════════════════════════ */
-#voiceBar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:9999;display:none;align-items:center;gap:10px;background:rgba(10,10,26,.92);border:1.5px solid rgba(185,28,28,.4);border-radius:40px;padding:8px 18px;box-shadow:0 4px 24px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
-#voiceBar.visible{display:flex}
-#pttBtn{width:54px;height:54px;border-radius:50%;border:2px solid var(--blood-glow);background:rgba(185,28,28,.2);cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;transition:.15s;user-select:none;-webkit-user-select:none;touch-action:none}
-#pttBtn.active{background:rgba(185,28,28,.75);border-color:#ff4444;box-shadow:0 0 18px rgba(255,68,68,.6);transform:scale(1.08)}
-#pttBtn:disabled{opacity:.35;cursor:not-allowed}
-#voiceChannelLabel{font-size:.7rem;color:var(--ghost);text-align:center;min-width:70px;letter-spacing:.05em}
-#voiceMicStatus{font-size:.75rem;color:var(--moon-pale);display:flex;align-items:center;gap:4px}
-#voiceConnStatus{font-size:.62rem;color:var(--ghost);opacity:.6}
-.pc-speaking-ring{position:absolute;inset:-4px;border-radius:50%;border:3px solid #22c55e;box-shadow:0 0 12px rgba(34,197,94,.7);animation:speakPulse .8s ease-in-out infinite;pointer-events:none;z-index:5}
-@keyframes speakPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.06)}}
-.pc-speaking-name{color:#22c55e!important;text-shadow:0 0 8px rgba(34,197,94,.5)}
-#voiceSettingsBtn{background:none;border:none;color:var(--ghost);font-size:1rem;cursor:pointer;padding:2px 4px;opacity:.6;transition:.15s}
-#voiceSettingsBtn:hover{opacity:1}
+#voiceBar{
+  position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  display:none;align-items:center;justify-content:center;gap:12px;
+  background:rgba(10,10,26,.97);border-top:1px solid rgba(185,28,28,.5);
+  padding:10px 16px;backdrop-filter:blur(10px);
+}
+#pttBtn{
+  width:48px;height:48px;border-radius:50%;border:2px solid rgba(185,28,28,.7);
+  background:rgba(185,28,28,.2);cursor:pointer;font-size:1.3rem;
+  display:flex;align-items:center;justify-content:center;transition:.2s;
+  color:#fff;flex-shrink:0;
+}
+#voiceConnStatus{font-family:'Creepster',cursive;font-size:.85rem;color:var(--moon);}
+#voiceLeaveBtn{
+  padding:.3rem .75rem;background:transparent;border:1px solid rgba(185,28,28,.5);
+  color:#ef4444;border-radius:6px;cursor:pointer;font-family:'Creepster',cursive;
+  font-size:.8rem;transition:.2s;
+}
+#voiceLeaveBtn:hover{background:rgba(185,28,28,.25);}
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -3458,312 +3464,83 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised with match reward fix)
-/* ══════════════════════════════════════════════════════════════════
-   DAILY.CO VOICE CHAT
-   Channels (implemented as separate Daily rooms):
-     {roomCode}_alive   — all living players
-     {roomCode}_wolves  — werewolves only, night only
-     {roomCode}_dead    — dead players
-   Push-to-talk: hold #pttBtn or SPACE to unmute
-   Speaking indicator: Firebase games/{room}/speaking/{myId} = true/false
-══════════════════════════════════════════════════════════════════ */
+// ════════════════════════════════════════════════════
+// DAILY.CO VOICE CHAT — simple push-to-talk
+// ════════════════════════════════════════════════════
+const DAILY_DOMAIN = 'loup-garou';
 
-// ── CONFIG ─────────────────────────────────────────────────────────
-// Create a free account at daily.co, then set your domain below
-// e.g. if your Daily URL is https://myapp.daily.co/  → 'myapp'
-const DAILY_DOMAIN = 'loup-garou'; // your Daily subdomain
+let _vc       = null;   // DailyIframe call object
+let _vcMuted  = true;   // start muted
+let _vcInited = false;
 
-// ── STATE ──────────────────────────────────────────────────────────
-let _dailyInited    = false;
-let _dailyCalls     = {};   // { alive: DailyCall, wolves: DailyCall, dead: DailyCall }
-let _dailyJoined    = {};   // { alive: bool, wolves: bool, dead: bool }
-let _pttActive      = false;
-let _voiceEnabled   = false;
-let _publishedTo    = null;
-let _speakingListener = null;
-let _lastVoiceKey   = null;
-let _startSpeakingPromise = null;
-
-// ── HELPERS ────────────────────────────────────────────────────────
-function _voiceLog(...a){ console.log('[Voice]', ...a); }
-function _isWolfPlayer(){
-  if(!myRole || !gameState) return false;
-  return typeof isWolfRole === 'function' ? isWolfRole(myRole, gameState) : false;
-}
-function _amAlive(){
-  return gameState?.players?.[myId]?.alive !== false;
-}
-function _dailyRoomName(type){
-  // Each channel is a separate Daily room scoped to this game room
-  return `${roomCode}-${type}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
-}
-function _dailyRoomUrl(type){
-  return `https://${DAILY_DOMAIN}.daily.co/${_dailyRoomName(type)}`;
-}
-
-// ── INIT ───────────────────────────────────────────────────────────
 async function initVoiceChat(){
-  if(_dailyInited) return;
-  if(!roomCode || !myId || typeof window.DailyIframe === 'undefined'){
-    _voiceLog('Daily.co SDK not loaded or room not ready');
-    return;
-  }
-  _dailyInited = true;
+  if(_vcInited) return;
+  if(!roomCode || !myId) return;
+  if(typeof window.DailyIframe === 'undefined'){ console.warn('[Voice] Daily SDK not loaded'); return; }
+  _vcInited = true;
 
-  // Create a Daily call object for each channel (no iframe — audio only)
-  for(const ch of ['alive','wolves','dead']){
-    const call = window.DailyIframe.createCallObject({
-      audioSource: true,
-      videoSource: false,
-      dailyConfig: { experimentalChromeVideoMuteLightOff: true }
-    });
-    _dailyCalls[ch] = call;
-    _dailyJoined[ch] = false;
+  const roomName = ('lg-' + roomCode).toLowerCase().replace(/[^a-z0-9-]/g,'');
+  const url = 'https://' + DAILY_DOMAIN + '.daily.co/' + roomName;
 
-    call.on('participant-joined', ()=> _voiceLog(`${ch}: participant joined`));
-    call.on('participant-left',   ()=> _voiceLog(`${ch}: participant left`));
-    call.on('error', (e)=> _voiceLog(`${ch} error:`, e));
-  }
-
-  _voiceEnabled = true;
-  document.getElementById('voiceBar').classList.add('visible');
-  document.getElementById('voiceConnStatus').textContent = 'Ready';
-
-  // PTT button
-  const btn = document.getElementById('pttBtn');
-  btn.disabled = false;
-  btn.addEventListener('pointerdown',  (e)=>{ e.preventDefault(); _startSpeaking(); }, { passive: false });
-  btn.addEventListener('pointerup',    (e)=>{ e.preventDefault(); _stopSpeaking();  }, { passive: false });
-  btn.addEventListener('pointerleave', (e)=>{ e.preventDefault(); if(_pttActive) _stopSpeaking(); }, { passive: false });
-  btn.addEventListener('pointercancel',(e)=>{ if(_pttActive) _stopSpeaking(); });
-
-  // Spacebar PTT
-  document.addEventListener('keydown',(e)=>{
-    if(e.code==='Space' && !e.repeat && !_isTyping(e)) _startSpeaking();
-  });
-  document.addEventListener('keyup',(e)=>{
-    if(e.code==='Space' && !_isTyping(e)) _stopSpeaking();
-  });
-
-  await _joinCorrectChannels();
-  _listenSpeakingIndicators();
-  _updateVoiceUI();
-}
-
-function _isTyping(e){
-  const t = e.target?.tagName;
-  return t==='INPUT' || t==='TEXTAREA' || e.target?.isContentEditable;
-}
-
-// ── JOIN / LEAVE CHANNELS ─────────────────────────────────────────
-async function _joinCorrectChannels(){
-  if(!_voiceEnabled || !roomCode || !myId) return;
-  const status = gameState?.status;
-  const phase  = gameState?.phase;
-  if(!status || status==='setup' || status.startsWith('gameover')){
-    await _leaveAllChannels();
-    _updateVoiceUI();
-    return;
-  }
-  const amAlive = _amAlive();
-  const amWolf  = _isWolfPlayer();
-
-  const joinAlive  = amAlive || !amAlive; // everyone joins alive (dead listen-only)
-  const joinWolves = amWolf;
-  const joinDead   = !amAlive;
-
-  if(joinAlive  && !_dailyJoined['alive'])  await _joinChannel('alive');
-  if(!joinAlive && _dailyJoined['alive'])   await _leaveChannel('alive');
-  if(joinWolves && !_dailyJoined['wolves']) await _joinChannel('wolves');
-  if(!joinWolves && _dailyJoined['wolves']) await _leaveChannel('wolves');
-  if(joinDead   && !_dailyJoined['dead'])   await _joinChannel('dead');
-  if(!joinDead  && _dailyJoined['dead'])    await _leaveChannel('dead');
-
-  // Start muted — PTT controls unmuting
-  await _setMicMuted(true);
-  _updateVoiceUI();
-}
-
-async function _joinChannel(ch){
-  if(!_dailyCalls[ch] || _dailyJoined[ch]) return;
   try {
-    await _dailyCalls[ch].join({
-      url: _dailyRoomUrl(ch),
-      startAudioOff: true,   // always join muted — PTT unmutes
-      startVideoOff: true,
-    });
-    _dailyJoined[ch] = true;
-    _voiceLog(`Joined ${ch}`);
-  } catch(e){
-    _voiceLog(`Join ${ch} failed:`, e.message || e);
+    _vc = window.DailyIframe.createCallObject({ audioSource: true, videoSource: false });
+    _vc.on('joined-meeting', () => { _vcSetStatus('🎙 Connected'); });
+    _vc.on('left-meeting',   () => { _vcHideBar(); });
+    _vc.on('error', (e)     => { console.error('[Voice]', e); _vcSetStatus('⚠️ Error'); });
+    await _vc.join({ url, userName: myName || 'Player' });
+    await _vc.setLocalAudio(false); // start muted
+    _vcShowBar();
+  } catch(e) {
+    console.error('[Voice] join failed', e);
+    _vcInited = false;
+    _vc = null;
   }
 }
 
-async function _leaveChannel(ch){
-  if(!_dailyCalls[ch] || !_dailyJoined[ch]) return;
-  try {
-    if(_publishedTo === ch){ _publishedTo = null; }
-    await _dailyCalls[ch].leave();
-    _dailyJoined[ch] = false;
-    _voiceLog(`Left ${ch}`);
-  } catch(e){ _voiceLog(`Leave ${ch} failed:`, e); }
-}
-
-async function _leaveAllChannels(){
-  for(const ch of ['alive','wolves','dead']) await _leaveChannel(ch);
-}
-
-async function _setMicMuted(muted){
-  const ch = _getSpeakChannel();
-  if(!ch || !_dailyCalls[ch] || !_dailyJoined[ch]) return;
-  try {
-    await _dailyCalls[ch].setLocalAudio(!muted);
-  } catch(e){ _voiceLog('setLocalAudio error:', e); }
-}
-
-// ── PTT: SPEAKING ─────────────────────────────────────────────────
-async function _startSpeaking(){
-  if(_pttActive || !_voiceEnabled) return;
-  if(_startSpeakingPromise){ await _startSpeakingPromise; return; }
-  _pttActive = true;
-  document.getElementById('pttBtn').classList.add('active');
-
-  _startSpeakingPromise = (async()=>{
-    try {
-      const ch = _getSpeakChannel() || 'alive';
-      if(!_dailyJoined[ch]) await _joinChannel(ch);
-      if(!_pttActive) return; // released before we finished joining
-      await _dailyCalls[ch].setLocalAudio(true); // unmute mic
-      _publishedTo = ch;
-      _setSpeaking(true);
-      _voiceLog('Speaking on', ch);
-    } catch(e){
-      _voiceLog('Start speaking error:', e);
-      _pttActive = false;
-      document.getElementById('pttBtn').classList.remove('active');
-    }
-  })();
-  await _startSpeakingPromise;
-  _startSpeakingPromise = null;
-}
-
-async function _stopSpeaking(){
-  if(!_pttActive) return;
-  _pttActive = false;
-  document.getElementById('pttBtn').classList.remove('active');
-  _setSpeaking(false);
-  if(_startSpeakingPromise) await _startSpeakingPromise;
-  if(_publishedTo){
-    try {
-      await _dailyCalls[_publishedTo].setLocalAudio(false); // mute mic
-    } catch(e){ _voiceLog('Stop speaking error:', e); }
-    _publishedTo = null;
-  }
-}
-
-function _getSpeakChannel(){
-  const amAlive = _amAlive();
-  const amWolf  = _isWolfPlayer();
-  const isNight = gameState?.phase === 'night';
-  if(!amAlive) return 'dead';
-  if(amWolf && isNight) return 'wolves';
-  return 'alive';
-}
-
-// ── SPEAKING INDICATORS VIA FIREBASE ─────────────────────────────
-function _setSpeaking(isSpeaking){
-  if(!fbOk || !db || !roomCode || !myId) return;
-  try {
-    db.ref(`games/${roomCode}/speaking/${myId}`).set(isSpeaking ? true : null);
-  } catch(e){}
-}
-
-function _listenSpeakingIndicators(){
-  if(!fbOk || !db || !roomCode) return;
-  if(_speakingListener) db.ref(`games/${roomCode}/speaking`).off('value', _speakingListener);
-  _speakingListener = db.ref(`games/${roomCode}/speaking`).on('value', snap=>{
-    const speaking = snap.val() || {};
-    document.querySelectorAll('[id^="pcnode_"]').forEach(node=>{
-      const pid = node.id.replace('pcnode_','');
-      const ring = node.querySelector('.pc-speaking-ring');
-      const nameEl = node.querySelector('.pc-name');
-      if(speaking[pid]){
-        if(!ring){
-          const r = document.createElement('div');
-          r.className = 'pc-speaking-ring';
-          const wrap = node.querySelector('.pc-avatar-wrap');
-          if(wrap) wrap.appendChild(r);
-        }
-        if(nameEl) nameEl.classList.add('pc-speaking-name');
-      } else {
-        if(ring) ring.remove();
-        if(nameEl) nameEl.classList.remove('pc-speaking-name');
-      }
-    });
-  });
-}
-
-// ── MUTE RULES ────────────────────────────────────────────────────
-function _applyMuteRules(){
-  // Daily handles audio routing per room — no manual muting needed
-}
-
-// ── UI ────────────────────────────────────────────────────────────
-function _updateVoiceUI(){
-  if(!_voiceEnabled) return;
-  const btn    = document.getElementById('pttBtn');
-  const label  = document.getElementById('voiceChannelLabel');
-  const status = document.getElementById('voiceConnStatus');
-  const amAlive = _amAlive();
-  const amWolf  = _isWolfPlayer();
-  const isNight = gameState?.phase === 'night';
-  const gs = gameState?.status;
-
-  if(gs && gs.startsWith('gameover')){
-    btn.disabled = true;
-    label.textContent = 'Game over';
-    return;
-  }
-  btn.disabled = false;
-  if(!amAlive){
-    label.textContent  = lang==='ar'?'💀 قناة الموتى':lang==='fr'?'💀 Canal Morts':'💀 Dead Channel';
-    status.textContent = lang==='ar'?'تسمع الأحياء':lang==='fr'?'Vous entendez les vivants':'Hearing alive players';
-  } else if(amWolf && isNight){
-    label.textContent  = lang==='ar'?'🐺 قناة الذئاب':lang==='fr'?'🐺 Canal Loups':'🐺 Wolf Channel';
-    status.textContent = lang==='ar'?'سري':lang==='fr'?'Privé':'Private';
-  } else {
-    label.textContent  = lang==='ar'?'🎙️ دردشة صوتية':lang==='fr'?'🎙️ Chat Vocal':'🎙️ Voice Chat';
-    status.textContent = lang==='ar'?'اضغط للكلام':lang==='fr'?'Maintenir pour parler':'Hold to talk';
-  }
-}
-
-// ── RESET ON REMATCH ──────────────────────────────────────────────
 async function resetVoiceChat(){
-  _setSpeaking(false);
-  if(_startSpeakingPromise) await _startSpeakingPromise;
-  await _leaveAllChannels();
-  _dailyInited = false;
-  _pttActive   = false;
-  _publishedTo = null;
-  _startSpeakingPromise = null;
-  _lastVoiceKey = null;
-  document.getElementById('pttBtn').classList.remove('active');
+  _vcInited = false;
+  _vcMuted  = true;
+  if(_vc){ try{ await _vc.leave(); _vc.destroy(); }catch(e){} _vc=null; }
+  _vcHideBar();
 }
 
-// ── HOOK INTO GAME EVENTS ─────────────────────────────────────────
-function onVoiceGameStateChange(){
-  if(!_voiceEnabled || !gameState) return;
-  const aliveNow = gameState?.players?.[myId]?.alive !== false;
-  const key = `${gameState?.status}|${gameState?.phase}|${aliveNow}`;
-  if(key !== _lastVoiceKey){
-    _lastVoiceKey = key;
-    _joinCorrectChannels();
-  }
-  _applyMuteRules();
-  _updateVoiceUI();
+function _vcShowBar(){
+  const bar = document.getElementById('voiceBar');
+  if(bar){ bar.style.display='flex'; _vcRefreshBtn(); }
+}
+function _vcHideBar(){
+  const bar = document.getElementById('voiceBar');
+  if(bar) bar.style.display='none';
+}
+function _vcSetStatus(txt){
+  const el = document.getElementById('voiceConnStatus');
+  if(el) el.textContent = txt;
+}
+function _vcRefreshBtn(){
+  const btn = document.getElementById('pttBtn');
+  if(!btn) return;
+  btn.textContent = _vcMuted ? '🔇' : '🎤';
+  btn.title       = _vcMuted ? 'Click to unmute' : 'Click to mute';
+  btn.style.background    = _vcMuted ? 'rgba(185,28,28,.2)' : 'rgba(185,28,28,.75)';
+  btn.style.borderColor   = _vcMuted ? 'rgba(185,28,28,.6)' : '#ff4444';
+  btn.style.boxShadow     = _vcMuted ? 'none' : '0 0 18px rgba(255,68,68,.6)';
 }
 
-// initVoiceChat is now called directly in the showGame patch below
+async function toggleVoiceMute(){
+  if(!_vc) return;
+  _vcMuted = !_vcMuted;
+  await _vc.setLocalAudio(!_vcMuted);
+  _vcRefreshBtn();
+}
+
+async function leaveVoiceChat(){
+  await resetVoiceChat();
+}
+
+// No-op stubs used by other patches
+function onVoiceGameStateChange(){}
+function _listenSpeakingIndicators(){}
+
 
 // Patch renderGame to also update voice
 window.addEventListener('load', ()=>{
@@ -4644,13 +4421,11 @@ window.addEventListener('load', () => {
 </head>
 <body>
 <!-- VOICE CHAT BAR -->
+<!-- ── VOICE CHAT BAR ── -->
 <div id="voiceBar">
-  <button id="pttBtn" title="Hold to talk (Space)">🎤</button>
-  <div style="display:flex;flex-direction:column;gap:2px">
-    <div id="voiceChannelLabel">Connecting…</div>
-    <div id="voiceConnStatus"></div>
-  </div>
-  <button id="voiceSettingsBtn" title="Voice settings">⚙️</button>
+  <button id="pttBtn" onclick="toggleVoiceMute()" title="Mute / Unmute">🔇</button>
+  <span id="voiceConnStatus">🎙 Connecting…</span>
+  <button id="voiceLeaveBtn" onclick="leaveVoiceChat()">Leave</button>
 </div>
 
 <!-- ══ LOGIN ══ -->
