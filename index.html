@@ -822,25 +822,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 /* ══════════════════════════════════════════
    VOICE CHAT BAR
 ══════════════════════════════════════════ */
-#voiceBar{
-  position:fixed;bottom:0;left:0;right:0;z-index:9999;
-  display:none;align-items:center;justify-content:center;gap:12px;
-  background:rgba(10,10,26,.97);border-top:1px solid rgba(185,28,28,.5);
-  padding:10px 16px;backdrop-filter:blur(10px);
-}
-#pttBtn{
-  width:48px;height:48px;border-radius:50%;border:2px solid rgba(185,28,28,.7);
-  background:rgba(185,28,28,.2);cursor:pointer;font-size:1.3rem;
-  display:flex;align-items:center;justify-content:center;transition:.2s;
-  color:#fff;flex-shrink:0;
-}
-#voiceConnStatus{font-family:'Creepster',cursive;font-size:.85rem;color:var(--moon);}
-#voiceLeaveBtn{
-  padding:.3rem .75rem;background:transparent;border:1px solid rgba(185,28,28,.5);
-  color:#ef4444;border-radius:6px;cursor:pointer;font-family:'Creepster',cursive;
-  font-size:.8rem;transition:.2s;
-}
-#voiceLeaveBtn:hover{background:rgba(185,28,28,.25);}
+
 </style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
@@ -3462,252 +3444,17 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { CircleTokenBoard, CIRCLE_TOKEN_CSS };
 }
 
-// ════════════════════════════════════════════════════════════════
-// PART 5 — COIN ECONOMY  (revised with match reward fix)
-// ════════════════════════════════════════════════════
-// LIVEKIT VOICE CHAT
-// ════════════════════════════════════════════════════
-
-let _vc        = null;   // LiveKit Room object
-let _vcMuted   = true;   // start muted
-let _vcInited  = false;
-let _vcJoining = false;
-let _vcRemoteAudios = {}; // participantSid → HTMLAudioElement
-let _vcFailCount   = 0;
-let _vcNextRetryAt = 0;
-
-async function initVoiceChat(){
-  _vcShowBar();
-  _vcSetStatus('🎙 Connecting...');
-
-  if(_vcInited || _vcJoining) return;
-  if(!roomCode || !myId){
-    _vcSetStatus('⚠️ Waiting for room...');
-    return;
-  }
-  if(typeof LivekitClient === 'undefined'){
-    console.warn('[Voice] LiveKit SDK not loaded');
-    _vcSetStatus('⚠️ Voice SDK not loaded — check connection');
-    return;
-  }
-  _vcJoining = true;
-
-  try {
-    // Get a LiveKit token from our Vercel API
-    const res = await fetch('/api/create-room', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomCode, participantName: myName || 'Player' })
-    });
-    if(!res.ok){
-      const errText = await res.text().catch(()=>'');
-      throw new Error('Token fetch failed (HTTP ' + res.status + ')' + (errText ? ': ' + errText.slice(0,120) : ''));
-    }
-    const data = await res.json();
-    const { token, url } = data;
-    if(!token || !url) throw new Error('Server returned no token or URL');
-
-    _vc = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
-
-    // ── Core lifecycle events ──
-    _vc.on(LivekitClient.RoomEvent.Connected, () => {
-      _vcInited      = true;
-      _vcJoining     = false;
-      _vcFailCount   = 0;
-      _vcNextRetryAt = 0;
-      _vcSetStatus('🎙 Connected');
-      console.log('[Voice] Connected to LiveKit room');
-      _vcUpdateParticipantCount();
-    });
-
-    _vc.on(LivekitClient.RoomEvent.Disconnected, () => {
-      _vcInited  = false;
-      _vcJoining = false;
-      _vcCleanupRemoteAudio();
-      console.log('[Voice] Disconnected from LiveKit room');
-    });
-
-    // ── Remote audio tracks ──
-    _vc.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
-      if(track.kind !== LivekitClient.Track.Kind.Audio) return;
-      const sid = participant.sid;
-      console.log('[Voice] Remote audio track from:', participant.identity);
-      if(_vcRemoteAudios[sid]){
-        try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
-      }
-      const audio = track.attach();
-      audio.style.display = 'none';
-      document.body.appendChild(audio);
-      audio.play().catch(e => console.warn('[Voice] Autoplay blocked:', e));
-      _vcRemoteAudios[sid] = audio;
-    });
-
-    _vc.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-      if(track.kind !== LivekitClient.Track.Kind.Audio) return;
-      const sid = participant.sid;
-      if(_vcRemoteAudios[sid]){
-        try { track.detach(_vcRemoteAudios[sid]); _vcRemoteAudios[sid].remove(); } catch(x){}
-        delete _vcRemoteAudios[sid];
-      }
-    });
-
-    _vc.on(LivekitClient.RoomEvent.ParticipantConnected,    () => _vcUpdateParticipantCount());
-    _vc.on(LivekitClient.RoomEvent.ParticipantDisconnected, (participant) => {
-      const sid = participant.sid;
-      if(_vcRemoteAudios[sid]){
-        try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
-        delete _vcRemoteAudios[sid];
-      }
-      _vcUpdateParticipantCount();
-    });
-
-    // ── Connect and publish mic (muted) ──
-    await _vc.connect(url, token);
-    await _vc.localParticipant.setMicrophoneEnabled(false); // start muted
-    _vcMuted = true;
-    _vcRefreshBtn();
-
-  } catch(e) {
-    console.error('[Voice] join failed:', e);
-    _vcInited  = false;
-    _vcJoining = false;
-    _vcFailCount = (_vcFailCount || 0) + 1;
-    _vcNextRetryAt = Date.now() + Math.min(30000, 5000 * _vcFailCount);
-    if(_vc){ try{ await _vc.disconnect(); }catch(x){} _vc = null; }
-    const reason = e.message || 'Unknown error';
-    if(reason.includes('403') || reason.includes('401')){
-      _vcSetStatus('⚠️ Voice auth failed — try refreshing');
-    } else if(reason.includes('fetch') || reason.includes('network') || reason.includes('Failed')){
-      _vcSetStatus('⚠️ Voice server unreachable — check connection');
-    } else if(reason.includes('NotAllowedError') || reason.includes('Permission')){
-      _vcSetStatus('⚠️ Microphone blocked — allow mic in browser');
-    } else {
-      _vcSetStatus('⚠️ Voice failed: ' + reason.slice(0, 60));
-    }
-  }
-}
-
-function _vcCleanupRemoteAudio(){
-  Object.keys(_vcRemoteAudios).forEach(sid => {
-    try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
-  });
-  _vcRemoteAudios = {};
-}
-
-async function resetVoiceChat(){
-  _vcInited  = false;
-  _vcMuted   = true;
-  _vcJoining = false;
-  _vcCleanupRemoteAudio();
-  if(_vc){
-    try { await _vc.disconnect(); } catch(e){ console.warn('[Voice] cleanup error:', e); }
-    _vc = null;
-  }
-  _vcHideBar();
-}
-
-function _vcShowBar(){
-  const bar = document.getElementById('voiceBar');
-  if(bar){ bar.style.display='flex'; _vcRefreshBtn(); }
-}
-function _vcHideBar(){
-  const bar = document.getElementById('voiceBar');
-  if(bar) bar.style.display='none';
-}
-function _vcSetStatus(txt){
-  const el = document.getElementById('voiceConnStatus');
-  if(el) el.textContent = txt;
-}
-function _vcRefreshBtn(){
-  const btn = document.getElementById('pttBtn');
-  if(!btn) return;
-  btn.textContent = _vcMuted ? '🔇' : '🎤';
-  btn.title       = _vcMuted ? 'Click to unmute' : 'Click to mute';
-  btn.style.background  = _vcMuted ? 'rgba(185,28,28,.2)' : 'rgba(185,28,28,.75)';
-  btn.style.borderColor = _vcMuted ? 'rgba(185,28,28,.6)' : '#ff4444';
-  btn.style.boxShadow   = _vcMuted ? 'none' : '0 0 18px rgba(255,68,68,.6)';
-}
-
-function _vcUpdateParticipantCount(){
-  if(!_vc || !_vcInited) return;
-  try {
-    const count = _vc.numParticipants;
-    _vcSetStatus('🎙 Connected (' + count + ' in voice)');
-  } catch(e){}
-}
-
-async function toggleVoiceMute(){
-  if(!_vc || !_vcInited){
-    if(!_vcInited && !_vcJoining){
-      _vcSetStatus('🎙 Reconnecting...');
-      initVoiceChat();
-    }
-    return;
-  }
-  _vcMuted = !_vcMuted;
-  try {
-    await _vc.localParticipant.setMicrophoneEnabled(!_vcMuted);
-    _vcRefreshBtn();
-    console.log('[Voice] Mic ' + (_vcMuted ? 'muted' : 'unmuted'));
-  } catch(e){
-    console.error('[Voice] Failed to toggle mic:', e);
-    _vcMuted = !_vcMuted;
-    _vcRefreshBtn();
-    _vcSetStatus('⚠️ Mic toggle failed — try again');
-    setTimeout(() => { if(_vcInited) _vcUpdateParticipantCount(); }, 2000);
-  }
-}
-
-async function leaveVoiceChat(){
-  await resetVoiceChat();
-}
-
+// VOICE CHAT DISABLED
+function initVoiceChat(){}
+function resetVoiceChat(){}
+function leaveVoiceChat(){}
+function toggleVoiceMute(){}
 function onVoiceGameStateChange(){}
 function _listenSpeakingIndicators(){}
-
-// Patch renderGame to also update voice
-window.addEventListener('load', ()=>{
-  setTimeout(()=>{
-    if(typeof renderGame === 'function'){
-      const _rg = renderGame;
-      window.renderGame = function(){
-        _rg.apply(this, arguments);
-        onVoiceGameStateChange();
-        if(typeof gameState !== 'undefined' && gameState && gameState.status !== undefined){
-          if(typeof _vcShowBar === 'function') _vcShowBar();
-        }
-      };
-      if(typeof renderPlayerList === 'function'){
-        const _rpl = renderPlayerList;
-        window.renderPlayerList = function(){
-          _rpl.apply(this, arguments);
-          _listenSpeakingIndicators();
-        };
-      }
-    }
-  }, 800);
-});
-
-// Clean up on rematch and reinitialize voice
-window.addEventListener('load', ()=>{
-  setTimeout(()=>{
-    if(typeof handleRematch === 'function'){
-      const _hr = handleRematch;
-      window.handleRematch = async function(){
-        await resetVoiceChat();
-        const result = _hr.apply(this, arguments);
-        setTimeout(() => {
-          if(typeof initVoiceChat === 'function' && roomCode && myId){
-            console.log('[Voice] Re-initializing voice after rematch');
-            initVoiceChat();
-          }
-        }, 1500);
-        return result;
-      };
-    }
-  }, 800);
-});
+function _vcShowBar(){}
+function _vcHideBar(){}
 </script>
+
 
 <script>
 // after all other scripts (Firebase, avatars.js, avatar-store.js,
@@ -4548,17 +4295,10 @@ window.addEventListener('load', () => {
 });
 
 </script>
-<!-- LiveKit Voice Chat SDK -->
-<script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+
 </head>
 <body>
-<!-- VOICE CHAT BAR -->
-<!-- ── VOICE CHAT BAR ── -->
-<div id="voiceBar">
-  <button id="pttBtn" onclick="toggleVoiceMute()" title="Mute / Unmute">🔇</button>
-  <span id="voiceConnStatus">🎙 Connecting…</span>
-  <button id="voiceLeaveBtn" onclick="leaveVoiceChat()">Leave</button>
-</div>
+
 
 <!-- ══ LOGIN ══ -->
 <!-- ══════════════════════════════════════
@@ -6928,9 +6668,6 @@ function showGame(){
   // Silently load store data so equipped avatar is ready for the lobby
   // without requiring the player to open the shop first
   if(typeof _loadStoreData==='function') _loadStoreData().catch(()=>{});
-  // Show voice bar and connect
-  if(typeof _vcShowBar==='function') _vcShowBar();
-  setTimeout(function(){ if(typeof initVoiceChat==='function') initVoiceChat(); }, 800);
 }
 
 // ════════════════════════════════════════════
@@ -10700,9 +10437,6 @@ showGame = function(){
   _origShowGame();
   // Refresh coin badge visibility (login screen now hidden)
   if (typeof _renderCoinBadge === 'function') _renderCoinBadge();
-  // Show voice bar immediately, then connect LiveKit in background
-  if(typeof _vcShowBar === 'function') _vcShowBar();
-  setTimeout(function(){ if(typeof initVoiceChat === 'function') initVoiceChat(); }, 800);
 };
 
 // ── Patch _updateGoogleUI: after sign-in go to main menu ──
