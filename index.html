@@ -3465,150 +3465,115 @@ if (typeof module !== 'undefined' && module.exports) {
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised with match reward fix)
 // ════════════════════════════════════════════════════
-// DAILY.CO VOICE CHAT  (fixed: audio tracks, mute, reconnect, error messages)
+// LIVEKIT VOICE CHAT
 // ════════════════════════════════════════════════════
 
-let _vc        = null;   // DailyIframe call object
+let _vc        = null;   // LiveKit Room object
 let _vcMuted   = true;   // start muted
 let _vcInited  = false;
-let _vcJoining = false;  // prevent duplicate join attempts
-let _vcRemoteAudios = {}; // sessionId → HTMLAudioElement for remote participants
-let _vcFailCount   = 0;   // consecutive API failures (for backoff)
-let _vcNextRetryAt = 0;   // timestamp before which failsafe will not retry
+let _vcJoining = false;
+let _vcRemoteAudios = {}; // participantSid → HTMLAudioElement
+let _vcFailCount   = 0;
+let _vcNextRetryAt = 0;
 
 async function initVoiceChat(){
-  // Show bar immediately regardless of Daily status
   _vcShowBar();
   _vcSetStatus('🎙 Connecting...');
 
-  // Prevent duplicate instances
   if(_vcInited || _vcJoining) return;
   if(!roomCode || !myId){
     _vcSetStatus('⚠️ Waiting for room...');
     return;
   }
-  if(typeof window.DailyIframe === 'undefined'){
-    console.warn('[Voice] Daily SDK not loaded');
+  if(typeof LivekitClient === 'undefined'){
+    console.warn('[Voice] LiveKit SDK not loaded');
     _vcSetStatus('⚠️ Voice SDK not loaded — check connection');
     return;
   }
   _vcJoining = true;
 
   try {
-    // Ask Vercel to create/get the Daily room for this game
+    // Get a LiveKit token from our Vercel API
     const res = await fetch('/api/create-room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomCode })
+      body: JSON.stringify({ roomCode, participantName: myName || 'Player' })
     });
     if(!res.ok){
       const errText = await res.text().catch(()=>'');
-      throw new Error('Room creation failed (HTTP ' + res.status + ')' + (errText ? ': ' + errText.slice(0,100) : ''));
+      throw new Error('Token fetch failed (HTTP ' + res.status + ')' + (errText ? ': ' + errText.slice(0,120) : ''));
     }
     const data = await res.json();
-    const url  = data.url;
-    if(!url) throw new Error('Server returned no room URL');
+    const { token, url } = data;
+    if(!token || !url) throw new Error('Server returned no token or URL');
 
-    _vc = window.DailyIframe.createCallObject({ audioSource: true, videoSource: false });
+    _vc = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
 
     // ── Core lifecycle events ──
-    _vc.on('joined-meeting', () => {
-      _vcInited = true;
-      _vcJoining = false;
-      _vcFailCount   = 0;   // reset backoff on success
+    _vc.on(LivekitClient.RoomEvent.Connected, () => {
+      _vcInited      = true;
+      _vcJoining     = false;
+      _vcFailCount   = 0;
       _vcNextRetryAt = 0;
       _vcSetStatus('🎙 Connected');
-      console.log('[Voice] Joined Daily room successfully');
+      console.log('[Voice] Connected to LiveKit room');
+      _vcUpdateParticipantCount();
     });
 
-    _vc.on('left-meeting', () => {
-      _vcInited = false;
+    _vc.on(LivekitClient.RoomEvent.Disconnected, () => {
+      _vcInited  = false;
       _vcJoining = false;
       _vcCleanupRemoteAudio();
-      _vc = null;
-      console.log('[Voice] Left Daily room');
+      console.log('[Voice] Disconnected from LiveKit room');
     });
 
-    _vc.on('error', (e) => {
-      console.error('[Voice] Daily error:', e);
-      const msg = (e && e.errorMsg) ? e.errorMsg : 'connection error';
-      _vcSetStatus('⚠️ Voice error: ' + msg);
-      _vcInited = false;
-      _vcJoining = false;
-    });
-
-    // ── CRITICAL: Handle remote audio tracks ──
-    // This is what makes other players' audio actually play
-    _vc.on('track-started', (evt) => {
-      if(!evt || !evt.track || evt.track.kind !== 'audio') return;
-      if(evt.participant && evt.participant.local) return; // skip own audio
-      const sessionId = evt.participant?.session_id;
-      if(!sessionId) return;
-      console.log('[Voice] Remote audio track started from:', evt.participant?.user_name || sessionId);
-
-      // Remove any existing audio element for this participant
-      if(_vcRemoteAudios[sessionId]){
-        try { _vcRemoteAudios[sessionId].srcObject = null; _vcRemoteAudios[sessionId].remove(); } catch(x){}
+    // ── Remote audio tracks ──
+    _vc.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      if(track.kind !== LivekitClient.Track.Kind.Audio) return;
+      const sid = participant.sid;
+      console.log('[Voice] Remote audio track from:', participant.identity);
+      if(_vcRemoteAudios[sid]){
+        try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
       }
-
-      const audio = new Audio();
-      audio.autoplay = true;
-      audio.srcObject = new MediaStream([evt.track]);
-      // Some browsers need the element in the DOM to play
+      const audio = track.attach();
       audio.style.display = 'none';
       document.body.appendChild(audio);
-      audio.play().catch(err => console.warn('[Voice] Audio autoplay blocked:', err));
-      _vcRemoteAudios[sessionId] = audio;
+      audio.play().catch(e => console.warn('[Voice] Autoplay blocked:', e));
+      _vcRemoteAudios[sid] = audio;
     });
 
-    _vc.on('track-stopped', (evt) => {
-      if(!evt || !evt.track || evt.track.kind !== 'audio') return;
-      if(evt.participant && evt.participant.local) return;
-      const sessionId = evt.participant?.session_id;
-      if(!sessionId) return;
-      console.log('[Voice] Remote audio track stopped from:', evt.participant?.user_name || sessionId);
-      if(_vcRemoteAudios[sessionId]){
-        try { _vcRemoteAudios[sessionId].srcObject = null; _vcRemoteAudios[sessionId].remove(); } catch(x){}
-        delete _vcRemoteAudios[sessionId];
+    _vc.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      if(track.kind !== LivekitClient.Track.Kind.Audio) return;
+      const sid = participant.sid;
+      if(_vcRemoteAudios[sid]){
+        try { track.detach(_vcRemoteAudios[sid]); _vcRemoteAudios[sid].remove(); } catch(x){}
+        delete _vcRemoteAudios[sid];
       }
     });
 
-    // ── Participant events for status updates ──
-    _vc.on('participant-joined', (evt) => {
-      if(evt && evt.participant && !evt.participant.local){
-        console.log('[Voice] Participant joined:', evt.participant.user_name || evt.participant.session_id);
-        _vcUpdateParticipantCount();
+    _vc.on(LivekitClient.RoomEvent.ParticipantConnected,    () => _vcUpdateParticipantCount());
+    _vc.on(LivekitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+      const sid = participant.sid;
+      if(_vcRemoteAudios[sid]){
+        try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
+        delete _vcRemoteAudios[sid];
       }
+      _vcUpdateParticipantCount();
     });
 
-    _vc.on('participant-left', (evt) => {
-      if(evt && evt.participant){
-        const sid = evt.participant.session_id;
-        console.log('[Voice] Participant left:', evt.participant.user_name || sid);
-        // Clean up their audio element
-        if(sid && _vcRemoteAudios[sid]){
-          try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
-          delete _vcRemoteAudios[sid];
-        }
-        _vcUpdateParticipantCount();
-      }
-    });
-
-    // ── Join the room ──
-    await _vc.join({ url, userName: myName || 'Player' });
-    await _vc.setLocalAudio(false); // start muted
+    // ── Connect and publish mic (muted) ──
+    await _vc.connect(url, token);
+    await _vc.localParticipant.setMicrophoneEnabled(false); // start muted
     _vcMuted = true;
     _vcRefreshBtn();
-    _vcUpdateParticipantCount();
 
   } catch(e) {
     console.error('[Voice] join failed:', e);
     _vcInited  = false;
     _vcJoining = false;
     _vcFailCount = (_vcFailCount || 0) + 1;
-    _vcNextRetryAt = Date.now() + Math.min(30000, 5000 * _vcFailCount); // backoff: 5s, 10s, 15s… up to 30s
-    if(_vc){ try{ _vc.destroy(); }catch(x){} _vc = null; }
-    // Show specific error message instead of generic "Voice unavailable"
+    _vcNextRetryAt = Date.now() + Math.min(30000, 5000 * _vcFailCount);
+    if(_vc){ try{ await _vc.disconnect(); }catch(x){} _vc = null; }
     const reason = e.message || 'Unknown error';
     if(reason.includes('403') || reason.includes('401')){
       _vcSetStatus('⚠️ Voice auth failed — try refreshing');
@@ -3622,7 +3587,6 @@ async function initVoiceChat(){
   }
 }
 
-// Clean up all remote audio elements
 function _vcCleanupRemoteAudio(){
   Object.keys(_vcRemoteAudios).forEach(sid => {
     try { _vcRemoteAudios[sid].srcObject = null; _vcRemoteAudios[sid].remove(); } catch(x){}
@@ -3631,22 +3595,12 @@ function _vcCleanupRemoteAudio(){
 }
 
 async function resetVoiceChat(){
-  _vcInited = false;
-  _vcMuted  = true;
+  _vcInited  = false;
+  _vcMuted   = true;
   _vcJoining = false;
   _vcCleanupRemoteAudio();
   if(_vc){
-    try {
-      _vc.off('track-started');
-      _vc.off('track-stopped');
-      _vc.off('participant-joined');
-      _vc.off('participant-left');
-      _vc.off('joined-meeting');
-      _vc.off('left-meeting');
-      _vc.off('error');
-      await _vc.leave();
-      _vc.destroy();
-    } catch(e){ console.warn('[Voice] cleanup error:', e); }
+    try { await _vc.disconnect(); } catch(e){ console.warn('[Voice] cleanup error:', e); }
     _vc = null;
   }
   _vcHideBar();
@@ -3669,24 +3623,21 @@ function _vcRefreshBtn(){
   if(!btn) return;
   btn.textContent = _vcMuted ? '🔇' : '🎤';
   btn.title       = _vcMuted ? 'Click to unmute' : 'Click to mute';
-  btn.style.background    = _vcMuted ? 'rgba(185,28,28,.2)' : 'rgba(185,28,28,.75)';
-  btn.style.borderColor   = _vcMuted ? 'rgba(185,28,28,.6)' : '#ff4444';
-  btn.style.boxShadow     = _vcMuted ? 'none' : '0 0 18px rgba(255,68,68,.6)';
+  btn.style.background  = _vcMuted ? 'rgba(185,28,28,.2)' : 'rgba(185,28,28,.75)';
+  btn.style.borderColor = _vcMuted ? 'rgba(185,28,28,.6)' : '#ff4444';
+  btn.style.boxShadow   = _vcMuted ? 'none' : '0 0 18px rgba(255,68,68,.6)';
 }
 
-// Show participant count in status when connected
 function _vcUpdateParticipantCount(){
   if(!_vc || !_vcInited) return;
   try {
-    const participants = _vc.participants();
-    const count = Object.keys(participants).length;
+    const count = _vc.numParticipants;
     _vcSetStatus('🎙 Connected (' + count + ' in voice)');
   } catch(e){}
 }
 
 async function toggleVoiceMute(){
   if(!_vc || !_vcInited){
-    // If voice isn't connected, try to reconnect instead of silently failing
     if(!_vcInited && !_vcJoining){
       _vcSetStatus('🎙 Reconnecting...');
       initVoiceChat();
@@ -3695,12 +3646,11 @@ async function toggleVoiceMute(){
   }
   _vcMuted = !_vcMuted;
   try {
-    await _vc.setLocalAudio(!_vcMuted);
+    await _vc.localParticipant.setMicrophoneEnabled(!_vcMuted);
     _vcRefreshBtn();
     console.log('[Voice] Mic ' + (_vcMuted ? 'muted' : 'unmuted'));
   } catch(e){
     console.error('[Voice] Failed to toggle mic:', e);
-    // Revert state on failure
     _vcMuted = !_vcMuted;
     _vcRefreshBtn();
     _vcSetStatus('⚠️ Mic toggle failed — try again');
@@ -3712,10 +3662,8 @@ async function leaveVoiceChat(){
   await resetVoiceChat();
 }
 
-// No-op stubs used by other patches
 function onVoiceGameStateChange(){}
 function _listenSpeakingIndicators(){}
-
 
 // Patch renderGame to also update voice
 window.addEventListener('load', ()=>{
@@ -3725,7 +3673,6 @@ window.addEventListener('load', ()=>{
       window.renderGame = function(){
         _rg.apply(this, arguments);
         onVoiceGameStateChange();
-        // Show voice bar whenever game is active
         if(typeof gameState !== 'undefined' && gameState && gameState.status !== undefined){
           if(typeof _vcShowBar === 'function') _vcShowBar();
         }
@@ -3741,8 +3688,7 @@ window.addEventListener('load', ()=>{
   }, 800);
 });
 
-// Clean up on game end / rematch — then reinitialize voice for the new game
-const _origHandleRematch = window.handleRematch;
+// Clean up on rematch and reinitialize voice
 window.addEventListener('load', ()=>{
   setTimeout(()=>{
     if(typeof handleRematch === 'function'){
@@ -3750,7 +3696,6 @@ window.addEventListener('load', ()=>{
       window.handleRematch = async function(){
         await resetVoiceChat();
         const result = _hr.apply(this, arguments);
-        // Re-initialize voice after rematch completes (new room code may be set)
         setTimeout(() => {
           if(typeof initVoiceChat === 'function' && roomCode && myId){
             console.log('[Voice] Re-initializing voice after rematch');
@@ -3762,7 +3707,6 @@ window.addEventListener('load', ()=>{
     }
   }, 800);
 });
-</script>
 
 <script>
 // after all other scripts (Firebase, avatars.js, avatar-store.js,
@@ -4603,8 +4547,8 @@ window.addEventListener('load', () => {
 });
 
 </script>
-<!-- Daily.co Voice Chat SDK -->
-<script src="https://unpkg.com/@daily-co/daily-js"></script>
+<!-- LiveKit Voice Chat SDK -->
+<script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 </head>
 <body>
 <!-- VOICE CHAT BAR -->
