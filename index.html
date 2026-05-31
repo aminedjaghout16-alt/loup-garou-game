@@ -3548,14 +3548,14 @@ async function initVoiceChat(){
   document.getElementById('voiceBar').classList.add('visible');
   document.getElementById('voiceConnStatus').textContent = 'Ready';
 
-  // PTT button — remove disabled before attaching listeners so mobile browsers register events
+  // PTT button — use pointer events only; preventDefault stops touchstart/touchend
+  // from also firing so we never double-call _startSpeaking/_stopSpeaking on mobile.
   const btn = document.getElementById('pttBtn');
   btn.disabled = false;
-  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); _startSpeaking(); });
-  btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); _stopSpeaking(); });
-  btn.addEventListener('pointerleave',(e)=>{ if(_pttActive) _stopSpeaking(); });
-  btn.addEventListener('touchstart',  (e)=>{ e.preventDefault(); _startSpeaking(); }, { passive: false });
-  btn.addEventListener('touchend',    (e)=>{ e.preventDefault(); _stopSpeaking(); },  { passive: false });
+  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); _startSpeaking(); }, { passive: false });
+  btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); _stopSpeaking();  }, { passive: false });
+  btn.addEventListener('pointerleave',(e)=>{ e.preventDefault(); if(_pttActive) _stopSpeaking(); }, { passive: false });
+  btn.addEventListener('pointercancel',(e)=>{ if(_pttActive) _stopSpeaking(); });
 
   // Spacebar PTT
   document.addEventListener('keydown',(e)=>{
