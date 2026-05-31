@@ -3459,102 +3459,82 @@ if (typeof module !== 'undefined' && module.exports) {
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised with match reward fix)
 /* ══════════════════════════════════════════════════════════════════
-   AGORA VOICE CHAT
-   Channels:
-     alive   — all living players (day + night open)
-     wolves  — werewolves only, night only
-     dead    — dead players; also receive alive channel read-only
+   DAILY.CO VOICE CHAT
+   Channels (implemented as separate Daily rooms):
+     {roomCode}_alive   — all living players
+     {roomCode}_wolves  — werewolves only, night only
+     {roomCode}_dead    — dead players
    Push-to-talk: hold #pttBtn or SPACE to unmute
    Speaking indicator: Firebase games/{room}/speaking/{myId} = true/false
 ══════════════════════════════════════════════════════════════════ */
 
 // ── CONFIG ─────────────────────────────────────────────────────────
-// Replace with your Agora App ID (get one free at console.agora.io)
-const AGORA_APP_ID = 'b9e59aec67b4415892e3c5ae7944e3a9';
+// Create a free account at daily.co, then set your domain below
+// e.g. if your Daily URL is https://myapp.daily.co/  → 'myapp'
+const DAILY_DOMAIN = 'loup-garou'; // <-- set your Daily subdomain here
 
 // ── STATE ──────────────────────────────────────────────────────────
-let _agoraInited   = false;
-let _agoraClients  = {};   // { alive: AgoraRTCClient, wolves: ..., dead: ... }
-let _agoraTracks   = {};   // { alive: [mic,null], wolves: ..., dead: ... }
-let _agoraJoined   = {};   // { alive: bool, wolves: bool, dead: bool }
-let _agoraUid      = {};   // uid returned per channel
-let _pttActive     = false;
-let _voiceEnabled  = false;
-let _currentChannels = []; // which channels I'm active in right now
-let _speakingRef   = null; // Firebase ref for my speaking state
+let _dailyInited    = false;
+let _dailyCalls     = {};   // { alive: DailyCall, wolves: DailyCall, dead: DailyCall }
+let _dailyJoined    = {};   // { alive: bool, wolves: bool, dead: bool }
+let _pttActive      = false;
+let _voiceEnabled   = false;
+let _publishedTo    = null;
 let _speakingListener = null;
-let _localMicTrack = null;
-let _wolfMicTrack  = null;
-let _deadMicTrack  = null;
-let _remoteUsers   = {};   // uid → { channel, audioTrack }
-let _publishedTo   = null; // which channel my mic is currently published to
-let _joiningPromises = {}; // in-flight join promises keyed by channel name
+let _lastVoiceKey   = null;
+let _startSpeakingPromise = null;
 
 // ── HELPERS ────────────────────────────────────────────────────────
 function _voiceLog(...a){ console.log('[Voice]', ...a); }
-
 function _isWolfPlayer(){
   if(!myRole || !gameState) return false;
   return typeof isWolfRole === 'function' ? isWolfRole(myRole, gameState) : false;
 }
-
 function _amAlive(){
   return gameState?.players?.[myId]?.alive !== false;
 }
-
-function _voiceChannelName(type){
-  // Scope channels to this room so different rooms don't bleed
-  return `${roomCode}_${type}`;
+function _dailyRoomName(type){
+  // Each channel is a separate Daily room scoped to this game room
+  return `${roomCode}-${type}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+}
+function _dailyRoomUrl(type){
+  return `https://${DAILY_DOMAIN}.daily.co/${_dailyRoomName(type)}`;
 }
 
 // ── INIT ───────────────────────────────────────────────────────────
 async function initVoiceChat(){
-  if(_agoraInited) return;
-  if(!roomCode || !myId || typeof AgoraRTC === 'undefined'){
-    _voiceLog('Agora SDK not loaded or room not ready');
+  if(_dailyInited) return;
+  if(!roomCode || !myId || typeof window.DailyIframe === 'undefined'){
+    _voiceLog('Daily.co SDK not loaded or room not ready');
     return;
   }
-  if(AGORA_APP_ID === 'YOUR_AGORA_APP_ID_HERE'){
-    _voiceLog('Agora App ID not configured — voice chat disabled');
-    document.getElementById('voiceBar').classList.remove('visible');
-    return;
-  }
-  _agoraInited = true;
-  AgoraRTC.setLogLevel(4); // suppress verbose logs
+  _dailyInited = true;
 
-  // Create clients for each channel
+  // Create a Daily call object for each channel (no iframe — audio only)
   for(const ch of ['alive','wolves','dead']){
-    const client = AgoraRTC.createClient({ mode:'rtc', codec:'vp8' });
-    _agoraClients[ch] = client;
-    _agoraJoined[ch] = false;
-
-    client.on('user-published', async (user, mediaType)=>{
-      if(mediaType !== 'audio') return;
-      await client.subscribe(user, 'audio');
-      const track = user.audioTrack;
-      if(track){
-        track.play();
-        if(!_remoteUsers[user.uid]) _remoteUsers[user.uid] = {};
-        _remoteUsers[user.uid][ch] = track;
-      }
+    const call = window.DailyIframe.createCallObject({
+      audioSource: true,
+      videoSource: false,
+      dailyConfig: { experimentalChromeVideoMuteLightOff: true }
     });
+    _dailyCalls[ch] = call;
+    _dailyJoined[ch] = false;
 
-    client.on('user-unpublished', (user)=>{
-      if(_remoteUsers[user.uid]) delete _remoteUsers[user.uid][ch];
-    });
+    call.on('participant-joined', ()=> _voiceLog(`${ch}: participant joined`));
+    call.on('participant-left',   ()=> _voiceLog(`${ch}: participant left`));
+    call.on('error', (e)=> _voiceLog(`${ch} error:`, e));
   }
 
   _voiceEnabled = true;
   document.getElementById('voiceBar').classList.add('visible');
   document.getElementById('voiceConnStatus').textContent = 'Ready';
 
-  // PTT button — use pointer events only; preventDefault stops touchstart/touchend
-  // from also firing so we never double-call _startSpeaking/_stopSpeaking on mobile.
+  // PTT button
   const btn = document.getElementById('pttBtn');
   btn.disabled = false;
-  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); _startSpeaking(); }, { passive: false });
-  btn.addEventListener('pointerup',   (e)=>{ e.preventDefault(); _stopSpeaking();  }, { passive: false });
-  btn.addEventListener('pointerleave',(e)=>{ e.preventDefault(); if(_pttActive) _stopSpeaking(); }, { passive: false });
+  btn.addEventListener('pointerdown',  (e)=>{ e.preventDefault(); _startSpeaking(); }, { passive: false });
+  btn.addEventListener('pointerup',    (e)=>{ e.preventDefault(); _stopSpeaking();  }, { passive: false });
+  btn.addEventListener('pointerleave', (e)=>{ e.preventDefault(); if(_pttActive) _stopSpeaking(); }, { passive: false });
   btn.addEventListener('pointercancel',(e)=>{ if(_pttActive) _stopSpeaking(); });
 
   // Spacebar PTT
@@ -3567,7 +3547,7 @@ async function initVoiceChat(){
 
   await _joinCorrectChannels();
   _listenSpeakingIndicators();
-  _updateVoiceUI(); // ensure button state reflects current game state immediately
+  _updateVoiceUI();
 }
 
 function _isTyping(e){
@@ -3578,79 +3558,53 @@ function _isTyping(e){
 // ── JOIN / LEAVE CHANNELS ─────────────────────────────────────────
 async function _joinCorrectChannels(){
   if(!_voiceEnabled || !roomCode || !myId) return;
-
-  const phase  = gameState?.phase;
   const status = gameState?.status;
-  if(!status || status==='setup' || status.startsWith('gameover')) {
+  const phase  = gameState?.phase;
+  if(!status || status==='setup' || status.startsWith('gameover')){
     await _leaveAllChannels();
     _updateVoiceUI();
     return;
   }
+  const amAlive = _amAlive();
+  const amWolf  = _isWolfPlayer();
 
-  const amAlive  = _amAlive();
-  const amWolf   = _isWolfPlayer();
-  const isNight  = phase === 'night';
-  const isDay    = phase === 'day';
-
-  // Decide which channels to join
-  const wantAlive  = amAlive && isDay;          // alive players hear/talk on day
-  const wantAliveNight = amAlive && !amWolf;    // alive non-wolves: hear alive at night (listen only)
-  const wantWolves = amWolf && isNight;         // wolves: private channel at night
-  const wantDead   = !amAlive;                  // dead players: always on dead channel
-
-  // Always join alive channel if alive (for receiving), wolves if wolf+night, dead if dead
-  const joinAlive  = amAlive;   // join always when alive (mute handled by PTT)
-  const joinWolves = amWolf;    // wolves always joined to their channel
+  const joinAlive  = amAlive || !amAlive; // everyone joins alive (dead listen-only)
+  const joinWolves = amWolf;
   const joinDead   = !amAlive;
 
-  // Join/leave alive
-  if(joinAlive && !_agoraJoined['alive'])  await _joinChannel('alive');
-  if(!joinAlive && _agoraJoined['alive'])  await _leaveChannel('alive');
+  if(joinAlive  && !_dailyJoined['alive'])  await _joinChannel('alive');
+  if(!joinAlive && _dailyJoined['alive'])   await _leaveChannel('alive');
+  if(joinWolves && !_dailyJoined['wolves']) await _joinChannel('wolves');
+  if(!joinWolves && _dailyJoined['wolves']) await _leaveChannel('wolves');
+  if(joinDead   && !_dailyJoined['dead'])   await _joinChannel('dead');
+  if(!joinDead  && _dailyJoined['dead'])    await _leaveChannel('dead');
 
-  // Join/leave wolves
-  if(joinWolves && !_agoraJoined['wolves']) await _joinChannel('wolves');
-  if(!joinWolves && _agoraJoined['wolves']) await _leaveChannel('wolves');
-
-  // Join/leave dead
-  if(joinDead && !_agoraJoined['dead'])   await _joinChannel('dead');
-  if(!joinDead && _agoraJoined['dead'])   await _leaveChannel('dead');
-
-  // Dead players also receive the alive channel (listen-only — they don't publish there)
-  if(!amAlive && !_agoraJoined['alive'])  await _joinChannel('alive');
-
+  // Start muted — PTT controls unmuting
+  await _setMicMuted(true);
   _updateVoiceUI();
 }
 
 async function _joinChannel(ch){
-  if(!_agoraClients[ch]) return false;
-  if(_agoraJoined[ch]) return true;
-  // If a join is already in-flight for this channel, wait for it instead of
-  // starting a second one (which causes the INVALID_OPERATION error).
-  if(_joiningPromises[ch]) return _joiningPromises[ch];
-  _joiningPromises[ch] = (async () => {
-    try {
-      const uid = await _agoraClients[ch].join(AGORA_APP_ID, _voiceChannelName(ch), null);
-      _agoraUid[ch] = uid;
-      _agoraJoined[ch] = true;
-      _voiceLog(`Joined ${ch} as uid ${uid}`);
-      return true;
-    } catch(e){
-      _voiceLog(`Join ${ch} failed:`, e);
-      return false;
-    } finally {
-      delete _joiningPromises[ch];
-    }
-  })();
-  return _joiningPromises[ch];
+  if(!_dailyCalls[ch] || _dailyJoined[ch]) return;
+  try {
+    await _dailyCalls[ch].join({
+      url: _dailyRoomUrl(ch),
+      startAudioOff: true,   // always join muted — PTT unmutes
+      startVideoOff: true,
+    });
+    _dailyJoined[ch] = true;
+    _voiceLog(`Joined ${ch}`);
+  } catch(e){
+    _voiceLog(`Join ${ch} failed:`, e.message || e);
+  }
 }
 
 async function _leaveChannel(ch){
-  if(!_agoraJoined[ch]) return;
+  if(!_dailyCalls[ch] || !_dailyJoined[ch]) return;
   try {
-    // Unpublish mic if we published to this channel
-    if(_publishedTo === ch) await _unpublishMic(ch);
-    await _agoraClients[ch].leave();
-    _agoraJoined[ch] = false;
+    if(_publishedTo === ch){ _publishedTo = null; }
+    await _dailyCalls[ch].leave();
+    _dailyJoined[ch] = false;
     _voiceLog(`Left ${ch}`);
   } catch(e){ _voiceLog(`Leave ${ch} failed:`, e); }
 }
@@ -3659,42 +3613,30 @@ async function _leaveAllChannels(){
   for(const ch of ['alive','wolves','dead']) await _leaveChannel(ch);
 }
 
-// ── PTT: SPEAKING ─────────────────────────────────────────────────
-let _startSpeakingPromise = null; // guard against concurrent _startSpeaking calls
+async function _setMicMuted(muted){
+  const ch = _getSpeakChannel();
+  if(!ch || !_dailyCalls[ch] || !_dailyJoined[ch]) return;
+  try {
+    await _dailyCalls[ch].setLocalAudio(!muted);
+  } catch(e){ _voiceLog('setLocalAudio error:', e); }
+}
 
+// ── PTT: SPEAKING ─────────────────────────────────────────────────
 async function _startSpeaking(){
   if(_pttActive || !_voiceEnabled) return;
-  // If a previous start is still in flight, wait for it then bail
   if(_startSpeakingPromise){ await _startSpeakingPromise; return; }
   _pttActive = true;
-
-  // Glow immediately so the button feels responsive
   document.getElementById('pttBtn').classList.add('active');
 
-  // Default to 'alive' channel if gameState isn't fully loaded yet
-  const ch = _getSpeakChannel() || 'alive';
-
-  _startSpeakingPromise = (async () => {
+  _startSpeakingPromise = (async()=>{
     try {
-      // Create track if missing or if the previous one was closed (e.g. after reset)
-      if(!_localMicTrack || _localMicTrack._isClosed){
-        _localMicTrack = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig:'music_standard' });
-      }
-      const joined = _agoraJoined[ch] || await _joinChannel(ch);
-      if(!joined){
-        _voiceLog('Could not join channel', ch);
-        _pttActive = false;
-        document.getElementById('pttBtn').classList.remove('active');
-        return;
-      }
-      // Don't publish if user released button while we were awaiting
-      if(!_pttActive) return;
-      // Guard against double-publish
-      if(_publishedTo){ _voiceLog('Already published to', _publishedTo); return; }
-      await _agoraClients[ch].publish([_localMicTrack]);
+      const ch = _getSpeakChannel() || 'alive';
+      if(!_dailyJoined[ch]) await _joinChannel(ch);
+      if(!_pttActive) return; // released before we finished joining
+      await _dailyCalls[ch].setLocalAudio(true); // unmute mic
       _publishedTo = ch;
-      _voiceLog('Publishing to', ch);
       _setSpeaking(true);
+      _voiceLog('Speaking on', ch);
     } catch(e){
       _voiceLog('Start speaking error:', e);
       _pttActive = false;
@@ -3710,29 +3652,22 @@ async function _stopSpeaking(){
   _pttActive = false;
   document.getElementById('pttBtn').classList.remove('active');
   _setSpeaking(false);
-  // If start is still in flight, wait for it so we unpublish cleanly
   if(_startSpeakingPromise) await _startSpeakingPromise;
-  if(_publishedTo) await _unpublishMic(_publishedTo);
-}
-
-async function _unpublishMic(ch){
-  try {
-    if(_localMicTrack && _agoraJoined[ch]){
-      await _agoraClients[ch].unpublish([_localMicTrack]);
-    }
-  } catch(e){ _voiceLog('Unpublish error:', e); }
-  _publishedTo = null;
+  if(_publishedTo){
+    try {
+      await _dailyCalls[_publishedTo].setLocalAudio(false); // mute mic
+    } catch(e){ _voiceLog('Stop speaking error:', e); }
+    _publishedTo = null;
+  }
 }
 
 function _getSpeakChannel(){
-  // Which channel should this player speak on?
   const amAlive = _amAlive();
   const amWolf  = _isWolfPlayer();
   const isNight = gameState?.phase === 'night';
-
-  if(!amAlive) return 'dead';              // dead → dead channel always
-  if(amWolf && isNight) return 'wolves';   // wolf at night → wolf channel
-  return 'alive';                          // everyone else → alive channel
+  if(!amAlive) return 'dead';
+  if(amWolf && isNight) return 'wolves';
+  return 'alive';
 }
 
 // ── SPEAKING INDICATORS VIA FIREBASE ─────────────────────────────
@@ -3748,7 +3683,6 @@ function _listenSpeakingIndicators(){
   if(_speakingListener) db.ref(`games/${roomCode}/speaking`).off('value', _speakingListener);
   _speakingListener = db.ref(`games/${roomCode}/speaking`).on('value', snap=>{
     const speaking = snap.val() || {};
-    // Update player circle nodes
     document.querySelectorAll('[id^="pcnode_"]').forEach(node=>{
       const pid = node.id.replace('pcnode_','');
       const ring = node.querySelector('.pc-speaking-ring');
@@ -3769,33 +3703,17 @@ function _listenSpeakingIndicators(){
   });
 }
 
-// ── MUTE RULES: enforce who hears who ────────────────────────────
+// ── MUTE RULES ────────────────────────────────────────────────────
 function _applyMuteRules(){
-  if(!_voiceEnabled || !gameState) return;
-  const amAlive = _amAlive();
-  const amWolf  = _isWolfPlayer();
-  const isNight = gameState?.phase === 'night';
-
-  // On alive channel: mute remote alive players at night if I'm wolf (I hear wolf channel instead)
-  // Dead players hear alive channel but can't speak there — no muting needed (they just don't publish)
-  // Wolf channel: only wolves are in it, so no muting needed there
-  // This is mostly handled by channel membership, but for extra safety mute alive channel remotes at night for wolves
-  Object.entries(_remoteUsers).forEach(([uid, chMap])=>{
-    if(chMap['alive']){
-      const shouldMute = amWolf && isNight;
-      if(shouldMute) chMap['alive'].setVolume(0);
-      else chMap['alive'].setVolume(100);
-    }
-  });
+  // Daily handles audio routing per room — no manual muting needed
 }
 
 // ── UI ────────────────────────────────────────────────────────────
 function _updateVoiceUI(){
   if(!_voiceEnabled) return;
-  const btn = document.getElementById('pttBtn');
-  const label = document.getElementById('voiceChannelLabel');
+  const btn    = document.getElementById('pttBtn');
+  const label  = document.getElementById('voiceChannelLabel');
   const status = document.getElementById('voiceConnStatus');
-
   const amAlive = _amAlive();
   const amWolf  = _isWolfPlayer();
   const isNight = gameState?.phase === 'night';
@@ -3806,17 +3724,15 @@ function _updateVoiceUI(){
     label.textContent = 'Game over';
     return;
   }
-
   btn.disabled = false;
-
   if(!amAlive){
-    label.textContent = lang==='ar'?'💀 قناة الموتى':lang==='fr'?'💀 Canal Morts':'💀 Dead Channel';
+    label.textContent  = lang==='ar'?'💀 قناة الموتى':lang==='fr'?'💀 Canal Morts':'💀 Dead Channel';
     status.textContent = lang==='ar'?'تسمع الأحياء':lang==='fr'?'Vous entendez les vivants':'Hearing alive players';
   } else if(amWolf && isNight){
-    label.textContent = lang==='ar'?'🐺 قناة الذئاب':lang==='fr'?'🐺 Canal Loups':'🐺 Wolf Channel';
+    label.textContent  = lang==='ar'?'🐺 قناة الذئاب':lang==='fr'?'🐺 Canal Loups':'🐺 Wolf Channel';
     status.textContent = lang==='ar'?'سري':lang==='fr'?'Privé':'Private';
   } else {
-    label.textContent = lang==='ar'?'🎙️ دردشة صوتية':lang==='fr'?'🎙️ Chat Vocal':'🎙️ Voice Chat';
+    label.textContent  = lang==='ar'?'🎙️ دردشة صوتية':lang==='fr'?'🎙️ Chat Vocal':'🎙️ Voice Chat';
     status.textContent = lang==='ar'?'اضغط للكلام':lang==='fr'?'Maintenir pour parler':'Hold to talk';
   }
 }
@@ -3824,25 +3740,19 @@ function _updateVoiceUI(){
 // ── RESET ON REMATCH ──────────────────────────────────────────────
 async function resetVoiceChat(){
   _setSpeaking(false);
-  // Wait for any in-flight start before leaving, to avoid unpublish-on-closed-track errors
   if(_startSpeakingPromise) await _startSpeakingPromise;
   await _leaveAllChannels();
-  if(_localMicTrack){ _localMicTrack.close(); _localMicTrack=null; }
-  _agoraInited = false;
-  _pttActive = false;
+  _dailyInited = false;
+  _pttActive   = false;
   _publishedTo = null;
   _startSpeakingPromise = null;
-  _joiningPromises = {};
+  _lastVoiceKey = null;
   document.getElementById('pttBtn').classList.remove('active');
 }
 
 // ── HOOK INTO GAME EVENTS ─────────────────────────────────────────
-// Only re-evaluate channels when phase/status/alive actually changes
-let _lastVoiceKey = null;
 function onVoiceGameStateChange(){
   if(!_voiceEnabled || !gameState) return;
-
-  // Build a key that captures everything that affects channel membership
   const aliveNow = gameState?.players?.[myId]?.alive !== false;
   const key = `${gameState?.status}|${gameState?.phase}|${aliveNow}`;
   if(key !== _lastVoiceKey){
@@ -3853,31 +3763,7 @@ function onVoiceGameStateChange(){
   _updateVoiceUI();
 }
 
-// Patch renderGame to also update voice
-// We hook in after page load since renderGame is defined later
-window.addEventListener('load', ()=>{
-  // Delay to let all game JS initialize
-  setTimeout(()=>{
-    if(typeof renderGame === 'function'){
-      const _rg = renderGame;
-      window.renderGame = function(){
-        _rg.apply(this, arguments);
-        onVoiceGameStateChange();
-      };
-      // Also hook renderPlayerList for speaking indicators
-      if(typeof renderPlayerList === 'function'){
-        const _rpl = renderPlayerList;
-        window.renderPlayerList = function(){
-          _rpl.apply(this, arguments);
-          _listenSpeakingIndicators();
-        };
-      }
-    }
-  }, 800);
-});
-
 // Start voice chat when the player enters a game room
-// Hook into showGame (called when Firebase room is joined)
 window.addEventListener('load', ()=>{
   setTimeout(()=>{
     if(typeof showGame === 'function'){
@@ -3890,6 +3776,26 @@ window.addEventListener('load', ()=>{
   }, 900);
 });
 
+// Patch renderGame to also update voice
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    if(typeof renderGame === 'function'){
+      const _rg = renderGame;
+      window.renderGame = function(){
+        _rg.apply(this, arguments);
+        onVoiceGameStateChange();
+      };
+      if(typeof renderPlayerList === 'function'){
+        const _rpl = renderPlayerList;
+        window.renderPlayerList = function(){
+          _rpl.apply(this, arguments);
+          _listenSpeakingIndicators();
+        };
+      }
+    }
+  }, 800);
+});
+
 // Clean up on game end / rematch
 const _origHandleRematch = window.handleRematch;
 window.addEventListener('load', ()=>{
@@ -3898,11 +3804,6 @@ window.addEventListener('load', ()=>{
       const _hr = handleRematch;
       window.handleRematch = async function(){
         await resetVoiceChat();
-        _hr.apply(this, arguments);
-      };
-    }
-  }, 1000);
-});
 </script>
 
 <script>
@@ -4745,7 +4646,7 @@ window.addEventListener('load', () => {
 
 </script>
 <!-- Agora Voice Chat SDK -->
-<script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.2.js"></script>
+<script src="https://unpkg.com/@daily-co/daily-js"></script>
 </head>
 <body>
 <!-- VOICE CHAT BAR -->
