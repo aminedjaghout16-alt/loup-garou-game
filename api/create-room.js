@@ -37,9 +37,6 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         name: roomName,
         properties: {
-          max_participants: 30,
-          enable_chat: false,
-          enable_screenshare: false,
           exp: Math.floor(Date.now() / 1000) + 60 * 60 * 4 // expires in 4 hours
         }
       })
