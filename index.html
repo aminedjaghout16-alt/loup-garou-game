@@ -67,6 +67,42 @@
 }
 body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);line-height:1.6;min-height:100vh;letter-spacing:.03em}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--moon);border-radius:3px}
+/* ── RECONNECT BANNER ── */
+#reconnectBanner{
+  position:fixed;top:0;left:0;right:0;z-index:9500;
+  background:rgba(10,10,26,.96);border-bottom:2px solid var(--blood-glow);
+  padding:.55rem 1rem;display:flex;flex-direction:column;gap:.35rem;
+  transform:translateY(-100%);transition:transform .35s ease;
+  pointer-events:none;
+}
+#reconnectBanner.visible{transform:translateY(0);pointer-events:auto}
+.rc-row{display:flex;align-items:center;gap:.55rem;font-size:.82rem}
+.rc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;animation:rc-pulse 1.4s infinite}
+.rc-dot.disc{background:var(--blood-glow)}
+.rc-dot.back{background:var(--green);animation:none}
+@keyframes rc-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.rc-name{color:var(--moon-pale);font-weight:700}
+.rc-msg{color:rgba(232,232,232,.6)}
+.rc-timer{margin-left:auto;color:var(--blood-glow);font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+/* ── RECONNECT MODAL (own-screen, shown to the disconnected player) ── */
+#reconnectModal{
+  position:fixed;inset:0;z-index:10800;
+  background:rgba(0,0,0,.92);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1.2rem;padding:2rem;
+  display:none;
+}
+#reconnectModal.visible{display:flex}
+.rcm-icon{font-size:3rem;animation:rc-pulse 1.4s infinite}
+.rcm-title{font-family:'Cinzel',cursive;color:var(--moon);font-size:1.3rem;font-weight:700;text-align:center}
+.rcm-sub{color:rgba(232,232,232,.55);font-size:.85rem;text-align:center;max-width:260px;line-height:1.6}
+.rcm-dots{display:flex;gap:.5rem}
+.rcm-dot{width:10px;height:10px;border-radius:50%;background:var(--moon);animation:rc-bounce .9s infinite ease-in-out}
+.rcm-dot:nth-child(2){animation-delay:.15s}
+.rcm-dot:nth-child(3){animation-delay:.3s}
+@keyframes rc-bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+.rcm-leave{padding:.55rem 1.4rem;background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.45);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.82rem;margin-top:.4rem;transition:.2s}
+.rcm-leave:hover{border-color:var(--blood-glow);color:var(--blood-glow)}
 
 /* ── LEADERBOARD MODAL ── */
 #leaderboardModal{position:fixed;inset:0;z-index:220;background:rgba(0,0,0,1);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
@@ -11065,6 +11101,334 @@ window.addEventListener('load',()=>{
   setTimeout(()=>initFB(), 200);
 });
 </script>
+<!-- ── RECONNECT BANNER (shown to OTHER players while someone is disconnected) ── -->
+<div id="reconnectBanner"></div>
+
+<!-- ── RECONNECT MODAL (shown to THE DISCONNECTED PLAYER while trying to reconnect) ── -->
+<div id="reconnectModal">
+  <div class="rcm-icon">🔌</div>
+  <div class="rcm-title" id="rcmTitle">Connection lost…</div>
+  <div class="rcm-sub" id="rcmSub">Trying to reconnect to your game. Please wait.</div>
+  <div class="rcm-dots"><div class="rcm-dot"></div><div class="rcm-dot"></div><div class="rcm-dot"></div></div>
+  <button class="rcm-leave" onclick="_rcmLeave()">Leave game</button>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// RECONNECT SYSTEM
+// Handles two scenarios:
+//   A) Player refreshes / loses connection mid-game → auto-rejoin via localStorage
+//   B) Other players see a "disconnected" banner with a live countdown
+// ════════════════════════════════════════════════════════════════════════════
+
+const _RC_SESSION_KEY = 'lg_session_v1';   // localStorage key for session snapshot
+const _RC_MODAL_SHOW_DELAY = 3000;          // ms before modal appears (avoids flicker on fast reconnects)
+
+// ── Session persistence ───────────────────────────────────────────────────
+function _rcSaveSession(){
+  try {
+    localStorage.setItem(_RC_SESSION_KEY, JSON.stringify({
+      myId, myName, roomCode,
+      savedAt: Date.now()
+    }));
+  } catch(e){}
+}
+
+function _rcClearSession(){
+  try { localStorage.removeItem(_RC_SESSION_KEY); } catch(e){}
+}
+
+function _rcLoadSession(){
+  try {
+    const raw = localStorage.getItem(_RC_SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    // Discard sessions older than 4 hours (game must be long gone)
+    if(Date.now() - (s.savedAt||0) > 4 * 60 * 60 * 1000) { _rcClearSession(); return null; }
+    return s;
+  } catch(e){ return null; }
+}
+
+// ── Auto-rejoin on page load ──────────────────────────────────────────────
+// Called once Firebase is ready. Checks for a saved session and, if the room
+// still exists and is in 'playing' status, skips the login screen entirely.
+async function _rcTryAutoRejoin(){
+  const s = _rcLoadSession();
+  if(!s || !s.myId || !s.myName || !s.roomCode) return false;
+  if(!fbOk || !db) return false;
+
+  try {
+    const snap = await db.ref(`games/${s.roomCode}`).once('value');
+    const gs   = snap.val();
+    if(!gs) { _rcClearSession(); return false; }
+    // Only rejoin active games
+    if(gs.status !== 'playing') { _rcClearSession(); return false; }
+    // Confirm our player node still exists (wasn't removed)
+    const playerNode = gs.players?.[s.myId];
+    if(!playerNode) { _rcClearSession(); return false; }
+
+    // ✅ All checks passed — restore identity and jump straight into the room
+    myId       = s.myId;
+    myName     = s.myName;
+    roomCode   = s.roomCode;
+    isLeader   = (gs.leader === myId);
+    myRole     = playerNode.role || null;
+
+    console.log('[Reconnect] Auto-rejoining room', roomCode, 'as', myName);
+    _rcShowOwnModal(); // show "reconnecting…" UI to this player
+    await _rcDoRejoin();
+    return true;
+  } catch(e){
+    console.warn('[Reconnect] Auto-rejoin failed:', e);
+    _rcClearSession();
+    return false;
+  }
+}
+
+async function _rcDoRejoin(){
+  if(!fbOk || !db || !roomCode || !myId) return;
+  const ref = db.ref(`games/${roomCode}`);
+
+  // Clear disconnected flag and resume heartbeat
+  await ref.child(`players/${myId}`).update({
+    disconnected: false,
+    disconnectedAt: null,
+    heartbeat: Date.now()
+  });
+
+  // Restore onDisconnect to flag-mode (not remove — game is live)
+  ref.child(`players/${myId}`).onDisconnect().update({
+    disconnected: true,
+    disconnectedAt: Date.now()
+  });
+
+  startHeartbeat();
+
+  _rcHideOwnModal();
+
+  // Re-attach Firebase listener (same as enterRoom but skip the write-player step)
+  let _prevStatus = null;
+  let _onDisconnectIsRemove = false;
+  ref.on('value', snap => {
+    gameState = snap.val();
+    if(gameState?.config){
+      cfg = gameState.config;
+      if(cfg.roles && !Array.isArray(cfg.roles)) cfg.roles = Object.values(cfg.roles);
+      if(!cfg.roleCounts) cfg.roleCounts = {werewolf:1, villager:1};
+    }
+    isLeader = (gameState?.leader === myId);
+    // Leader failover (same logic as enterRoom)
+    if(gameState){
+      const leaderData = gameState.players?.[gameState.leader];
+      const leaderGone = leaderData?.disconnected || !leaderData;
+      if(leaderGone){
+        const connected = Object.values(gameState.players||{})
+          .filter(p => p.alive !== false && !p.disconnected)
+          .sort((a,b) => (a.joinedAt||0)-(b.joinedAt||0));
+        const nextLeader = connected[0];
+        if(nextLeader && nextLeader.id === myId && !isLeader){
+          isLeader = true;
+          db.ref(`games/${roomCode}/leader`).set(myId);
+          console.log('👑 Leader failover after reconnect — I am now leader');
+        }
+      }
+    }
+    runDisconnectWatcher();
+    renderGame();
+    _prevStatus = gameState?.status;
+  });
+
+  showGame();
+  renderGame();
+}
+
+// ── Own-screen reconnect modal ────────────────────────────────────────────
+let _rcModalTimer = null;
+function _rcShowOwnModal(){
+  const m   = document.getElementById('reconnectModal');
+  const ttl = document.getElementById('rcmTitle');
+  const sub = document.getElementById('rcmSub');
+  if(!m) return;
+  const l = (typeof lang !== 'undefined') ? lang : 'en';
+  if(ttl) ttl.textContent = l==='ar' ? 'انقطع الاتصال…' : l==='fr' ? 'Connexion perdue…' : 'Connection lost…';
+  if(sub) sub.textContent = l==='ar' ? 'جارٍ إعادة الاتصال بلعبتك. انتظر من فضلك.' : l==='fr' ? 'Reconnexion en cours… Veuillez patienter.' : 'Reconnecting to your game. Please wait.';
+  clearTimeout(_rcModalTimer);
+  _rcModalTimer = setTimeout(()=>{ m.classList.add('visible'); }, _RC_MODAL_SHOW_DELAY);
+}
+function _rcHideOwnModal(){
+  clearTimeout(_rcModalTimer);
+  const m = document.getElementById('reconnectModal');
+  if(m) m.classList.remove('visible');
+}
+function _rcmLeave(){
+  _rcClearSession();
+  _rcHideOwnModal();
+  _doLeaveNow();
+}
+
+// ── Reconnect BANNER (shown to OTHER players) ─────────────────────────────
+// State: map of playerId → { name, discAt, timerHandle, countdownHandle }
+const _rcBannerState = {};
+
+function _rcUpdateBanner(){
+  const banner = document.getElementById('reconnectBanner');
+  if(!banner || !gameState) return;
+
+  const players = Object.values(gameState.players || {});
+  const now     = Date.now();
+  const l       = (typeof lang !== 'undefined') ? lang : 'en';
+
+  // Rows to render
+  const rows = players
+    .filter(p => p.alive && p.disconnected && p.id !== myId)
+    .map(p => {
+      const discAt  = p.disconnectedAt || now;
+      const elapsed = Math.max(0, now - discAt);
+      const remaining = Math.max(0, Math.ceil((60000 - elapsed) / 1000));
+      return { id: p.id, name: p.name, remaining };
+    });
+
+  // Also show a brief "back!" flash for recently-reconnected players
+  const backRows = Object.entries(_rcBannerState)
+    .filter(([id, st]) => st.backFlash)
+    .map(([id, st]) => ({ id, name: st.name, back: true }));
+
+  if(rows.length === 0 && backRows.length === 0){
+    banner.classList.remove('visible');
+    banner.innerHTML = '';
+    return;
+  }
+
+  banner.classList.add('visible');
+
+  const discLabel = l==='ar' ? 'انقطع اتصاله — يعود خلال' : l==='fr' ? 'déconnecté — retour dans' : 'disconnected — returning in';
+  const secLabel  = l==='ar' ? 'ث' : 's';
+  const backLabel = l==='ar' ? 'عاد!' : l==='fr' ? 'de retour !' : 'back!';
+
+  banner.innerHTML = [
+    ...rows.map(r => `
+      <div class="rc-row" data-rcid="${r.id}">
+        <div class="rc-dot disc"></div>
+        <span class="rc-name">${r.name}</span>
+        <span class="rc-msg">${discLabel}</span>
+        <span class="rc-timer" data-rcid="${r.id}">${r.remaining}${secLabel}</span>
+      </div>`),
+    ...backRows.map(r => `
+      <div class="rc-row">
+        <div class="rc-dot back"></div>
+        <span class="rc-name">${r.name}</span>
+        <span class="rc-msg">${backLabel}</span>
+      </div>`)
+  ].join('');
+}
+
+// Drive per-second countdown updates without re-rendering the whole banner
+function _rcTickBannerCountdowns(){
+  if(!gameState) return;
+  const now = Date.now();
+  const l   = (typeof lang !== 'undefined') ? lang : 'en';
+  const secLabel = l==='ar' ? 'ث' : 's';
+  document.querySelectorAll('.rc-timer[data-rcid]').forEach(el => {
+    const pid = el.dataset.rcid;
+    const p   = gameState.players?.[pid];
+    if(!p || !p.disconnected){ el.closest('.rc-row')?.remove(); return; }
+    const discAt    = p.disconnectedAt || now;
+    const remaining = Math.max(0, Math.ceil((60000 - (now - discAt)) / 1000));
+    el.textContent  = remaining + secLabel;
+  });
+  // Hide banner if all rows gone
+  const banner = document.getElementById('reconnectBanner');
+  if(banner && banner.querySelectorAll('.rc-row').length === 0){
+    banner.classList.remove('visible');
+  }
+}
+
+// ── Per-player reconnect state manager ───────────────────────────────────
+// Called from renderGame whenever we have a fresh gameState.
+function _rcSyncPlayerStates(){
+  if(!gameState || gameState.status === 'setup') return;
+  const players = Object.values(gameState.players || {});
+
+  players.forEach(p => {
+    if(!p.alive) return;
+    const st = _rcBannerState[p.id];
+
+    if(p.disconnected && !st){
+      // Newly disconnected — start tracking
+      _rcBannerState[p.id] = { name: p.name, discAt: p.disconnectedAt || Date.now() };
+      _rcUpdateBanner();
+    }
+
+    if(!p.disconnected && st && !st.backFlash){
+      // Player just reconnected — show "back!" flash for 3s, then remove
+      st.backFlash = true;
+      _rcUpdateBanner();
+      setTimeout(()=>{
+        delete _rcBannerState[p.id];
+        _rcUpdateBanner();
+      }, 3000);
+    }
+  });
+
+  // Remove stale entries for players that no longer exist (kicked / dead)
+  const ids = new Set(players.map(p => p.id));
+  Object.keys(_rcBannerState).forEach(id => {
+    if(!ids.has(id)) delete _rcBannerState[id];
+  });
+
+  _rcUpdateBanner();
+}
+
+// Drive the countdown ticker
+setInterval(_rcTickBannerCountdowns, 1000);
+
+// ── Hook into existing renderGame to sync banner ──────────────────────────
+const _origRenderGame = window.renderGame;
+window.renderGame = function(){
+  if(typeof _origRenderGame === 'function') _origRenderGame.apply(this, arguments);
+  _rcSyncPlayerStates();
+};
+
+// ── Hook into enterRoom to save session ──────────────────────────────────
+// We patch startHeartbeat — it's called exactly once on successful room entry
+const _origStartHeartbeat = window.startHeartbeat;
+window.startHeartbeat = function(){
+  if(typeof _origStartHeartbeat === 'function') _origStartHeartbeat.apply(this, arguments);
+  // Save session whenever we (re)start the heartbeat — means we're in a room
+  if(myId && myName && roomCode) _rcSaveSession();
+};
+
+// ── Clear session on intentional leave or game over ───────────────────────
+const _origDoLeaveNow = window._doLeaveNow;
+window._doLeaveNow = function(){
+  _rcClearSession();
+  if(typeof _origDoLeaveNow === 'function') _origDoLeaveNow.apply(this, arguments);
+};
+
+const _origShowGameOver = window.showGameOver;
+window.showGameOver = function(result){
+  _rcClearSession(); // game is over — no need to reconnect
+  if(typeof _origShowGameOver === 'function') _origShowGameOver.apply(this, arguments);
+};
+
+// ── Bootstrap: try auto-rejoin once Firebase is ready ────────────────────
+// initFBWithRetry already exists; we hook into it by waiting for fbOk.
+// We poll briefly since Firebase init is async and may not be done at parse time.
+(function _rcBootstrap(){
+  function tryOnce(){
+    if(typeof fbOk !== 'undefined' && fbOk && typeof db !== 'undefined' && db){
+      _rcTryAutoRejoin().then(rejoined => {
+        if(!rejoined) console.log('[Reconnect] No valid session found — normal login flow');
+      });
+    } else {
+      setTimeout(tryOnce, 300);
+    }
+  }
+  // Give the page a moment to init Firebase before we start polling
+  setTimeout(tryOnce, 600);
+})();
+</script>
+
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <!-- ── AUDIO TAP HINT ── -->
 <div id="audioTapHint">🔊 Tap anywhere to enable sound</div>
