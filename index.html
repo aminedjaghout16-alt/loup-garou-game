@@ -6603,10 +6603,26 @@ async function enterRoom(){
       }
       console.log('✅ Room joined',roomCode);
     }
-    // Add self
-    await ref.child(`players/${myId}`).set(
-      {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
-    );
+    // Add self — behaviour depends on game state
+    const _snapVal = snap.val();
+    const _gameIsPlaying = _snapVal?.status === 'playing';
+    const _existingMe = _snapVal?.players?.[myId];
+    if(_gameIsPlaying && !_existingMe){
+      // Newcomer joining a running game → spectator only (alive:false, no role)
+      await ref.child(`players/${myId}`).set(
+        {id:myId,name:myName,alive:false,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null),spectator:true}
+      );
+    } else if(_gameIsPlaying && _existingMe){
+      // Real rejoin — only update connection metadata, preserve role/alive
+      await ref.child(`players/${myId}`).update(
+        {disconnected:false, disconnectedAt:null, name:myName, uid:(_googleUser?.uid||null)}
+      );
+    } else {
+      // Lobby (setup) — normal join
+      await ref.child(`players/${myId}`).set(
+        {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
+      );
+    }
     // After store data loads, patch avatarId in case it was null at join time
     if(typeof _loadStoreData==='function'){
       _loadStoreData().then(()=>{
@@ -10769,10 +10785,8 @@ function prRefresh(){
 function _prRender(rooms){
   const sub = document.getElementById('prSubtitle');
   const list = document.getElementById('prList');
-  const panel = document.getElementById('prNamePanel');
   if(sub) sub.textContent = rooms.length ? rooms.length+' open room'+(rooms.length!==1?'s':'')+' · live' : 'No open rooms';
   list.innerHTML='';
-  list.appendChild(panel);
   if(!rooms.length){
     const e=document.createElement('div'); e.className='pr-empty';
     e.innerHTML='🌙<br>No open rooms right now.<br>Be the first!';
@@ -10782,6 +10796,10 @@ function _prRender(rooms){
     const full=r.playerCount>=r.maxPlayers;
     const inProgress=r.status==='playing';
     const isMe=r.hostUid===myId;
+    // Check if the current user was actually in this game (by UID or generated ID)
+    const myUid = (_googleUser?.uid) || null;
+    const playerUids = Array.isArray(r.playerUids) ? r.playerUids : [];
+    const wasInGame = isMe || (myUid && playerUids.includes(myUid));
     const ageMs=Date.now()-(r.createdAt||Date.now());
     const age=ageMs<60000?'just now':ageMs<3600000?Math.floor(ageMs/60000)+'m ago':Math.floor(ageMs/3600000)+'h ago';
     const card=document.createElement('div');
@@ -10789,7 +10807,7 @@ function _prRender(rooms){
     const statusPip = inProgress
       ? `<span class="pr-card-pip" style="color:#facc15">🟡 In Progress</span>`
       : `<span class="pr-card-pip ${full?'full':'open'}">${full?'🔴':'🟢'} ${r.playerCount||1}/${r.maxPlayers}</span>`;
-    const joinLabel = isMe ? 'Enter' : inProgress ? 'Rejoin' : full ? 'Full' : 'Join';
+    const joinLabel = inProgress ? (wasInGame ? 'Rejoin' : 'Spectate') : (isMe ? 'Enter' : full ? 'Full' : 'Join');
     const joinDisabled = (full && !isMe && !inProgress) ? 'disabled' : '';
     card.innerHTML=`
       <div class="pr-card-info">
@@ -11094,11 +11112,15 @@ renderGame = function(){
   }
 };
 
-// Update public room listing when game starts (mark as playing, don't remove)
+// Update public room listing when game starts (mark as playing, store player UIDs)
 const _origDoStartGame = doStartGame;
 doStartGame = function(){
   if(typeof db!=='undefined'&&db&&roomCode){
-    db.ref(`publicRooms/${roomCode}`).update({status:'playing'}).catch(()=>{});
+    const playerUids = Object.values(gameState?.players||{})
+      .filter(p=>!p.disconnected)
+      .map(p=>p.uid||p.id)
+      .filter(Boolean);
+    db.ref(`publicRooms/${roomCode}`).update({status:'playing', playerUids}).catch(()=>{});
   }
   _origDoStartGame();
 };
