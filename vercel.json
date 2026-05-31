@@ -1,9 +1,13 @@
 {
-  "buildCommand": "echo 'Static site'",
+  "buildCommand": "npm install",
   "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/index.html"
