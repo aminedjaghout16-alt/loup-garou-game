@@ -9625,7 +9625,8 @@ function tick(){
   }
   if(!start){ timerTO=setTimeout(tick,1000); return; }
   const rem=Math.max(0,Math.ceil(dur-(Date.now()-start)/1000));
-  document.getElementById('phaseTimer').textContent=rem;
+  const phaseTimerEl=document.getElementById('phaseTimer');
+  if(phaseTimerEl) phaseTimerEl.textContent=rem;
   if(rem===10) {
     if(window._timerWarningSfx){ window._timerWarningSfx.pause(); window._timerWarningSfx=null; }
     const src = '/sounds/tomas_herudek-heartbeat-slow-quiet-and-simple-529662.mp3';
@@ -11405,11 +11406,7 @@ window._doLeaveNow = function(){
   if(typeof _origDoLeaveNow === 'function') _origDoLeaveNow.apply(this, arguments);
 };
 
-const _origShowGameOver = window.showGameOver;
-window.showGameOver = function(result){
-  _rcClearSession(); // game is over — no need to reconnect
-  if(typeof _origShowGameOver === 'function') _origShowGameOver.apply(this, arguments);
-};
+// showGameOver is patched later (audio block) — _rcClearSession() merged there
 
 // ── Bootstrap: try auto-rejoin once Firebase is ready ────────────────────
 // initFBWithRetry already exists; we hook into it by waiting for fbOk.
@@ -11929,6 +11926,7 @@ window.doVote = function(targetId){
 // ── Win / game-over SFX + stop music ────────────────────────────────────
 const _origShowGameOver = showGameOver;
 window.showGameOver = function(result){
+  if(typeof _rcClearSession === 'function') _rcClearSession(); // game over — no need to reconnect
   AUDIO.stopMusic();
   const players = Object.values(gameState?.players || {});
   const newlyDeadCount = players.filter(p => !p.alive && _previousAlive && _previousAlive[p.id] === true).length;
