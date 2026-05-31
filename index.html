@@ -3804,6 +3804,11 @@ window.addEventListener('load', ()=>{
       const _hr = handleRematch;
       window.handleRematch = async function(){
         await resetVoiceChat();
+        return _hr.apply(this, arguments);
+      };
+    }
+  }, 800);
+});
 </script>
 
 <script>
