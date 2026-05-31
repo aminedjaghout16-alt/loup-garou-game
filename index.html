@@ -5207,6 +5207,7 @@ let timerTO=null;
 let activeChatTab='general'; // 'general', 'wolves', 'twosisters', 'threebrothers'
 let _previousAlive={}; // track alive states for death animation
 let _gameOver=false; // prevent actions after game end
+let _roleRevealActive=false; // blocks player clicks while role card is showing or fading
 
 // ── Disconnect / reconnect system ──────────────────────────────────────────
 let _heartbeatInterval=null;          // setInterval handle for our own heartbeat
@@ -5350,20 +5351,47 @@ function showRoleRevealAnimation(onDone){
   const newCard=oldCard.cloneNode(true);
   oldCard.parentNode.replaceChild(newCard,oldCard);
   const ov=document.getElementById('roleRevealOverlay');
+  // Block player-circle clicks for the entire lifetime of this overlay
+  _roleRevealActive=true;
+  let _dismissed=false;
   ov.classList.add('active');
+
   function dismiss(){
-    ov.removeEventListener('click',dismiss);
+    if(_dismissed) return; // guard against double-call
+    _dismissed=true;
+    clearTimeout(autoTimer);
+    ov.removeEventListener('click',onOverlayClick);
+    ov.removeEventListener('click',onEarlyClick);
     ov.style.transition='opacity .5s';
     ov.style.opacity='0';
     setTimeout(()=>{
       ov.classList.remove('active');
       ov.style.transition='';
       ov.style.opacity='';
+      _roleRevealActive=false; // unblock player clicks only after overlay is gone
       if(onDone) onDone();
     },500);
   }
+
+  // Intercept ANY early tap on the overlay before the 1500ms grace period.
+  // Without this, taps < 1500ms fell through to the game board behind the overlay.
+  function onEarlyClick(e){
+    e.stopPropagation();
+    // Absorb silently — card hasn't finished flipping yet.
+  }
+  ov.addEventListener('click', onEarlyClick);
+
+  function onOverlayClick(e){
+    e.stopPropagation();
+    dismiss();
+  }
+
   const autoTimer=setTimeout(dismiss, 5500);
-  setTimeout(()=>{ ov.addEventListener('click',()=>{ clearTimeout(autoTimer); dismiss(); }); },1500);
+  // After 1500ms the card has flipped; swap absorb-handler for real dismiss handler
+  setTimeout(()=>{
+    ov.removeEventListener('click', onEarlyClick);
+    ov.addEventListener('click', onOverlayClick);
+  }, 1500);
 }
 
 function showGameStartAnimation(onDone){
@@ -7093,6 +7121,7 @@ function renderGame(){
     // Reset local game state for ALL clients on every setup transition (rematch/new game)
     if(_gameOver || _lastPhase === 'night' || _lastPhase === 'day'){
       _gameOver=false;
+      _roleRevealActive=false;
       _lastStepId=null;
       _advancingStep=false;
       _lastPhase=null;
@@ -7521,6 +7550,11 @@ function renderPlayerList(players){
 
 function circleNodeClick(event, targetId){
   event.stopPropagation();
+  // Block all player interaction while the role-reveal overlay is visible or fading out.
+  // Without this guard, a fast tap dismisses the card AND immediately triggers a night
+  // action on whichever player circle was underneath — leaving the night phase in a broken
+  // state where alreadyActed=true but onDone() (which initialises the UI) hasn't fired yet.
+  if(_roleRevealActive) return;
   if(_circlePopupOpen===targetId){ closeCirclePopup(); return; }
   closeCirclePopup();
   _circlePopupOpen=targetId;
