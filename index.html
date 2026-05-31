@@ -3465,37 +3465,47 @@ if (typeof module !== 'undefined' && module.exports) {
 // ════════════════════════════════════════════════════════════════
 // PART 5 — COIN ECONOMY  (revised with match reward fix)
 // ════════════════════════════════════════════════════
-// DAILY.CO VOICE CHAT — simple push-to-talk
+// DAILY.CO VOICE CHAT
 // ════════════════════════════════════════════════════
-const DAILY_DOMAIN = 'loup-garou';
 
-let _vc       = null;   // DailyIframe call object
-let _vcMuted  = true;   // start muted
-let _vcInited = false;
+let _vc        = null;   // DailyIframe call object
+let _vcMuted   = true;   // start muted
+let _vcInited  = false;
+let _vcJoining = false;  // prevent duplicate join attempts
 
 async function initVoiceChat(){
-  // Always show the bar immediately — connecting happens async
+  // Show bar immediately regardless of Daily status
   _vcShowBar();
-  if(_vcInited) return;
+  // Prevent duplicate instances
+  if(_vcInited || _vcJoining) return;
   if(!roomCode || !myId) return;
   if(typeof window.DailyIframe === 'undefined'){ console.warn('[Voice] Daily SDK not loaded'); return; }
-  _vcInited = true;
-
-  const roomName = ('lg-' + roomCode).toLowerCase().replace(/[^a-z0-9-]/g,'');
-  const url = 'https://' + DAILY_DOMAIN + '.daily.co/' + roomName;
+  _vcJoining = true;
 
   try {
+    // Ask Vercel to create/get the Daily room for this game
+    const res = await fetch('/api/create-room', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode })
+    });
+    if(!res.ok) throw new Error('create-room returned ' + res.status);
+    const data = await res.json();
+    const url  = data.url;
+    if(!url) throw new Error('No URL in response');
+
     _vc = window.DailyIframe.createCallObject({ audioSource: true, videoSource: false });
-    _vc.on('joined-meeting', () => { _vcSetStatus('🎙 Connected'); });
-    _vc.on('left-meeting',   () => { _vcHideBar(); });
-    _vc.on('error', (e)     => { console.error('[Voice]', e); _vcSetStatus('⚠️ Error'); });
+    _vc.on('joined-meeting', () => { _vcInited = true; _vcJoining = false; _vcSetStatus('🎙 Connected'); });
+    _vc.on('left-meeting',   () => { _vcInited = false; _vcJoining = false; _vcHideBar(); _vc = null; });
+    _vc.on('error', (e)      => { console.error('[Voice]', e); _vcSetStatus('⚠️ Error'); _vcInited = false; _vcJoining = false; });
     await _vc.join({ url, userName: myName || 'Player' });
     await _vc.setLocalAudio(false); // start muted
-    _vcShowBar();
   } catch(e) {
     console.error('[Voice] join failed', e);
-    _vcInited = false;
-    _vc = null;
+    _vcInited  = false;
+    _vcJoining = false;
+    if(_vc){ try{ _vc.destroy(); }catch(x){} _vc = null; }
+    _vcSetStatus('⚠️ Voice unavailable');
   }
 }
 
@@ -3555,7 +3565,6 @@ window.addEventListener('load', ()=>{
         // Show voice bar whenever game is active
         if(typeof gameState !== 'undefined' && gameState && gameState.status !== undefined){
           if(typeof _vcShowBar === 'function') _vcShowBar();
-          if(typeof initVoiceChat === 'function' && !_vcInited) initVoiceChat();
         }
       };
       if(typeof renderPlayerList === 'function'){
@@ -12104,7 +12113,6 @@ setInterval(function(){
     if(bar.style.display === 'flex') return; // already showing
     // We're in game but bar is hidden — force show it
     if(typeof _vcShowBar === 'function') _vcShowBar();
-    if(typeof initVoiceChat === 'function' && !window._vcInited) initVoiceChat();
   } catch(e){}
 }, 1000);
 </script>
