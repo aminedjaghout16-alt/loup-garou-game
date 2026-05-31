@@ -10696,8 +10696,8 @@ showGame = function(){
   _origShowGame();
   // Refresh coin badge visibility (login screen now hidden)
   if (typeof _renderCoinBadge === 'function') _renderCoinBadge();
-  // Show voice bar immediately, then connect Daily in background
-  _vcShowBar();
+  // Show voice bar immediately, then connect LiveKit in background
+  if(typeof _vcShowBar === 'function') _vcShowBar();
   setTimeout(function(){ if(typeof initVoiceChat === 'function') initVoiceChat(); }, 800);
 };
 
