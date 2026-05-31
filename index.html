@@ -6927,6 +6927,9 @@ function showGame(){
   // Silently load store data so equipped avatar is ready for the lobby
   // without requiring the player to open the shop first
   if(typeof _loadStoreData==='function') _loadStoreData().catch(()=>{});
+  // Show voice bar and connect
+  if(typeof _vcShowBar==='function') _vcShowBar();
+  setTimeout(function(){ if(typeof initVoiceChat==='function') initVoiceChat(); }, 800);
 }
 
 // ════════════════════════════════════════════
