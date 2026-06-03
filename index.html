@@ -11181,7 +11181,9 @@ function lobbyShare() {
   else { navigator.clipboard?.writeText(text); _showToast('Invite copied!'); }
 }
 
-function lobbyInviteFriends() {
+async function lobbyInviteFriends() {
+  // Refresh presence so online status is current
+  if(typeof _loadFriendPresence==='function') await _loadFriendPresence();
   // Always open our custom picker — only fallback to share if truly no friends at all
   const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
   // Build or show the friend invite picker modal
@@ -12949,9 +12951,20 @@ setInterval(function(){
     _hideInvitePopup();
     // Remove invite from Firebase
     try{const myPresKey=_presKeyFrom(myTag());if(myPresKey)db.ref('gameInvites/'+myPresKey).remove();}catch(e){}
-    // Navigate to the room — join via URL param or call joinRoom if available
-    const url=location.origin+location.pathname+'?room='+encodeURIComponent(room);
-    location.href=url;
+    // Fill in the join form and call doJoin() directly
+    const nameInput=document.getElementById('inName');
+    const codeInput=document.getElementById('inCode');
+    if(nameInput&&codeInput&&typeof doJoin==='function'){
+      // Use existing name or display name
+      if(!nameInput.value.trim()){
+        nameInput.value=currentDisplayName()||myName||'Player';
+      }
+      codeInput.value=room.toUpperCase();
+      doJoin();
+    } else {
+      // Fallback: reload with room in URL
+      location.href=location.origin+location.pathname+'?room='+encodeURIComponent(room);
+    }
   };
 
   window.declineGameInvite=function(){
