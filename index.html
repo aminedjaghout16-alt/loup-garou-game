@@ -12726,8 +12726,8 @@ setInterval(function(){
         const snap=await db.ref('presence/'+presKey).once('value');
         const val=snap.val();
         console.log('[presence] friend',f.name,'key',presKey,'val',val);
-        // Consider online if ts within last 3 minutes
-        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.online&&(Date.now()-val.ts<180000))||false;
+        // Online = wrote presence in last 5 minutes (ignore online flag — tab-hide can set it false incorrectly)
+        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.ts&&(Date.now()-val.ts<300000))||false;
       }catch(e){console.warn('[presence] load error for',f.tag,e);}
     }));
   }
@@ -12801,8 +12801,7 @@ setInterval(function(){
     document.addEventListener('visibilitychange',()=>{
       try{
         if(!_presenceRef)return;
-        if(document.hidden){_presenceRef.update({online:false,ts:Date.now()});}
-        else{_presenceRef.update({online:true,ts:Date.now()});}
+        if(!document.hidden){_presenceRef.update({online:true,ts:Date.now()});}
       }catch(e){}
     });
   });  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
