@@ -12882,6 +12882,12 @@ setInterval(function(){
     return _friendPresenceCache[t]===true;
   }
 
+  window.isFriendOnline=isFriendOnline;
+  window._presKeyFrom=_presKeyFrom;
+  window._loadFriendPresence=_loadFriendPresence;
+  window.normalizeTag=normalizeTag;
+  Object.defineProperty(window,"_friendPresenceCache",{get:()=>_friendPresenceCache,configurable:true});
+
   window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();setTimeout(async()=>{await _loadFriendPresence();renderFriends();},2000);};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
   window.addFriendFromInput=async function(){
