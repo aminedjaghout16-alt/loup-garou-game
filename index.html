@@ -881,6 +881,31 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .profile-history-title{font-size:.72rem;color:var(--ghost);opacity:.72;margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.08em}
 .role-history-list{display:flex;flex-wrap:wrap;gap:.35rem}.role-chip{border:1px solid rgba(212,160,23,.28);border-radius:999px;padding:.22rem .55rem;color:var(--moon-pale);font-size:.75rem;background:rgba(212,160,23,.08)}
 .friends-add{display:grid;grid-template-columns:1fr auto;gap:.45rem;margin-bottom:.9rem}.friends-list{display:flex;flex-direction:column;gap:.5rem;max-height:330px;overflow:auto}.friend-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:.55rem;align-items:center;padding:.65rem;background:rgba(26,10,46,.65);border:1px solid rgba(212,160,23,.18);border-radius:8px}.friend-dot{width:10px;height:10px;border-radius:50%;background:rgba(232,232,232,.25)}.friend-row.online .friend-dot{background:var(--green);box-shadow:0 0 10px rgba(16,185,129,.7)}.friend-name{color:var(--moon-pale);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis}.friend-state{font-size:.72rem;color:var(--ghost);opacity:.55}.friend-action.remove{color:var(--red);border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08)}
+.friend-action:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+/* ── INVITE POPUP ── */
+#invitePopup{
+  position:fixed;bottom:1.5rem;right:1.5rem;z-index:11000;
+  background:linear-gradient(145deg,#1a0a2e,#0d0d24);
+  border:1px solid rgba(212,160,23,.5);border-radius:14px;
+  padding:1.2rem 1.3rem 1rem;min-width:260px;max-width:300px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+  transform:translateY(120%);opacity:0;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .3s ease;
+  pointer-events:none;
+}
+#invitePopup.visible{transform:translateY(0);opacity:1;pointer-events:auto}
+.inv-from{font-size:.7rem;color:rgba(232,232,232,.5);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem}
+.inv-name{font-size:1.1rem;color:var(--moon-pale);font-weight:700;margin-bottom:.15rem}
+.inv-room{font-size:.75rem;color:rgba(232,232,232,.45);margin-bottom:.9rem}
+.inv-wolf{font-size:2rem;text-align:center;margin-bottom:.6rem;line-height:1}
+.inv-bar-wrap{height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:.85rem;overflow:hidden}
+.inv-bar{height:100%;background:var(--moon);border-radius:2px;width:100%;transform-origin:left;transition:width linear}
+.inv-btns{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}
+.inv-btn{min-height:38px;border-radius:8px;border:none;font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:700;letter-spacing:.04em}
+.inv-btn.join{background:var(--moon);color:#0a0a1a}
+.inv-btn.join:hover{background:var(--moon-pale)}
+.inv-btn.decline{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.inv-btn.decline:hover{background:rgba(239,68,68,.25)}
 .audio-master{padding-bottom:.45rem;margin-bottom:.15rem;border-bottom:1px solid rgba(212,160,23,.18)}.audio-row{min-height:32px}.audio-row label{min-width:68px}.audio-value{width:34px;text-align:right;color:var(--ghost);opacity:.6;font-size:.7rem}.audio-mute.active{color:var(--red)!important;border-color:var(--red)!important;background:rgba(239,68,68,.1)}.audio-global{width:100%;margin-bottom:.45rem;padding:.42rem;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:var(--moon);font-family:inherit;cursor:pointer}.audio-global.off{border-color:rgba(239,68,68,.45);color:var(--red);background:rgba(239,68,68,.08)}
 @media (max-width:760px){body{letter-spacing:0}.mn-title{font-size:1.7rem}.mn-grid{grid-template-columns:1fr}.mn-btn.primary,.mn-btn{grid-column:auto;min-height:74px}.mn-btn,.btn,.lb,.rc-toggle-btn,.friend-action,.profile-small-btn,.mn-foot-btn,.audio-mute{min-height:44px}.g-content{flex-direction:column;gap:.65rem;padding:.65rem;overflow-y:auto}.left-panel{flex:none;max-height:none;width:100%;padding:.85rem}.center-panel{min-height:58vh;padding:.9rem}.right-panel{width:100%;max-height:42vh}.vote-grid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}.site-box,.profile-box{max-width:96vw;padding:1.2rem .95rem}#audioPanel{left:.7rem;right:.7rem;bottom:.7rem;min-width:0;border-radius:8px}.audio-row{gap:.4rem}.audio-slider{min-width:0}.stats-grid{gap:.5rem}.stat-card{padding:.65rem .45rem}.profile-edit,.friends-add{grid-template-columns:1fr}.friend-row{grid-template-columns:auto 1fr auto}.friend-state{display:none}}
 @media (hover:none){button,.mn-btn,.vote-card,.pc-node,.pc-vote-btn,.chat-tab,.rc,.lb{touch-action:manipulation;-webkit-tap-highlight-color:rgba(212,160,23,.22)}}</style>
@@ -11596,6 +11621,18 @@ window._doLeaveNow = function(){
     <div class="friends-list" id="friendsList"></div>
   </div>
 </div>
+<!-- ── INVITE POPUP ── -->
+<div id="invitePopup">
+  <div class="inv-wolf">🐺</div>
+  <div class="inv-from">Invitation from</div>
+  <div class="inv-name" id="invPopupName">—</div>
+  <div class="inv-room" id="invPopupRoom">Room ···</div>
+  <div class="inv-bar-wrap"><div class="inv-bar" id="invBar"></div></div>
+  <div class="inv-btns">
+    <button class="inv-btn join" onclick="acceptGameInvite()">Join</button>
+    <button class="inv-btn decline" onclick="declineGameInvite()">Decline</button>
+  </div>
+</div>
 <!-- ── PROFILE MODAL ── -->
 <div id="profileModal" class="hidden">
   <div class="profile-box">
@@ -12785,13 +12822,109 @@ setInterval(function(){
   window.acceptFriend=async function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid){await db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();await db.ref(`socialAccepted/${tag}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid||'',ts:Date.now()});}}catch(e){console.warn('[acceptFriend] firebase error',e);}renderFriends();};
   window.declineFriend=function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
   window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
-  window.inviteFriend=function(tag){const f=friends().find(x=>x.tag===normalizeTag(tag));let code=(typeof roomCode!=='undefined'&&roomCode)||'';let msg=code?`Join my Loup-Garou room ${code}`:'Join me for Loup-Garou online';if(code)msg += ` - ${location.origin}${location.pathname}?room=${encodeURIComponent(code)}`;if(navigator.clipboard)navigator.clipboard.writeText(msg);alert(`Invite for ${(f&&f.name)||tag} copied${code?' with room code '+code:''}.`);};
-  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(displayNameTag(r.name,r.tag))}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=isFriendOnline(f.tag);return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(displayNameTag(f.name,f.tag))}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
+  // ─── GAME INVITE SYSTEM ─────────────────────────────────────────────────
+  let _invitePopupTimer=null;
+  let _pendingInviteRoom=null;
+  let _inviteListener=null;
+
+  window.inviteFriend=async function(tag){
+    const code=(typeof roomCode!=='undefined'&&roomCode)||'';
+    if(!code){
+      alert('You need to be in a room first before inviting friends!');
+      return;
+    }
+    const f=friends().find(x=>x.tag===normalizeTag(tag));
+    if(!f){return;}
+    if(typeof db==='undefined'||!db){alert('Not connected to server.');return;}
+    const presKey=_presKeyFrom(normalizeTag(tag));
+    const myT=myTag();
+    const senderName=currentDisplayName();
+    try{
+      await db.ref('gameInvites/'+presKey).set({
+        from:myT,
+        fromName:senderName,
+        room:code,
+        ts:Date.now()
+      });
+      // Auto-remove invite after 12s server-side
+      setTimeout(()=>{
+        try{db.ref('gameInvites/'+presKey).remove();}catch(e){}
+      },12000);
+      // Show sent feedback on the button
+      const btn=document.querySelector(`.friend-action[onclick="inviteFriend('${tag}')"]`);
+      if(btn){btn.textContent='Sent!';btn.disabled=true;setTimeout(()=>{btn.textContent='Invite';btn.disabled=false;},5000);}
+    }catch(e){alert('Could not send invite. Try again.');console.error(e);}
+  };
+
+  function _showInvitePopup(data){
+    const popup=document.getElementById('invitePopup');
+    const nameEl=document.getElementById('invPopupName');
+    const roomEl=document.getElementById('invPopupRoom');
+    const bar=document.getElementById('invBar');
+    if(!popup||!nameEl||!roomEl||!bar)return;
+    _pendingInviteRoom=data.room;
+    nameEl.textContent=data.fromName||'Someone';
+    roomEl.textContent='Room: '+data.room;
+    bar.style.transition='none';
+    bar.style.width='100%';
+    popup.classList.add('visible');
+    // Animate bar down over 10s
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        bar.style.transition='width 10s linear';
+        bar.style.width='0%';
+      });
+    });
+    // Auto-dismiss after 10s
+    if(_invitePopupTimer)clearTimeout(_invitePopupTimer);
+    _invitePopupTimer=setTimeout(()=>{
+      _hideInvitePopup();
+    },10000);
+  }
+
+  function _hideInvitePopup(){
+    const popup=document.getElementById('invitePopup');
+    if(popup)popup.classList.remove('visible');
+    if(_invitePopupTimer){clearTimeout(_invitePopupTimer);_invitePopupTimer=null;}
+    _pendingInviteRoom=null;
+  }
+
+  window.acceptGameInvite=function(){
+    if(!_pendingInviteRoom)return;
+    const room=_pendingInviteRoom;
+    _hideInvitePopup();
+    // Remove invite from Firebase
+    try{const myPresKey=_presKeyFrom(myTag());if(myPresKey)db.ref('gameInvites/'+myPresKey).remove();}catch(e){}
+    // Navigate to the room — join via URL param or call joinRoom if available
+    const url=location.origin+location.pathname+'?room='+encodeURIComponent(room);
+    location.href=url;
+  };
+
+  window.declineGameInvite=function(){
+    _hideInvitePopup();
+    try{const myPresKey=_presKeyFrom(myTag());if(myPresKey)db.ref('gameInvites/'+myPresKey).remove();}catch(e){}
+  };
+
+  function _listenForInvites(){
+    if(_inviteListener||typeof db==='undefined'||!db)return;
+    const myPresKey=_presKeyFrom(myTag());
+    if(!myPresKey)return;
+    const ref=db.ref('gameInvites/'+myPresKey);
+    _inviteListener=ref.on('value',snap=>{
+      const val=snap.val();
+      if(!val)return;
+      // Ignore stale invites (older than 11s)
+      if(Date.now()-val.ts>11000){ref.remove();return;}
+      _showInvitePopup(val);
+    });
+    console.log('[invites] listening at gameInvites/'+myPresKey);
+  }
+  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(displayNameTag(r.name,r.tag))}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=isFriendOnline(f.tag);return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(displayNameTag(f.name,f.tag))}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')" ${!(typeof roomCode!=='undefined'&&roomCode)?'disabled title="Join a room first"':''}>Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
   document.addEventListener('DOMContentLoaded',()=>{
     localProfile();
     // Retry publishIdentity + presence until Firebase db is actually ready
     function _tryPublish(attempts){
-      if(typeof db!=='undefined'&&db){publishIdentity();_startPresence();return;}
+      if(typeof db!=='undefined'&&db){publishIdentity();_startPresence();_listenForInvites();return;}
       if(attempts>60)return; // give up after ~6s
       setTimeout(()=>_tryPublish(attempts+1),100);
     }
