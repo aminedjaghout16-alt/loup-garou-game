@@ -12535,9 +12535,8 @@ setInterval(function(){
   function makeTag(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='LG-';for(let i=0;i<6;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out;}
   function tagSuffix(fullTag){return String(fullTag||'').replace(/^LG-/i,'').slice(0,6).toUpperCase();}
   function displayNameTag(name,fullTag){return (name||'Player')+'#'+tagSuffix(fullTag);}
-  // parseNameTag: extracts the internal LG-XXXXXX key from any input format.
-  // Accepts: "LG-RZJTBZ", "RZJTBZ", "Yassine#RZJTBZ", "yassine#rzjtbz"
-  // Returns the LG-XXXXXX string, or the normalizeTag fallback for plain inputs.
+  // parseNameTag: turns any user input into an internal LG-XXXXXX key.
+  // Handles: "LG-RZJTBZ", "RZJTBZ", "Yassine#RZJTBZ", "yassine#rzjtbz"
   function parseNameTag(input){
     const s=String(input||'').trim();
     const hashIdx=s.lastIndexOf('#');
@@ -12547,15 +12546,97 @@ setInterval(function(){
     }
     return normalizeTag(s);
   }
-  // splitNameTag: if input is "Name#SUFFIX" returns {name, suffix} else null.
-  function splitNameTag(input){
-    const s=String(input||'').trim();
-    const hashIdx=s.lastIndexOf('#');
-    if(hashIdx>0){
-      const name=s.slice(0,hashIdx).trim();
-      const suffix=s.slice(hashIdx+1).trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-      if(suffix.length===6&&name.length>0)return {name,suffix,lgTag:'LG-'+suffix};
+
+  // resolveTag: look up a player by LG-XXXXXX tag key only (name is ignored).
+  async function resolveTag(lgTag){
+    if(!/^LG-[A-Z0-9]{6}$/.test(lgTag))return null;
+    if(lgTag===myTag())return {self:true,tag:lgTag};
+    const registry=loadJson(REGISTRY_KEY,{});
+    if(registry[lgTag])return registry[lgTag];
+    try{
+      if(typeof db!=='undefined'&&db){
+        const snap=await db.ref('publicProfiles/'+lgTag).once('value');
+        if(snap.exists()){
+          const val=snap.val();
+          registry[lgTag]=val;saveJson(REGISTRY_KEY,registry);
+          return val;
+        }
+      }
+    }catch(e){console.warn('resolveTag error',e);}
+    return null;
+  }
+
+  // resolveByNameOrTag: main search used by addFriendFromInput.
+  // Supports all formats:
+  //   "Name#SUFFIX"  — tag lookup, then verifies name matches the found profile
+  //   "LG-XXXXXX"   — direct tag lookup
+  //   "XXXXXX"      — bare 6-char suffix treated as tag
+  //   "PlayerName"  — name-only Firebase search
+  async function resolveByNameOrTag(raw){
+    const input=String(raw||'').trim();
+    if(!input||input.length<2)return null;
+
+    // Detect "Name#SUFFIX" format
+    const hashIdx=input.lastIndexOf('#');
+    const isNameTag=hashIdx>0&&(input.length-hashIdx-1)===6;
+
+    if(isNameTag){
+      const namePart=input.slice(0,hashIdx).trim();
+      const suffix=input.slice(hashIdx+1).trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+      const lgTag='LG-'+suffix;
+
+      // Step 1: direct tag lookup (hits cache or Firebase by key — fastest path)
+      const byTag=await resolveTag(lgTag);
+      if(byTag&&byTag.self)return byTag;
+      if(byTag){
+        // Verify the name the user typed matches what's on the profile
+        const profileName=String(byTag.name||'').trim().toLowerCase();
+        if(profileName===namePart.toLowerCase())return byTag;
+        // Tag exists but belongs to a different name — not a match
+        return null;
+      }
+
+      // Step 2: tag not found by key — search Firebase by name, then filter by suffix.
+      // This handles profiles that aren't in the local cache yet.
+      try{
+        if(typeof db!=='undefined'&&db){
+          const snap=await db.ref('publicProfiles').orderByChild('name_lower').equalTo(namePart.toLowerCase()).limitToFirst(20).once('value');
+          if(snap.exists()){
+            const all=Object.values(snap.val()||{});
+            const matched=all.filter(p=>tagSuffix(p.tag)===suffix);
+            if(matched.length===1)return matched[0];
+            if(matched.length>1)return {multipleResults:true,results:matched};
+          }
+        }
+      }catch(e){console.warn('Name#Tag search error',e);}
+      return null;
     }
+
+    // Direct tag lookup ("LG-XXXXXX" or plain 6-char "XXXXXX")
+    const lgTag=normalizeTag(input);
+    if(/^LG-[A-Z0-9]{6}$/.test(lgTag)){
+      return await resolveTag(lgTag);
+    }
+
+    // Name-only search
+    try{
+      if(typeof db!=='undefined'&&db){
+        // Case-insensitive via name_lower index (primary)
+        const snapLower=await db.ref('publicProfiles').orderByChild('name_lower').equalTo(input.toLowerCase()).limitToFirst(5).once('value');
+        if(snapLower.exists()){
+          const results=Object.values(snapLower.val()||{});
+          if(results.length===1)return results[0];
+          if(results.length>1)return {multipleResults:true,results};
+        }
+        // Exact-case fallback
+        const snapExact=await db.ref('publicProfiles').orderByChild('name').equalTo(input).limitToFirst(5).once('value');
+        if(snapExact.exists()){
+          const results=Object.values(snapExact.val()||{});
+          if(results.length===1)return results[0];
+          if(results.length>1)return {multipleResults:true,results};
+        }
+      }
+    }catch(e){console.warn('Name search error',e);}
     return null;
   }
 
@@ -12600,10 +12681,8 @@ setInterval(function(){
     const registry=loadJson(REGISTRY_KEY,{});registry[tag]={tag,name,uid:_googleUser?.uid||'',updatedAt:Date.now()};saveJson(REGISTRY_KEY,registry);
     try{
       if(typeof db!=='undefined'&&db){
-        const profileData={tag,name,uid:_googleUser?.uid||'',updatedAt:Date.now()};
+        const profileData={tag,name,name_lower:name.toLowerCase(),uid:_googleUser?.uid||'',updatedAt:Date.now()};
         await db.ref('publicProfiles/'+tag).set(profileData);
-        // Also index by name_lower for case-insensitive search
-        await db.ref('publicProfiles/'+tag+'/name_lower').set(name.toLowerCase());
         if(_googleUser?.uid){await db.ref('users/'+_googleUser.uid+'/social').update({friendTag:tag,displayName:name});}
         console.log('✅ Identity published:',name+'#'+tag.replace('LG-',''));
       }
@@ -12622,137 +12701,27 @@ setInterval(function(){
   function requests(){return loadJson(REQUESTS_KEY,[]);}
   function saveRequests(list){saveJson(REQUESTS_KEY,list);}
   function playersOnline(){try{return Object.values(gameState?.players||{}).map(p=>(p.friendTag||p.socialTag||p.tag||p.name||'').toLowerCase());}catch(e){return[];}}
-  // resolveTag: looks up a player by their internal LG-XXXXXX tag only.
-  // Input can be "LG-RZJTBZ", "RZJTBZ", or "Name#RZJTBZ" — the name is ignored here.
-  async function resolveTag(input){
-    const lgTag=parseNameTag(input);
-    if(!/^LG-[A-Z0-9]{6}$/.test(lgTag))return null;
-    if(lgTag===myTag())return {self:true,tag:lgTag};
-    // Check local registry cache first
-    const registry=loadJson(REGISTRY_KEY,{});
-    if(registry[lgTag])return registry[lgTag];
-    // Fall back to Firebase
-    try{
-      if(typeof db!=='undefined'&&db){
-        const snap=await db.ref('publicProfiles/'+lgTag).get();
-        if(snap.exists()){
-          const val=snap.val();
-          // Cache locally for next time
-          registry[lgTag]=val;saveJson(REGISTRY_KEY,registry);
-          return val;
-        }
-      }
-    }catch(e){console.warn('resolveTag Firebase error',e);}
-    return null;
-  }
-
-  // resolveByNameOrTag: the main search entry point.
-  // Handles all input formats:
-  //   "Name#SUFFIX"  — looks up by tag, then verifies name matches (case-insensitive)
-  //   "LG-XXXXXX"   — direct tag lookup
-  //   "XXXXXX"      — bare suffix, treated as tag
-  //   "PlayerName"  — name-only search in Firebase
-  async function resolveByNameOrTag(raw){
-    const input=String(raw||'').trim();
-    if(!input||input.length<2)return null;
-
-    const parts=splitNameTag(input); // non-null only for "Name#SUFFIX" format
-
-    if(parts){
-      // ── "Name#SUFFIX" path ──────────────────────────────────────────────────
-      // Step 1: Try direct tag lookup (fastest — hits cache or Firebase by key)
-      const byTag=await resolveTag(parts.lgTag);
-      if(byTag&&byTag.self)return byTag;
-      if(byTag){
-        // Verify the name the user typed matches the profile we found
-        const profileName=String(byTag.name||'').trim().toLowerCase();
-        const inputName=parts.name.toLowerCase();
-        if(profileName===inputName)return byTag;
-        // Tag matched but name didn't — the user typed a wrong name; not found
-        return null;
-      }
-      // Step 2: Tag not found by direct lookup — search Firebase by name, then
-      // filter results by matching tag suffix. Handles profiles missing from local cache.
-      try{
-        if(typeof db!=='undefined'&&db){
-          const snap=await db.ref('publicProfiles')
-            .orderByChild('name_lower')
-            .equalTo(parts.name.toLowerCase())
-            .limitToFirst(20)
-            .get();
-          if(snap.exists()){
-            const all=Object.values(snap.val()||{});
-            const matched=all.filter(p=>tagSuffix(p.tag)===parts.suffix);
-            if(matched.length===1)return matched[0];
-            if(matched.length>1)return {multipleResults:true,results:matched};
-          }
-        }
-      }catch(e){console.warn('Name#Tag Firebase search failed',e);}
-      // Nothing found for this Name#TAG combination
-      return null;
-    }
-
-    // ── Tag-only path ("LG-XXXXXX" or bare "XXXXXX") ────────────────────────
-    const lgTag=normalizeTag(input);
-    if(/^LG-[A-Z0-9]{6}$/.test(lgTag)){
-      return await resolveTag(lgTag);
-    }
-
-    // ── Name-only path ───────────────────────────────────────────────────────
-    try{
-      if(typeof db!=='undefined'&&db){
-        // Case-insensitive search via name_lower index
-        const snap=await db.ref('publicProfiles')
-          .orderByChild('name_lower')
-          .equalTo(input.toLowerCase())
-          .limitToFirst(5)
-          .get();
-        if(snap.exists()){
-          const results=Object.values(snap.val()||{});
-          if(results.length===1)return results[0];
-          if(results.length>1)return {multipleResults:true,results};
-        }
-        // Exact case match as fallback
-        const snapExact=await db.ref('publicProfiles')
-          .orderByChild('name')
-          .equalTo(input)
-          .limitToFirst(5)
-          .get();
-        if(snapExact.exists()){
-          const results=Object.values(snapExact.val()||{});
-          if(results.length===1)return results[0];
-          if(results.length>1)return {multipleResults:true,results};
-        }
-      }
-    }catch(e){console.warn('Name search failed',e);}
-    return null;
-  }
   async function loadIncoming(){
     if(!(typeof db!=='undefined'&&db&&_googleUser?.uid))return;
-    try{const snap=await db.ref(`socialRequests/${_googleUser.uid}`).get();const val=snap.val()||{};const list=requests();Object.values(val).forEach(r=>{if(r&&r.tag&&!list.some(x=>x.tag===r.tag&&x.status==='pending_in'))list.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',status:'pending_in',addedAt:r.ts||Date.now()});});saveRequests(list);}catch(e){}
+    try{const snap=await db.ref(`socialRequests/${_googleUser.uid}`).once('value');const val=snap.val()||{};const list=requests();Object.values(val).forEach(r=>{if(r&&r.tag&&!list.some(x=>x.tag===r.tag&&x.status==='pending_in'))list.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',status:'pending_in',addedAt:r.ts||Date.now()});});saveRequests(list);}catch(e){}
   }
   window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();renderFriends();};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
   window.addFriendFromInput=async function(){
     const input=document.getElementById('friendNameInput');
     const raw=(input?.value||'').trim();
-    if(!raw){alert('Enter your friend\'s tag.\n\nAsk them to open Profile and tap "Copy Tag".\nIt looks like: Yassine#RZJTBZ');return;}
+    if(!raw){alert('Ask your friend to tap "Copy Tag" in their Profile. Their tag looks like: Yassine#RZJTBZ');return;}
     const fr=friends();const req=requests();
     const found=await resolveByNameOrTag(raw);
     if(!found){
-      const hasParts=splitNameTag(raw);
-      if(hasParts)
-        alert('No player found with tag "'+raw+'".\n\nDouble-check the tag — it must match exactly (name and the 6-character code).\nExample: Yassine#RZJTBZ');
-      else if(/^LG-[A-Z0-9]{6}$/i.test(normalizeTag(raw)))
-        alert('No player found with that tag code.\n\nMake sure it\'s the full tag from their Profile page.');
-      else
-        alert('No player found with that name.\n\nFor best results, ask your friend for their full tag (e.g. Yassine#RZJTBZ) from their Profile page.');
+      if(raw.includes('#'))alert('No player found with tag "'+raw+'".\n\nMake sure they shared their full tag (e.g. Yassine#RZJTBZ) from their Profile page.');
+      else alert('No player found.\n\nAsk your friend to open the game, go to Profile, and tap "Copy Tag". Their tag looks like: Name#XXXXXX');
       return;
     }
     if(found.self){alert('That is your own tag!');return;}
     if(found.multipleResults){
       const names=found.results.map(r=>displayNameTag(r.name,r.tag)).join('\n');
-      alert('Multiple players with that name:\n'+names+'\n\nAsk them for their full Name#XXXXXX tag to find the right one.');
+      alert('Multiple players with that name:\n'+names+'\n\nAsk them for their full Name#XXXXXX tag.');
       return;
     }
     const tag=normalizeTag(found.tag);
