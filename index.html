@@ -4780,6 +4780,23 @@ window.addEventListener('load', () => {
           <button class="wr-ctx-btn wr-ctx-cancel" onclick="wrCloseCtx()">✕ Cancel</button>
         </div>
 
+
+        <!-- ══ PLAYER PROFILE POPUP ══ -->
+        <div id="lobbyPlayerProfile" onclick="if(event.target===this)closeLobbyProfile()" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:1rem;">
+          <div style="background:#0d0d24;border:1px solid rgba(212,160,23,.4);border-radius:14px;padding:1.5rem 1.3rem;width:100%;max-width:320px;position:relative;box-shadow:0 0 40px rgba(212,160,23,.15);">
+            <button onclick="closeLobbyProfile()" style="position:absolute;top:.6rem;right:.8rem;background:none;border:none;color:rgba(232,232,232,.45);font-size:1.3rem;cursor:pointer;line-height:1;font-family:inherit;">x</button>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;margin-bottom:1.1rem;">
+              <div id="lppAvatar" style="width:72px;height:72px;border-radius:50%;border:2px solid rgba(212,160,23,.5);background:#1a0a2e;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;"></div>
+              <div style="text-align:center;">
+                <div id="lppName" style="font-family:Cinzel,cursive;color:#e8c44a;font-size:1.05rem;font-weight:700;"></div>
+                <div id="lppFriendStatus" style="font-size:.72rem;margin-top:.2rem;"></div>
+              </div>
+            </div>
+            <div id="lppStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.9rem;"></div>
+            <div id="lppFavRole" style="background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:.6rem;text-align:center;margin-bottom:.9rem;font-size:.8rem;color:rgba(232,232,232,.6);"></div>
+            <div id="lppActions" style="display:flex;flex-direction:column;gap:.45rem;"></div>
+          </div>
+        </div>
         <!-- ══ READY BUTTON (non-hosts) ══ -->
         <div id="lobbyReadyWrap" style="display:none">
           <button class="wr-ready-btn" id="lobbyReadyBtn" onclick="lobbyToggleReady()">✋ Mark as Ready</button>
@@ -10987,7 +11004,7 @@ function renderLobby(players) {
     if (isHost)        cls += ' wc-host';
     else if (isReady)  cls += ' wc-ready';
     if (isMe)          cls += ' wc-me';
-    if (amLeader && !isMe) cls += ' wc-clickable';
+    if (!isMe) cls += ' wc-clickable';
 
     const badge = isHost
       ? '<span class="wr-badge wb-host">👑 Host</span>'
@@ -11010,10 +11027,10 @@ function renderLobby(players) {
       const nameText = p.name + (isMe ? ' (you)' : '');
       if (nameEl && nameEl.textContent !== nameText) nameEl.textContent = nameText;
 
-      // Re-attach click listener for host context menu (cheap, idempotent via clone)
-      if (amLeader && !isMe) {
+      // Re-attach click listener (opens profile popup for everyone)
+      if (!isMe) {
         const fresh = existingCard.cloneNode(true);
-        fresh.addEventListener('click', (e) => wrOpenCtx(e, p));
+        fresh.addEventListener('click', (e) => { e.stopPropagation(); openLobbyProfile(p); });
         existingCard.replaceWith(fresh);
         existingCards[p.id] = fresh;
       }
@@ -11035,8 +11052,8 @@ function renderLobby(players) {
         <div class="wr-av">${avatarHTML}</div>
         <div class="wr-name">${p.name}${isMe ? ' (you)' : ''}</div>
         ${badge}`;
-      if (amLeader && !isMe) {
-        card.addEventListener('click', (e) => wrOpenCtx(e, p));
+      if (!isMe) {
+        card.addEventListener('click', (e) => { e.stopPropagation(); openLobbyProfile(p); });
       }
       // Insert at correct position
       const refNode = grid.children[i] || null;
@@ -11147,6 +11164,182 @@ function wrTransferHost() {
     isLeader = false;
     _showToast('Host transferred 👑');
   }).catch(() => {});
+}
+
+
+// ── Lobby Player Profile Popup ────────────────────────────────────────────
+let _lppPlayer = null;
+
+async function openLobbyProfile(p) {
+  if (!p || p.id === myId) return;
+  _lppPlayer = p;
+  const popup = document.getElementById('lobbyPlayerProfile');
+  if (!popup) return;
+
+  // Show popup immediately with avatar + name, load stats async
+  popup.style.display = 'flex';
+  _lppRenderBasic(p);
+  _lppRenderStats(null); // loading state
+  _lppRenderActions(p, null);
+
+  // Load stats from Firebase if player has a uid
+  if (p.uid && typeof db !== 'undefined' && db) {
+    try {
+      const snap = await db.ref('users/' + p.uid + '/stats').once('value');
+      const stats = snap.val();
+      _lppRenderStats(stats);
+      _lppRenderActions(p, stats);
+    } catch(e) {
+      _lppRenderStats(null);
+    }
+  }
+}
+
+function closeLobbyProfile() {
+  const popup = document.getElementById('lobbyPlayerProfile');
+  if (popup) popup.style.display = 'none';
+  _lppPlayer = null;
+}
+
+function _lppRenderBasic(p) {
+  // Avatar
+  const avEl = document.getElementById('lppAvatar');
+  if (avEl) avEl.innerHTML = _wrGetAvatarHTML(p);
+
+  // Name
+  const nameEl = document.getElementById('lppName');
+  if (nameEl) nameEl.textContent = p.name || 'Unknown';
+
+  // Friend status
+  const statusEl = document.getElementById('lppFriendStatus');
+  if (statusEl) {
+    const normTag = p.friendTag ? (typeof normalizeTag === 'function' ? normalizeTag(p.friendTag) : p.friendTag) : null;
+    const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
+    const isFr = normTag && fr.some(f => f.tag === normTag);
+    const isOnline = normTag && (typeof window.isFriendOnline === 'function') ? window.isFriendOnline(normTag) : false;
+    if (isFr) {
+      statusEl.innerHTML = '<span style="color:#10b981;">● Friend</span>' + (isOnline ? ' <span style="color:rgba(232,232,232,.4);">· Online</span>' : '');
+    } else if (gameState?.leader === p.id) {
+      statusEl.innerHTML = '<span style="color:#d4a017;">👑 Host</span>';
+    } else {
+      statusEl.innerHTML = '<span style="color:rgba(232,232,232,.3);">In this room</span>';
+    }
+  }
+}
+
+function _lppRenderStats(stats) {
+  const el = document.getElementById('lppStats');
+  const favEl = document.getElementById('lppFavRole');
+  if (!el) return;
+
+  const statCard = (val, label) =>
+    `<div style="background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:.6rem .4rem;text-align:center;">
+      <div style="font-family:Creepster,cursive;font-size:1.5rem;color:#d4a017;line-height:1;">${val}</div>
+      <div style="font-size:.62rem;color:rgba(232,232,232,.5);margin-top:.2rem;">${label}</div>
+    </div>`;
+
+  if (!stats) {
+    el.innerHTML = statCard('—','Wins') + statCard('—','Losses') + statCard('—','Win Rate');
+    if (favEl) favEl.textContent = '⭐ Favourite Role: —';
+    return;
+  }
+
+  const wins = stats.wins || 0;
+  const losses = stats.losses || 0;
+  const games = wins + losses;
+  const rate = games > 0 ? Math.round(wins / games * 100) + '%' : '—';
+  el.innerHTML = statCard(wins,'Wins') + statCard(losses,'Losses') + statCard(rate,'Win Rate');
+
+  // Favourite role = role with most wins
+  if (favEl) {
+    const rc = stats.roleCounts || {};
+    let favRole = null, favWins = 0;
+    Object.entries(rc).forEach(([role, data]) => {
+      const w = (typeof data === 'object') ? (data.wins || 0) : data;
+      if (w > favWins) { favWins = w; favRole = role; }
+    });
+    const roleLabel = favRole ? ((typeof tr === 'function' ? tr(favRole) : null) || favRole) : null;
+    favEl.innerHTML = roleLabel
+      ? `<span style="color:rgba(232,232,232,.5);font-size:.72rem;">Favourite Role</span><br><span style="color:#e8c44a;font-size:.9rem;font-weight:700;">${roleLabel} (${favWins}W)</span>`
+      : `<span style="color:rgba(232,232,232,.4);font-size:.8rem;">No favourite role yet</span>`;
+  }
+}
+
+function _lppRenderActions(p, stats) {
+  const el = document.getElementById('lppActions');
+  if (!el) return;
+
+  const amHost = isLeader || gameState?.leader === myId;
+  const normTag = p.friendTag ? (typeof normalizeTag === 'function' ? normalizeTag(p.friendTag) : p.friendTag) : null;
+  const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
+  const isFr = normTag && fr.some(f => f.tag === normTag);
+  const reqs = (typeof window._lgRequests === 'function') ? window._lgRequests() : [];
+  const hasPending = normTag && reqs.some(r => r.tag === normTag);
+
+  let html = '';
+
+  const btnStyle = (bg, border, color) =>
+    `style="width:100%;padding:.6rem;border-radius:7px;border:1px solid ${border};background:${bg};color:${color};font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:700;transition:.2s;"`;
+
+  // Friend action
+  if (normTag) {
+    if (isFr) {
+      html += `<button ${btnStyle('rgba(239,68,68,.08)','rgba(239,68,68,.3)','#ef4444')} onclick="lppRemoveFriend('${normTag}')">👋 Remove Friend</button>`;
+    } else if (hasPending) {
+      html += `<button ${btnStyle('rgba(212,160,23,.05)','rgba(212,160,23,.2)','rgba(212,160,23,.5)')} disabled>⏳ Request Pending</button>`;
+    } else {
+      html += `<button ${btnStyle('rgba(16,185,129,.08)','rgba(16,185,129,.3)','#10b981')} onclick="lppAddFriend('${normTag}','${(p.name||'').replace(/'/g,'&#39;')}','${p.uid||''}')">➕ Add Friend</button>`;
+    }
+  }
+
+  // Host actions
+  if (amHost) {
+    html += `<button ${btnStyle('rgba(212,160,23,.08)','rgba(212,160,23,.3)','#d4a017')} onclick="lppTransferHost('${p.id}')">👑 Make Host</button>`;
+    html += `<button ${btnStyle('rgba(185,28,28,.1)','rgba(185,28,28,.4)','#b91c1c')} onclick="lppKick('${p.id}')">🚫 Kick Player</button>`;
+  }
+
+  el.innerHTML = html || '<div style="text-align:center;color:rgba(232,232,232,.3);font-size:.8rem;padding:.4rem;">No actions available</div>';
+}
+
+function lppAddFriend(tag, name, uid) {
+  // Directly add without needing the input field
+  const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
+  const reqs = (typeof window._lgRequests === 'function') ? window._lgRequests() : [];
+  const normTag = (typeof normalizeTag === 'function') ? normalizeTag(tag) : tag;
+  if (fr.some(f => f.tag === normTag) || reqs.some(r => r.tag === normTag)) return;
+  reqs.push({tag: normTag, name: name || normTag, uid: uid || '', status: 'pending_out', addedAt: Date.now()});
+  if (typeof saveRequests === 'function') saveRequests(reqs);
+  try {
+    if (typeof db !== 'undefined' && db && uid && typeof _googleUser !== 'undefined' && _googleUser?.uid) {
+      db.ref('socialRequests/' + uid + '/' + (typeof myTag === 'function' ? myTag() : '')).set({
+        tag: typeof myTag === 'function' ? myTag() : '',
+        name: typeof currentDisplayName === 'function' ? currentDisplayName() : (myName || ''),
+        uid: _googleUser.uid,
+        ts: Date.now()
+      });
+    }
+  } catch(e) {}
+  _showToast('Friend request sent to ' + (name || tag) + '!');
+  // Re-render actions
+  if (_lppPlayer) _lppRenderActions(_lppPlayer, null);
+}
+
+function lppRemoveFriend(tag) {
+  if (typeof window.removeFriend === 'function') window.removeFriend(tag);
+  _showToast('Friend removed');
+  if (_lppPlayer) _lppRenderActions(_lppPlayer, null);
+}
+
+function lppKick(playerId) {
+  closeLobbyProfile();
+  _wrCtxTargetId = playerId;
+  wrKickPlayer();
+}
+
+function lppTransferHost(playerId) {
+  closeLobbyProfile();
+  _wrCtxTargetId = playerId;
+  wrTransferHost();
 }
 
 // ── Kick detection (for kicked players) ───────────────────────────────────
@@ -12779,6 +12972,8 @@ setInterval(function(){
   function friends(){return loadJson(FRIENDS_KEY,[]);}
   function saveFriends(list){saveJson(FRIENDS_KEY,list);}
   window._lgFriends=friends; // expose globally for lobby picker
+  window._lgRequests=requests;
+  window.saveRequests=saveRequests;
   function requests(){return loadJson(REQUESTS_KEY,[]);}
   function saveRequests(list){saveJson(REQUESTS_KEY,list);}
   // ─── PRESENCE SYSTEM ─────────────────────────────────────────────────────
