@@ -11195,9 +11195,7 @@ async function lobbyInviteFriends() {
           <button onclick="document.getElementById('lobbyFriendPickerModal').remove()" style="background:none;border:none;color:rgba(232,232,232,.5);font-size:1.3rem;cursor:pointer;line-height:1;">×</button>
         </div>
         <div id="lobbyFriendPickerList" style="display:flex;flex-direction:column;gap:.5rem;max-height:280px;overflow-y:auto;"></div>
-        <div id="lobbyPresenceDebug" style="margin-top:.6rem;padding:.5rem;background:rgba(0,0,0,.4);border-radius:6px;font-size:.65rem;color:rgba(232,232,232,.4);word-break:break-all;display:none;max-height:120px;overflow-y:auto;"></div>
-        <button onclick="(async()=>{const dbg=document.getElementById('lobbyPresenceDebug');dbg.style.display='block';dbg.textContent='Loading...';try{const snap=await db.ref('presence').once('value');dbg.textContent='presence node: '+JSON.stringify(snap.val(),null,1);}catch(e){dbg.textContent='Error: '+e.message;}})()" style="margin-top:.5rem;width:100%;padding:.4rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(232,232,232,.3);font-family:inherit;font-size:.72rem;cursor:pointer;">🔍 Debug: show presence data</button>
-        <button onclick="lobbyShare();document.getElementById('lobbyFriendPickerModal').remove();" style="margin-top:.4rem;width:100%;padding:.55rem;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.25);border-radius:8px;color:rgba(232,232,232,.55);font-family:inherit;font-size:.8rem;cursor:pointer;">📤 Share link instead</button>
+        <button onclick="lobbyShare();document.getElementById('lobbyFriendPickerModal').remove();" style="margin-top:1rem;width:100%;padding:.55rem;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.25);border-radius:8px;color:rgba(232,232,232,.55);font-family:inherit;font-size:.8rem;cursor:pointer;">📤 Share link instead</button>
       </div>`;
     modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
     document.body.appendChild(modal);
@@ -11214,15 +11212,11 @@ async function lobbyInviteFriends() {
     } else {
       list.innerHTML = fr2.map(f => {
         const isOn = (typeof isFriendOnline === 'function') ? isFriendOnline(f.tag) : false;
-        const normTag = (typeof normalizeTag==='function')?normalizeTag(f.tag):f.tag;
-        const presKey = (typeof _presKeyFrom==='function')?_presKeyFrom(normTag):'?';
-        const cacheVal = (typeof _friendPresenceCache!=='undefined')?_friendPresenceCache[normTag]:undefined;
-        const debugInfo = `key:${presKey} cache:${JSON.stringify(cacheVal)}`;
         return `<div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;padding:.6rem .75rem;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.15);border-radius:8px;">
           <span style="width:9px;height:9px;border-radius:50%;background:${isOn?'#10b981':'rgba(232,232,232,.2)'};display:inline-block;${isOn?'box-shadow:0 0 8px rgba(16,185,129,.6)':''}"></span>
           <div>
             <div style="color:#e8c44a;font-weight:700;font-size:.88rem;">${(f.name||f.tag)}</div>
-            <div style="color:rgba(232,232,232,.4);font-size:.7rem;">${isOn?'🟢 Online':'⚫ Offline'} · ${debugInfo}</div>
+            <div style="color:rgba(232,232,232,.4);font-size:.7rem;">${isOn?'Online':'Offline'}</div>
           </div>
           <button id="lpick_${f.tag.replace(/[^A-Z0-9]/g,'')}" onclick="lobbyInviteOneFriend('${f.tag}',this)" style="padding:.35rem .75rem;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:#d4a017;font-family:inherit;font-size:.78rem;cursor:pointer;">Invite</button>
         </div>`;
