@@ -12584,6 +12584,7 @@ setInterval(function(){
   async function loadIncoming(){
     if(typeof db==='undefined'||!db||!_googleUser?.uid)return;
     try{
+      // 1. Pull pending incoming friend requests
       const snap=await db.ref('socialRequests/'+_googleUser.uid).once('value');
       const val=snap.val()||{};
       const list=requests();
@@ -12592,7 +12593,32 @@ setInterval(function(){
           list.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',status:'pending_in',addedAt:r.ts||Date.now()});
       });
       saveRequests(list);
-    }catch(e){}
+
+      // 2. Check if any of our pending_out requests were accepted by the other side
+      //    We do this by checking socialAccepted/<myTag>/<theirTag>
+      const myT=myTag();
+      const accSnap=await db.ref('socialAccepted/'+myT).once('value');
+      const accVal=accSnap.val()||{};
+      if(Object.keys(accVal).length){
+        const fr=friends();
+        let reqList=requests();
+        let changed=false;
+        Object.values(accVal).forEach(a=>{
+          if(!a||!a.tag)return;
+          const theirTag=normalizeTag(a.tag);
+          // Move from pending_out → friends
+          const wasOut=reqList.find(x=>x.tag===theirTag&&x.status==='pending_out');
+          if(wasOut&&!fr.some(f=>f.tag===theirTag)){
+            fr.push({tag:theirTag,name:a.name||theirTag,uid:a.uid||'',addedAt:Date.now()});
+            reqList=reqList.filter(x=>x.tag!==theirTag);
+            changed=true;
+          }
+          // Clean up the acceptance node now that we've processed it
+          try{db.ref('socialAccepted/'+myT+'/'+theirTag).remove();}catch(e){}
+        });
+        if(changed){saveFriends(fr);saveRequests(reqList);}
+      }
+    }catch(e){console.warn('[loadIncoming] error',e);}
   }
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -12656,8 +12682,53 @@ setInterval(function(){
   function saveFriends(list){saveJson(FRIENDS_KEY,list);}
   function requests(){return loadJson(REQUESTS_KEY,[]);}
   function saveRequests(list){saveJson(REQUESTS_KEY,list);}
-  function playersOnline(){try{return Object.values(gameState?.players||{}).map(p=>(p.friendTag||p.socialTag||p.tag||p.name||'').toLowerCase());}catch(e){return[];}}
-  window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();renderFriends();};
+  // ─── PRESENCE SYSTEM ─────────────────────────────────────────────────────
+  // Writes online status to Firebase; reads friends' status when modal opens.
+  let _presenceRef=null;
+  let _friendPresenceCache={};  // tag→true/false
+
+  function _startPresence(){
+    if(_presenceRef||typeof db==='undefined'||!db)return;
+    const tag=myTag();if(!tag)return;
+    _presenceRef=db.ref('presence/'+tag);
+    _presenceRef.set({online:true,name:currentDisplayName(),ts:Date.now()});
+    _presenceRef.onDisconnect().remove();
+    // Refresh heartbeat every 60s so stale entries auto-clean
+    setInterval(()=>{
+      try{if(_presenceRef)_presenceRef.update({online:true,ts:Date.now()});}catch(e){}
+    },60000);
+  }
+
+  async function _loadFriendPresence(){
+    _friendPresenceCache={};
+    if(typeof db==='undefined'||!db)return;
+    const fr=friends();
+    await Promise.all(fr.map(async f=>{
+      try{
+        const snap=await db.ref('presence/'+normalizeTag(f.tag)).once('value');
+        const val=snap.val();
+        // Consider online if ts within last 3 minutes
+        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.online&&(Date.now()-val.ts<180000))||false;
+      }catch(e){}
+    }));
+  }
+
+  function playersOnline(){
+    // Also include game-room players as before
+    try{
+      const inRoom=Object.values(gameState?.players||{}).map(p=>(p.friendTag||p.socialTag||p.tag||p.name||'').toLowerCase());
+      return inRoom;
+    }catch(e){return[];}
+  }
+
+  function isFriendOnline(tag){
+    const t=normalizeTag(tag);
+    if(_friendPresenceCache[t]===true)return true;
+    // Fallback: check game room
+    return playersOnline().some(x=>x===t.toLowerCase()||x===String(tag||'').toLowerCase());
+  }
+
+  window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
   window.addFriendFromInput=async function(){
     const inputEl=document.getElementById('friendNameInput');
@@ -12692,20 +12763,29 @@ setInterval(function(){
     renderFriends();
     alert('Friend request sent to '+displayNameTag(found.name,found.tag)+'!');
   };
-  window.acceptFriend=function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
+  window.acceptFriend=async function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid){await db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();await db.ref(`socialAccepted/${tag}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid||'',ts:Date.now()});}}catch(e){console.warn('[acceptFriend] firebase error',e);}renderFriends();};
   window.declineFriend=function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
   window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
   window.inviteFriend=function(tag){const f=friends().find(x=>x.tag===normalizeTag(tag));let code=(typeof roomCode!=='undefined'&&roomCode)||'';let msg=code?`Join my Loup-Garou room ${code}`:'Join me for Loup-Garou online';if(code)msg += ` - ${location.origin}${location.pathname}?room=${encodeURIComponent(code)}`;if(navigator.clipboard)navigator.clipboard.writeText(msg);alert(`Invite for ${(f&&f.name)||tag} copied${code?' with room code '+code:''}.`);};
-  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(displayNameTag(r.name,r.tag))}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=online.includes(String(f.tag||f.name).toLowerCase())||online.includes(String(f.name||'').toLowerCase());return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(displayNameTag(f.name,f.tag))}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
+  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(displayNameTag(r.name,r.tag))}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=isFriendOnline(f.tag);return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(displayNameTag(f.name,f.tag))}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
   document.addEventListener('DOMContentLoaded',()=>{
     localProfile();
-    // Retry publishIdentity until Firebase db is actually ready (800ms is often too early)
+    // Retry publishIdentity + presence until Firebase db is actually ready
     function _tryPublish(attempts){
-      if(typeof db!=='undefined'&&db){publishIdentity();return;}
+      if(typeof db!=='undefined'&&db){publishIdentity();_startPresence();return;}
       if(attempts>60)return; // give up after ~6s
       setTimeout(()=>_tryPublish(attempts+1),100);
     }
     setTimeout(()=>_tryPublish(0),500);
+    // Clean up presence on page hide/unload
+    window.addEventListener('beforeunload',()=>{try{if(_presenceRef)_presenceRef.remove();}catch(e){}});
+    document.addEventListener('visibilitychange',()=>{
+      try{
+        if(!_presenceRef)return;
+        if(document.hidden){_presenceRef.update({online:false,ts:Date.now()});}
+        else{_presenceRef.update({online:true,ts:Date.now()});}
+      }catch(e){}
+    });
   });  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
 })();
 </script>
