@@ -12615,12 +12615,42 @@ setInterval(function(){
     return null;
   }
   async function resolveByNameOrTag(raw){
-    // 1. Try as tag or Name#TAG (most reliable)
-    const byTag=await resolveTag(raw);if(byTag)return byTag;
-    // 2. If input contains #, the suffix didn't match anything — don't fall through to name search
-    if(raw.includes('#'))return null;
-    // 3. Try display name search in Firebase
     const cleaned=String(raw||'').trim();if(!cleaned||cleaned.length<2)return null;
+    // Detect "Name#SUFFIX" format and split into parts
+    const hashIdx=cleaned.lastIndexOf('#');
+    const hasNameTag=hashIdx>0&&(cleaned.length-hashIdx-1)===6;
+    const namePart=hasNameTag?cleaned.slice(0,hashIdx).trim():'';
+    // 1. Try resolving by tag suffix (works for both "LG-XXXXXX" and "Name#XXXXXX")
+    const byTag=await resolveTag(cleaned);
+    if(byTag&&!byTag.self){
+      // If the user typed "Name#TAG", verify the name matches the resolved profile.
+      // This catches cases where the tag alone matched but the name doesn't belong to it.
+      if(hasNameTag&&namePart){
+        const profileName=String(byTag.name||'').trim().toLowerCase();
+        if(profileName===namePart.toLowerCase())return byTag;
+        // Name mismatch — tag resolved to a different player; treat as not found
+        return null;
+      }
+      return byTag;
+    }
+    if(byTag&&byTag.self)return byTag;
+    // 2. If input was "Name#TAG" and tag lookup failed, try searching by name then
+    //    cross-check that the suffix matches — catches profiles not yet in local registry
+    if(hasNameTag&&namePart){
+      try{if(typeof db!=='undefined'&&db){
+        const snap=await db.ref('publicProfiles').orderByChild('name_lower').equalTo(namePart.toLowerCase()).limitToFirst(10).get();
+        if(snap.exists()){
+          const suffix=cleaned.slice(hashIdx+1).toUpperCase().replace(/[^A-Z0-9]/g,'');
+          const matched=Object.values(snap.val()||{}).filter(p=>tagSuffix(p.tag)===suffix);
+          if(matched.length===1)return matched[0];
+          if(matched.length>1)return {multipleResults:true,results:matched};
+        }
+      }}catch(e){console.warn('Name#Tag search failed',e);}
+      // Tag suffix not found even after name search — report not found (don't fall through
+      // to plain-name search which could return unrelated players with the same name)
+      return null;
+    }
+    // 3. Plain name search (no # in input)
     try{if(typeof db!=='undefined'&&db){
       // Try exact name match
       const snap=await db.ref('publicProfiles').orderByChild('name').equalTo(cleaned).limitToFirst(5).get();
