@@ -12810,9 +12810,9 @@ setInterval(function(){
 
   let _presenceListeners={};
 
-  function _watchFriendPresence(){
+  window._watchFriendPresence=function _watchFriendPresence(){
     if(typeof db==='undefined'||!db)return;
-    const fr=friends();
+    const fr=(typeof window._lgFriends==='function')?window._lgFriends():(typeof friends==='function'?friends():[]);
     fr.forEach(f=>{
       const normTag=normalizeTag(f.tag);
       if(_presenceListeners[normTag])return; // already watching
@@ -13016,7 +13016,7 @@ setInterval(function(){
     localProfile();
     // Retry publishIdentity + presence until Firebase db is actually ready
     function _tryPublish(attempts){
-      if(typeof db!=='undefined'&&db){publishIdentity();_startPresence();_listenForInvites();return;}
+      if(typeof db!=='undefined'&&db){publishIdentity();_startPresence();_listenForInvites();if(typeof window._watchFriendPresence==='function')window._watchFriendPresence();return;}
       if(attempts>60)return; // give up after ~6s
       setTimeout(()=>_tryPublish(attempts+1),100);
     }
