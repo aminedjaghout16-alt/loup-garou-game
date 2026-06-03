@@ -6722,7 +6722,7 @@ async function enterRoom(){
       // Lobby (setup) — normal join
       window._isSpectator = false;
       await ref.child(`players/${myId}`).set(
-        {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
+        {id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),friendTag:(typeof myTag==='function'?myTag():null)||null,avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}
       );
     }
     // After store data loads, patch avatarId in case it was null at join time
@@ -6832,7 +6832,7 @@ function offlineEnter(){
   console.log('Offline mode');
   gameState={
     code:roomCode, leader:myId, status:'setup', phase:'setup',
-    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}},
+    players:{[myId]:{id:myId,name:myName,alive:true,role:null,joinedAt:Date.now(),uid:(_googleUser?.uid||null),friendTag:(typeof myTag==='function'?myTag():null)||null,avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,photoURL:(_googleUser?.photoURL||null)}},
     config:cfg, chat:[], createdAt:Date.now()
   };
   showGame();
@@ -11182,16 +11182,30 @@ async function openLobbyProfile(p) {
   _lppRenderStats(null); // loading state
   _lppRenderActions(p, null);
 
-  // Load stats from Firebase if player has a uid
-  if (p.uid && typeof db !== 'undefined' && db) {
-    try {
+  if (typeof db === 'undefined' || !db) return;
+
+  try {
+    // Resolve friendTag: try player node first, then look up via uid in publicProfiles
+    if (!p.friendTag && p.uid) {
+      const social = await db.ref('users/' + p.uid + '/social').once('value');
+      const s = social.val();
+      if (s && s.friendTag) p = Object.assign({}, p, {friendTag: s.friendTag});
+      _lppPlayer = p;
+    }
+
+    // Load stats and re-render with full data
+    if (p.uid) {
       const snap = await db.ref('users/' + p.uid + '/stats').once('value');
       const stats = snap.val();
+      _lppRenderBasic(p); // re-render now we may have friendTag
       _lppRenderStats(stats);
       _lppRenderActions(p, stats);
-    } catch(e) {
-      _lppRenderStats(null);
+    } else {
+      _lppRenderBasic(p);
+      _lppRenderActions(p, null);
     }
+  } catch(e) {
+    console.warn('[lpp] error loading profile', e);
   }
 }
 
@@ -11216,7 +11230,7 @@ function _lppRenderBasic(p) {
     const normTag = p.friendTag ? (typeof normalizeTag === 'function' ? normalizeTag(p.friendTag) : p.friendTag) : null;
     const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
     const isFr = normTag && fr.some(f => f.tag === normTag);
-    const isOnline = normTag && (typeof window.isFriendOnline === 'function') ? window.isFriendOnline(normTag) : false;
+    const isOnline = (normTag && typeof window.isFriendOnline === 'function') ? window.isFriendOnline(normTag) : false;
     if (isFr) {
       statusEl.innerHTML = '<span style="color:#10b981;">● Friend</span>' + (isOnline ? ' <span style="color:rgba(232,232,232,.4);">· Online</span>' : '');
     } else if (gameState?.leader === p.id) {
