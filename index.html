@@ -11183,7 +11183,7 @@ function lobbyShare() {
 
 function lobbyInviteFriends() {
   // Always open our custom picker — only fallback to share if truly no friends at all
-  const fr = (typeof friends === 'function') ? friends() : [];
+  const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
   // Build or show the friend invite picker modal
   let modal = document.getElementById('lobbyFriendPickerModal');
   if (!modal) {
@@ -11205,7 +11205,7 @@ function lobbyInviteFriends() {
   // Render friends list
   const list = document.getElementById('lobbyFriendPickerList');
   const online = (typeof _friendPresenceCache !== 'undefined') ? _friendPresenceCache : {};
-  const fr2 = (typeof friends === 'function') ? friends() : [];
+  const fr2 = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
   if (!fr2.length) {
     list.innerHTML = '<div style="color:rgba(232,232,232,.4);font-size:.85rem;text-align:center;padding:.8rem;">No friends yet. Add them in the Friends panel!</div>';
   } else {
@@ -12770,6 +12770,7 @@ setInterval(function(){
 
   function friends(){return loadJson(FRIENDS_KEY,[]);}
   function saveFriends(list){saveJson(FRIENDS_KEY,list);}
+  window._lgFriends=friends; // expose globally for lobby picker
   function requests(){return loadJson(REQUESTS_KEY,[]);}
   function saveRequests(list){saveJson(REQUESTS_KEY,list);}
   // ─── PRESENCE SYSTEM ─────────────────────────────────────────────────────
