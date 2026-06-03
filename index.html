@@ -12808,7 +12808,31 @@ setInterval(function(){
     },60000);
   }
 
+  let _presenceListeners={};
+
+  function _watchFriendPresence(){
+    if(typeof db==='undefined'||!db)return;
+    const fr=friends();
+    fr.forEach(f=>{
+      const normTag=normalizeTag(f.tag);
+      if(_presenceListeners[normTag])return; // already watching
+      const presKey=_presKeyFrom(normTag);
+      if(!presKey)return;
+      const ref=db.ref('presence/'+presKey);
+      _presenceListeners[normTag]=ref.on('value',snap=>{
+        const val=snap.val();
+        const isOnline=val&&val.ts&&(Date.now()-val.ts<600000);
+        const wasOnline=_friendPresenceCache[normTag];
+        _friendPresenceCache[normTag]=isOnline||false;
+        // Re-render friends list if status changed
+        if(!!isOnline!==!!wasOnline&&typeof renderFriends==='function')renderFriends();
+      });
+      console.log('[presence] watching',f.name,'at key',presKey);
+    });
+  }
+
   async function _loadFriendPresence(){
+    // Still do a one-time read for immediate display, but also start live listeners
     _friendPresenceCache={};
     if(typeof db==='undefined'||!db)return;
     const fr=friends();
@@ -12819,10 +12843,10 @@ setInterval(function(){
         const snap=await db.ref('presence/'+presKey).once('value');
         const val=snap.val();
         console.log('[presence] friend',f.name,'key',presKey,'val',val);
-        // Online = wrote presence in last 5 minutes (ignore online flag — tab-hide can set it false incorrectly)
-        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.ts&&(Date.now()-val.ts<300000))||false;
+        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.ts&&(Date.now()-val.ts<600000))||false;
       }catch(e){console.warn('[presence] load error for',f.tag,e);}
     }));
+    _watchFriendPresence();
   }
 
   function playersOnline(){
@@ -12840,7 +12864,7 @@ setInterval(function(){
     return playersOnline().some(x=>x===t.toLowerCase()||x===String(tag||'').toLowerCase());
   }
 
-  window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();};
+  window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();setTimeout(async()=>{await _loadFriendPresence();renderFriends();},2000);};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
   window.addFriendFromInput=async function(){
     const inputEl=document.getElementById('friendNameInput');
