@@ -11182,9 +11182,8 @@ function lobbyShare() {
 }
 
 function lobbyInviteFriends() {
-  // If no friends, fallback to share
+  // Always open our custom picker — only fallback to share if truly no friends at all
   const fr = (typeof friends === 'function') ? friends() : [];
-  if (!fr.length) { lobbyShare(); return; }
   // Build or show the friend invite picker modal
   let modal = document.getElementById('lobbyFriendPickerModal');
   if (!modal) {
