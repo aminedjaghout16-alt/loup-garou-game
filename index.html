@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -11582,13 +11582,15 @@ window._doLeaveNow = function(){
   <div class="site-box">
     <button class="site-close" onclick="closeFriendsModal()">×</button>
     <h2>Friends</h2>
+    <div class="profile-history"><div class="profile-history-title">Your tag</div><div class="frv" id="myFriendTag">LG-......</div><button class="profile-small-btn" onclick="copyMyFriendTag()">Copy Tag</button></div>
     <div class="friends-add">
-      <input id="friendNameInput" maxlength="24" placeholder="Friend name" autocomplete="off">
+      <input id="friendNameInput" maxlength="24" placeholder="Player tag, example LG-AB12CD" autocomplete="off">
       <button onclick="addFriendFromInput()">Add</button>
     </div>
     <div class="friends-list" id="friendsList"></div>
   </div>
-</div>`n<!-- ── PROFILE MODAL ── -->
+</div>
+<!-- ── PROFILE MODAL ── -->
 <div id="profileModal" class="hidden">
   <div class="profile-box">
     <button class="profile-close" onclick="closeProfileModal()">✕</button>
@@ -11610,6 +11612,10 @@ window._doLeaveNow = function(){
       <div class="profile-edit">
         <input id="pmDisplayNameInput" maxlength="20" placeholder="Display name" autocomplete="off">
         <button onclick="saveProfileDisplayName()">Save</button>
+      </div>      <div class="profile-history">
+        <div class="profile-history-title">Your player tag</div>
+        <div class="frv" id="pmFriendTag">LG-......</div>
+        <button class="profile-small-btn" onclick="copyMyFriendTag()">Copy Tag</button>
       </div>
       <div class="profile-history">
         <div class="profile-history-title">Role history</div>
@@ -11939,6 +11945,8 @@ const AUDIO = (function(){
     },
   };
 })();
+
+window.AUDIO = AUDIO;
 
 // ── Panel UI helpers ──────────────────────────────────────────────────────
 function audioTogglePanel(){
@@ -12509,15 +12517,30 @@ setInterval(function(){
 (function(){
   const SOUND_KEY='lg_sound_settings_v2';
   const PROFILE_KEY='lg_profile_local_v1';
-  const FRIENDS_KEY='lg_friends_v1';
+  const FRIENDS_KEY='lg_friends_v2';
+  const REQUESTS_KEY='lg_friend_requests_v1';
+  const REGISTRY_KEY='lg_player_registry_v1';
   const defaults={enabled:true,master:1,music:0.5,sfx:0.8,alerts:0.8,ui:0.7,voice:1,muted:{master:false,music:false,sfx:false,alerts:false,ui:false,voice:false}};
-  function loadJson(key,fallback){try{return Object.assign(Array.isArray(fallback)?[]:{}, fallback, JSON.parse(localStorage.getItem(key)||'null')||{});}catch(e){return Array.isArray(fallback)?[]:{...fallback};}}
+  function loadJson(key,fallback){try{const raw=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(fallback))return Array.isArray(raw)?raw:fallback;return Object.assign({},fallback,raw||{});}catch(e){return Array.isArray(fallback)?[]:{...fallback};}}
   function saveJson(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
+  function esc(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+  function normalizeTag(tag){return String(tag||'').trim().toUpperCase().replace(/^#?/,'').replace(/[^A-Z0-9-]/g,'');}
+  function makeTag(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='LG-';for(let i=0;i<6;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out;}
+
   window._lgSoundSettings=loadJson(SOUND_KEY,defaults);
   window._lgSoundSettings.muted=Object.assign({},defaults.muted,window._lgSoundSettings.muted||{});
   function pct(v){return Math.round((Number(v)||0)*100)+'%';}
   function effective(cat){const s=window._lgSoundSettings;if(!s.enabled||s.muted.master||s.muted[cat])return 0;return (Number(s.master)||0)*(Number(s[cat])||0);}
-  function applySound(){const s=window._lgSoundSettings;saveJson(SOUND_KEY,s);if(window.AUDIO){AUDIO.setMusicVol(effective('music'));AUDIO.setSfxVol(Math.max(effective('sfx'),effective('alerts'),effective('ui')));AUDIO.muteMusic(effective('music')<=0);AUDIO.muteSfx(Math.max(effective('sfx'),effective('alerts'),effective('ui'))<=0);}['master','music','sfx','alerts','ui','voice'].forEach(cat=>{const cap=cat.charAt(0).toUpperCase()+cat.slice(1);const slider=document.getElementById('slider'+cap);const val=document.getElementById('val'+cap);const btn=document.getElementById('btnMute'+cap);if(slider)slider.value=s[cat];if(val)val.textContent=pct(s[cat]);if(btn)btn.classList.toggle('active',!!s.muted[cat]);});const all=document.getElementById('btnSoundAll');if(all){all.textContent=s.enabled?'Sound On':'Sound Off';all.classList.toggle('off',!s.enabled);}}
+  function applySound(){
+    const s=window._lgSoundSettings;saveJson(SOUND_KEY,s);
+    if(typeof AUDIO!=='undefined'){
+      const music=effective('music');
+      const sfx=Math.max(effective('sfx'),effective('alerts'),effective('ui'));
+      AUDIO.setMusicVol(music);AUDIO.setSfxVol(sfx);AUDIO.muteMusic(music<=0);AUDIO.muteSfx(sfx<=0);
+    }
+    ['master','music','sfx','alerts','ui','voice'].forEach(cat=>{const cap=cat.charAt(0).toUpperCase()+cat.slice(1);const slider=document.getElementById('slider'+cap);const val=document.getElementById('val'+cap);const btn=document.getElementById('btnMute'+cap);if(slider)slider.value=s[cat];if(val)val.textContent=pct(s[cat]);if(btn)btn.classList.toggle('active',!!s.muted[cat]);});
+    const all=document.getElementById('btnSoundAll');if(all){all.textContent=s.enabled?'Sound On':'Sound Off';all.classList.toggle('off',!s.enabled);}
+  }
   window.audioSetCategory=function(cat,val){window._lgSoundSettings[cat]=Number(val);applySound();};
   window.audioToggleCategory=function(cat){const s=window._lgSoundSettings;s.muted[cat]=!s.muted[cat];applySound();};
   window.audioToggleAll=function(){const s=window._lgSoundSettings;s.enabled=!s.enabled;applySound();};
@@ -12527,26 +12550,49 @@ setInterval(function(){
   window.audioMuteSfx=function(){window.audioToggleCategory('sfx');};
   document.addEventListener('DOMContentLoaded',applySound);setTimeout(applySound,400);
 
-  const baseSfx=window.AUDIO&&window.AUDIO.sfx?window.AUDIO.sfx.bind(window.AUDIO):null;
-  if(baseSfx){window.AUDIO.sfx=function(name){const cat=(name==='click'||name==='tap')?'ui':(String(name||'').includes('phase')?'alerts':'sfx');if(effective(cat)<=0)return;baseSfx(name);};}
+  const baseSfx=(typeof AUDIO!=='undefined'&&AUDIO.sfx)?AUDIO.sfx.bind(AUDIO):null;
+  if(baseSfx){AUDIO.sfx=function(name){const cat=(name==='click'||name==='tap')?'ui':(String(name||'').toLowerCase().includes('phase')?'alerts':'sfx');if(effective(cat)<=0)return;baseSfx(name);};}
 
-  function localProfile(){return loadJson(PROFILE_KEY,{displayName:'',avatar:'wolf',wins:0,losses:0,roleHistory:[]});}
+  function localProfile(){const p=loadJson(PROFILE_KEY,{displayName:'',avatar:'wolf',wins:0,losses:0,roleHistory:[],friendTag:''});if(!p.friendTag){p.friendTag=makeTag();saveLocalProfile(p);}return p;}
   function saveLocalProfile(p){saveJson(PROFILE_KEY,p);}
-  window.saveProfileDisplayName=function(){const input=document.getElementById('pmDisplayNameInput');if(!input)return;const p=localProfile();p.displayName=(input.value||'').trim().slice(0,20);saveLocalProfile(p);if(p.displayName){try{localStorage.setItem('lg_guest_name',p.displayName);}catch(e){} if(typeof myName!=='undefined'&&!myName)myName=p.displayName;}const mn=document.getElementById('mnName');if(mn&&p.displayName)mn.textContent=p.displayName;openProfileModal();};
-  function renderProfileExtras(){const p=localProfile();const input=document.getElementById('pmDisplayNameInput');if(input)input.value=p.displayName||((typeof myName!=='undefined'&&myName)||'');const hist=document.getElementById('pmRoleHistory');if(hist){let roles=[...(p.roleHistory||[])];try{const me=(typeof gameState!=="undefined"&&typeof myId!=="undefined"&&gameState?.players)?gameState.players?.[myId]:null;if(me&&me.role&&!roles.includes(me.role))roles.unshift(me.role);}catch(e){}hist.innerHTML=roles.length?roles.slice(0,8).map(r=>`<span class="role-chip">${(typeof tr==='function'?tr(r):r)||r}</span>`).join(''):'<span class="role-chip">No roles yet</span>';}}
+  function currentDisplayName(){const p=localProfile();return p.displayName||((typeof myName!=='undefined'&&myName)||(_googleUser?.displayName?.split(' ')[0])||'Guest');}
+  function myTag(){return localProfile().friendTag;}
+  async function publishIdentity(){
+    const p=localProfile();const tag=normalizeTag(p.friendTag);p.friendTag=tag;saveLocalProfile(p);
+    const registry=loadJson(REGISTRY_KEY,{});registry[tag]={tag,name:currentDisplayName(),uid:_googleUser?.uid||'',updatedAt:Date.now()};saveJson(REGISTRY_KEY,registry);
+    try{if(typeof db!=='undefined'&&db&&_googleUser?.uid){await db.ref(`publicProfiles/${tag}`).set({tag,name:currentDisplayName(),uid:_googleUser.uid,updatedAt:Date.now()});await db.ref(`users/${_googleUser.uid}/social`).update({friendTag:tag,displayName:currentDisplayName()});}}catch(e){console.warn('Could not publish social tag',e);}
+    updateTagDisplays();
+  }
+  function updateTagDisplays(){['myFriendTag','pmFriendTag'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=myTag();});}
+  window.copyMyFriendTag=function(){const tag=myTag();if(navigator.clipboard)navigator.clipboard.writeText(tag);alert('Your player tag: '+tag);};
+  window.saveProfileDisplayName=async function(){const input=document.getElementById('pmDisplayNameInput');if(!input)return;const p=localProfile();p.displayName=(input.value||'').trim().slice(0,20);saveLocalProfile(p);if(p.displayName){try{localStorage.setItem('lg_guest_name',p.displayName);}catch(e){} if(typeof myName!=='undefined'&&!myName)myName=p.displayName;}const mn=document.getElementById('mnName');if(mn&&p.displayName)mn.textContent=p.displayName;await publishIdentity();openProfileModal();};
+  function renderProfileExtras(){const p=localProfile();const input=document.getElementById('pmDisplayNameInput');if(input)input.value=p.displayName||((typeof myName!=='undefined'&&myName)||'');updateTagDisplays();const hist=document.getElementById('pmRoleHistory');if(hist){let roles=[...(p.roleHistory||[])];try{const me=(typeof gameState!=="undefined"&&typeof myId!=="undefined"&&gameState?.players)?gameState.players?.[myId]:null;if(me&&me.role&&!roles.includes(me.role))roles.unshift(me.role);}catch(e){}hist.innerHTML=roles.length?roles.slice(0,8).map(r=>`<span class="role-chip">${esc((typeof tr==='function'?tr(r):r)||r)}</span>`).join(''):'<span class="role-chip">No roles yet</span>';}}
   const baseProfile=window.openProfileModal;
-  window.openProfileModal=async function(){if(baseProfile)await baseProfile();const p=localProfile();const signed=document.getElementById('pmSignedIn');const note=document.getElementById('pmNotSignedIn');if(!_googleUser&&signed&&note){signed.style.display='block';note.style.display='none';document.getElementById('pmAvatarWrap').innerHTML='<div class="profile-avatar-placeholder">🐺</div>';document.getElementById('pmName').textContent=p.displayName||myName||'Guest';document.getElementById('pmEmail').textContent='Local profile';}renderProfileExtras();};
+  window.openProfileModal=async function(){if(baseProfile)await baseProfile();const p=localProfile();const signed=document.getElementById('pmSignedIn');const note=document.getElementById('pmNotSignedIn');if(!_googleUser&&signed&&note){signed.style.display='block';note.style.display='none';document.getElementById('pmAvatarWrap').innerHTML='<div class="profile-avatar-placeholder">🐺</div>';document.getElementById('pmName').textContent=p.displayName||myName||'Guest';document.getElementById('pmEmail').textContent='Local profile';}renderProfileExtras();await publishIdentity();};
 
-  function friends(){try{return JSON.parse(localStorage.getItem(FRIENDS_KEY)||'[]');}catch(e){return[];}}
-  function saveFriends(list){localStorage.setItem(FRIENDS_KEY,JSON.stringify(list));}
-  function playersOnline(){try{return Object.values(gameState?.players||{}).map(p=>(p.name||'').toLowerCase());}catch(e){return[];}}
-  window.openFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');renderFriends();};
+  function friends(){return loadJson(FRIENDS_KEY,[]);}
+  function saveFriends(list){saveJson(FRIENDS_KEY,list);}
+  function requests(){return loadJson(REQUESTS_KEY,[]);}
+  function saveRequests(list){saveJson(REQUESTS_KEY,list);}
+  function playersOnline(){try{return Object.values(gameState?.players||{}).map(p=>(p.friendTag||p.socialTag||p.tag||p.name||'').toLowerCase());}catch(e){return[];}}
+  async function resolveTag(tag){
+    tag=normalizeTag(tag);if(!/^LG-[A-Z0-9]{6}$/.test(tag))return null;if(tag===myTag())return {self:true,tag};
+    const registry=loadJson(REGISTRY_KEY,{});if(registry[tag])return registry[tag];
+    try{if(typeof db!=='undefined'&&db){const snap=await db.ref(`publicProfiles/${tag}`).get();if(snap.exists())return snap.val();}}catch(e){}
+    return null;
+  }
+  async function loadIncoming(){
+    if(!(typeof db!=='undefined'&&db&&_googleUser?.uid))return;
+    try{const snap=await db.ref(`socialRequests/${_googleUser.uid}`).get();const val=snap.val()||{};const list=requests();Object.values(val).forEach(r=>{if(r&&r.tag&&!list.some(x=>x.tag===r.tag&&x.status==='pending_in'))list.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',status:'pending_in',addedAt:r.ts||Date.now()});});saveRequests(list);}catch(e){}
+  }
+  window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();renderFriends();};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
-  window.addFriendFromInput=function(){const input=document.getElementById('friendNameInput');const name=(input?.value||'').trim();if(!name)return;const list=friends();if(!list.some(f=>f.name.toLowerCase()===name.toLowerCase()))list.push({name,addedAt:Date.now()});saveFriends(list);if(input)input.value='';renderFriends();};
-  window.removeFriend=function(name){saveFriends(friends().filter(f=>f.name!==name));renderFriends();};
-  window.inviteFriend=function(name){let code=(typeof roomCode!=='undefined'&&roomCode)||'';let msg=code?`Join my Loup-Garou room ${code}`:'Join me for Loup-Garou online';if(code)msg += ` - ${location.origin}${location.pathname}?room=${encodeURIComponent(code)}`;if(navigator.clipboard)navigator.clipboard.writeText(msg);alert(`Invite for ${name} copied${code?' with room code '+code:''}.`);};
-  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;const list=friends();const online=playersOnline();if(!list.length){el.innerHTML='<div class="profile-signin-note">Add friends by display name. Friends currently in this room show as online.</div>';return;}el.innerHTML=list.map(f=>{const on=online.includes(f.name.toLowerCase());return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${f.name.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div><div class="friend-state">${on?'Online':'Offline'}</div></div><button class="friend-action" onclick="inviteFriend('${f.name.replace(/'/g,"\\'")}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.name.replace(/'/g,"\\'")}')">Remove</button></div>`;}).join('');}
-
-  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
+  window.addFriendFromInput=async function(){const input=document.getElementById('friendNameInput');const tag=normalizeTag(input?.value||'');const found=await resolveTag(tag);if(!found){alert('No player found with that tag. Ask them to copy their tag from Profile or Friends.');return;}if(found.self){alert('That is your own tag.');return;}const req=requests();const fr=friends();if(fr.some(f=>f.tag===tag)){alert('Already friends.');return;}if(!req.some(r=>r.tag===tag))req.push({tag,name:found.name||tag,uid:found.uid||'',status:'pending_out',addedAt:Date.now()});saveRequests(req);try{if(typeof db!=='undefined'&&db&&found.uid&&_googleUser?.uid){await db.ref(`socialRequests/${found.uid}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid,ts:Date.now()});}}catch(e){}if(input)input.value='';renderFriends();};
+  window.acceptFriend=function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
+  window.declineFriend=function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
+  window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
+  window.inviteFriend=function(tag){const f=friends().find(x=>x.tag===normalizeTag(tag));let code=(typeof roomCode!=='undefined'&&roomCode)||'';let msg=code?`Join my Loup-Garou room ${code}`:'Join me for Loup-Garou online';if(code)msg += ` - ${location.origin}${location.pathname}?room=${encodeURIComponent(code)}`;if(navigator.clipboard)navigator.clipboard.writeText(msg);alert(`Invite for ${(f&&f.name)||tag} copied${code?' with room code '+code:''}.`);};
+  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(r.tag)}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=online.includes(String(f.tag||f.name).toLowerCase())||online.includes(String(f.name||'').toLowerCase());return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(f.tag)}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
+  document.addEventListener('DOMContentLoaded',()=>{localProfile();setTimeout(publishIdentity,800);});  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
 })();
 </script>
