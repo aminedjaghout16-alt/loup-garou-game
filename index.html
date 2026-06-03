@@ -12690,7 +12690,8 @@ setInterval(function(){
   function _startPresence(){
     if(_presenceRef||typeof db==='undefined'||!db)return;
     const tag=myTag();if(!tag)return;
-    _presenceRef=db.ref('presence/'+tag);
+    const presKey=tagSuffix(tag);if(!presKey)return;
+    _presenceRef=db.ref('presence/'+presKey);
     _presenceRef.set({online:true,name:currentDisplayName(),ts:Date.now()});
     _presenceRef.onDisconnect().remove();
     // Refresh heartbeat every 60s so stale entries auto-clean
@@ -12705,7 +12706,7 @@ setInterval(function(){
     const fr=friends();
     await Promise.all(fr.map(async f=>{
       try{
-        const snap=await db.ref('presence/'+normalizeTag(f.tag)).once('value');
+        const snap=await db.ref('presence/'+tagSuffix(normalizeTag(f.tag))).once('value');
         const val=snap.val();
         // Consider online if ts within last 3 minutes
         _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.online&&(Date.now()-val.ts<180000))||false;
