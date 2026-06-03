@@ -6585,6 +6585,8 @@ function doCreate(){
   if(!name){alert(tr('t_name')+' ?');return;}
   myId=(_googleUser?.uid)||('p_'+Date.now()); myName=name;
   roomCode=genCode(); isLeader=true;
+  // Publish identity with the name they just entered
+  initFBWithRetry(()=>{ if(typeof publishIdentity==='function') publishIdentity(); });
   const box=document.getElementById('createdCodeBox');
   document.getElementById('createdCodeVal').textContent=roomCode;
   box.style.display='block';
@@ -6599,6 +6601,8 @@ function doJoin(){
   const code=document.getElementById('inCode').value.trim().toUpperCase();
   if(!name||!code){alert(tr('t_name')+' / '+tr('t_code'));return;}
   myId=(_googleUser?.uid)||('p_'+Date.now()); myName=name; roomCode=code; isLeader=false;
+  // Publish identity with the name they just entered
+  initFBWithRetry(()=>{ if(typeof publishIdentity==='function') publishIdentity(); });
   // Load avatar data first so avatarId is ready when we write the player node
   const _afterStore = () => initFBWithRetry(()=>enterRoom());
   if(typeof _loadStoreData==='function') _loadStoreData().then(_afterStore).catch(_afterStore);
@@ -6616,6 +6620,8 @@ async function enterRoom(){
     initFB();
   }
   if(!fbOk||!db){ offlineEnter(); return; }
+  // Publish identity now that Firebase is confirmed ready
+  setTimeout(()=>{ if(typeof publishIdentity==='function') publishIdentity(); }, 200);
   // Always start from clean defaults; room config will overwrite if it exists
   cfg={roles:['werewolf','seer','witch','villager'], roleCounts:{werewolf:1, villager:1}, dayTimer:60, nightTimer:45};
   try{
@@ -12566,10 +12572,25 @@ setInterval(function(){
   function saveLocalProfile(p){saveJson(PROFILE_KEY,p);}
   function currentDisplayName(){const p=localProfile();return p.displayName||((typeof myName!=='undefined'&&myName)||(_googleUser?.displayName?.split(' ')[0])||'Guest');}
   function myTag(){return localProfile().friendTag;}
+  let _lastPublishedKey='';
   async function publishIdentity(){
     const p=localProfile();const tag=normalizeTag(p.friendTag);p.friendTag=tag;saveLocalProfile(p);
-    const registry=loadJson(REGISTRY_KEY,{});registry[tag]={tag,name:currentDisplayName(),uid:_googleUser?.uid||'',updatedAt:Date.now()};saveJson(REGISTRY_KEY,registry);
-    try{if(typeof db!=='undefined'&&db){const profileData={tag,name:currentDisplayName(),uid:_googleUser?.uid||'',updatedAt:Date.now()};await db.ref(`publicProfiles/${tag}`).set(profileData);if(_googleUser?.uid){await db.ref(`users/${_googleUser.uid}/social`).update({friendTag:tag,displayName:currentDisplayName()});}}}catch(e){console.warn('Could not publish social tag',e);}
+    const name=currentDisplayName();
+    // Avoid hammering Firebase: skip if nothing changed since last publish
+    const key=tag+'|'+name+'|'+(_googleUser?.uid||'');
+    if(key===_lastPublishedKey&&typeof db!=='undefined'&&db){updateTagDisplays();return;}
+    _lastPublishedKey=key;
+    const registry=loadJson(REGISTRY_KEY,{});registry[tag]={tag,name,uid:_googleUser?.uid||'',updatedAt:Date.now()};saveJson(REGISTRY_KEY,registry);
+    try{
+      if(typeof db!=='undefined'&&db){
+        const profileData={tag,name,uid:_googleUser?.uid||'',updatedAt:Date.now()};
+        await db.ref('publicProfiles/'+tag).set(profileData);
+        // Also index by name_lower for case-insensitive search
+        await db.ref('publicProfiles/'+tag+'/name_lower').set(name.toLowerCase());
+        if(_googleUser?.uid){await db.ref('users/'+_googleUser.uid+'/social').update({friendTag:tag,displayName:name});}
+        console.log('✅ Identity published:',name+'#'+tag.replace('LG-',''));
+      }
+    }catch(e){console.warn('Could not publish social tag',e);_lastPublishedKey='';}
     updateTagDisplays();
   }
   function updateTagDisplays(){const nt=displayNameTag(currentDisplayName(),myTag());['myFriendTag','pmFriendTag'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=nt;});}
@@ -12601,10 +12622,12 @@ setInterval(function(){
     // 3. Try display name search in Firebase
     const cleaned=String(raw||'').trim();if(!cleaned||cleaned.length<2)return null;
     try{if(typeof db!=='undefined'&&db){
+      // Try exact name match
       const snap=await db.ref('publicProfiles').orderByChild('name').equalTo(cleaned).limitToFirst(5).get();
       if(snap.exists()){const results=Object.values(snap.val()||{});if(results.length===1)return results[0];if(results.length>1)return {multipleResults:true,results};}
-      const snapCI=await db.ref('publicProfiles').orderByChild('updatedAt').limitToLast(500).get();
-      if(snapCI.exists()){const match=Object.values(snapCI.val()||{}).find(p=>p.name&&p.name.toLowerCase()===cleaned.toLowerCase());if(match)return match;}
+      // Try case-insensitive via name_lower index
+      const snapLower=await db.ref('publicProfiles').orderByChild('name_lower').equalTo(cleaned.toLowerCase()).limitToFirst(5).get();
+      if(snapLower.exists()){const results=Object.values(snapLower.val()||{});if(results.length===1)return results[0];if(results.length>1)return {multipleResults:true,results};}
     }}catch(e){console.warn('Name search failed',e);}
     return null;
   }
@@ -12646,6 +12669,15 @@ setInterval(function(){
   window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
   window.inviteFriend=function(tag){const f=friends().find(x=>x.tag===normalizeTag(tag));let code=(typeof roomCode!=='undefined'&&roomCode)||'';let msg=code?`Join my Loup-Garou room ${code}`:'Join me for Loup-Garou online';if(code)msg += ` - ${location.origin}${location.pathname}?room=${encodeURIComponent(code)}`;if(navigator.clipboard)navigator.clipboard.writeText(msg);alert(`Invite for ${(f&&f.name)||tag} copied${code?' with room code '+code:''}.`);};
   function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(displayNameTag(r.name,r.tag))}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=online.includes(String(f.tag||f.name).toLowerCase())||online.includes(String(f.name||'').toLowerCase());return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(displayNameTag(f.name,f.tag))}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
-  document.addEventListener('DOMContentLoaded',()=>{localProfile();setTimeout(publishIdentity,800);});  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
+  document.addEventListener('DOMContentLoaded',()=>{
+    localProfile();
+    // Retry publishIdentity until Firebase db is actually ready (800ms is often too early)
+    function _tryPublish(attempts){
+      if(typeof db!=='undefined'&&db){publishIdentity();return;}
+      if(attempts>60)return; // give up after ~6s
+      setTimeout(()=>_tryPublish(attempts+1),100);
+    }
+    setTimeout(()=>_tryPublish(0),500);
+  });  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
 })();
 </script>
