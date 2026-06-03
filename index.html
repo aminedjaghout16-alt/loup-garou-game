@@ -12687,12 +12687,27 @@ setInterval(function(){
   let _presenceRef=null;
   let _friendPresenceCache={};  // tag→true/false
 
+  function _presKeyFrom(fullTag){
+    // Strip LG- prefix, keep only alphanumeric, take first 6 chars
+    return String(fullTag||'').replace(/^LG-/i,'').replace(/[^A-Z0-9]/gi,'').slice(0,6).toUpperCase();
+  }
+
   function _startPresence(){
     if(_presenceRef||typeof db==='undefined'||!db)return;
-    const tag=myTag();if(!tag)return;
-    const presKey=tagSuffix(tag);if(!presKey)return;
+    // Make sure we have a tag — localProfile() creates one if missing
+    const profile=localProfile();
+    const tag=profile.friendTag||myTag();
+    const presKey=_presKeyFrom(tag);
+    if(!presKey||presKey.length<4){
+      // Tag not ready yet, retry in 1s
+      setTimeout(_startPresence,1000);
+      return;
+    }
+    console.log('[presence] starting at key:',presKey);
     _presenceRef=db.ref('presence/'+presKey);
-    _presenceRef.set({online:true,name:currentDisplayName(),ts:Date.now()});
+    _presenceRef.set({online:true,name:currentDisplayName(),ts:Date.now()})
+      .then(()=>console.log('[presence] written ok'))
+      .catch(e=>console.error('[presence] write failed:',e));
     _presenceRef.onDisconnect().remove();
     // Refresh heartbeat every 60s so stale entries auto-clean
     setInterval(()=>{
@@ -12706,11 +12721,14 @@ setInterval(function(){
     const fr=friends();
     await Promise.all(fr.map(async f=>{
       try{
-        const snap=await db.ref('presence/'+tagSuffix(normalizeTag(f.tag))).once('value');
+        const presKey=_presKeyFrom(normalizeTag(f.tag));
+        if(!presKey)return;
+        const snap=await db.ref('presence/'+presKey).once('value');
         const val=snap.val();
+        console.log('[presence] friend',f.name,'key',presKey,'val',val);
         // Consider online if ts within last 3 minutes
         _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.online&&(Date.now()-val.ts<180000))||false;
-      }catch(e){}
+      }catch(e){console.warn('[presence] load error for',f.tag,e);}
     }));
   }
 
