@@ -11182,11 +11182,7 @@ function lobbyShare() {
 }
 
 async function lobbyInviteFriends() {
-  // Refresh presence so online status is current
-  if(typeof _loadFriendPresence==='function') await _loadFriendPresence();
-  // Always open our custom picker — only fallback to share if truly no friends at all
-  const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
-  // Build or show the friend invite picker modal
+  // Build or show the friend invite picker modal first (so user sees it immediately)
   let modal = document.getElementById('lobbyFriendPickerModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -11204,26 +11200,36 @@ async function lobbyInviteFriends() {
     modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
     document.body.appendChild(modal);
   }
-  // Render friends list
-  const list = document.getElementById('lobbyFriendPickerList');
-  const online = (typeof _friendPresenceCache !== 'undefined') ? _friendPresenceCache : {};
-  const fr2 = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
-  if (!fr2.length) {
-    list.innerHTML = '<div style="color:rgba(232,232,232,.4);font-size:.85rem;text-align:center;padding:.8rem;">No friends yet. Add them in the Friends panel!</div>';
-  } else {
-    list.innerHTML = fr2.map(f => {
-      const isOn = (typeof isFriendOnline === 'function') ? isFriendOnline(f.tag) : false;
-      return `<div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;padding:.6rem .75rem;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.15);border-radius:8px;">
-        <span style="width:9px;height:9px;border-radius:50%;background:${isOn?'#10b981':'rgba(232,232,232,.2)'};display:inline-block;${isOn?'box-shadow:0 0 8px rgba(16,185,129,.6)':''}"></span>
-        <div>
-          <div style="color:#e8c44a;font-weight:700;font-size:.88rem;">${(f.name||f.tag)}</div>
-          <div style="color:rgba(232,232,232,.4);font-size:.7rem;">${isOn?'Online':'Offline'}</div>
-        </div>
-        <button id="lpick_${f.tag.replace(/[^A-Z0-9]/g,'')}" onclick="lobbyInviteOneFriend('${f.tag}',this)" style="padding:.35rem .75rem;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:#d4a017;font-family:inherit;font-size:.78rem;cursor:pointer;">Invite</button>
-      </div>`;
-    }).join('');
-  }
   modal.style.display = 'flex';
+
+  // Helper to render the friends list
+  function _renderLobbyFriendList() {
+    const list = document.getElementById('lobbyFriendPickerList');
+    if (!list) return;
+    const fr2 = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
+    if (!fr2.length) {
+      list.innerHTML = '<div style="color:rgba(232,232,232,.4);font-size:.85rem;text-align:center;padding:.8rem;">No friends yet. Add them in the Friends panel!</div>';
+    } else {
+      list.innerHTML = fr2.map(f => {
+        const isOn = (typeof isFriendOnline === 'function') ? isFriendOnline(f.tag) : false;
+        return `<div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;padding:.6rem .75rem;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.15);border-radius:8px;">
+          <span style="width:9px;height:9px;border-radius:50%;background:${isOn?'#10b981':'rgba(232,232,232,.2)'};display:inline-block;${isOn?'box-shadow:0 0 8px rgba(16,185,129,.6)':''}"></span>
+          <div>
+            <div style="color:#e8c44a;font-weight:700;font-size:.88rem;">${(f.name||f.tag)}</div>
+            <div style="color:rgba(232,232,232,.4);font-size:.7rem;">${isOn?'Online':'Offline'}</div>
+          </div>
+          <button id="lpick_${f.tag.replace(/[^A-Z0-9]/g,'')}" onclick="lobbyInviteOneFriend('${f.tag}',this)" style="padding:.35rem .75rem;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:#d4a017;font-family:inherit;font-size:.78rem;cursor:pointer;">Invite</button>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Render immediately with cached data, then refresh presence and re-render
+  _renderLobbyFriendList();
+  if(typeof _loadFriendPresence==='function') {
+    await _loadFriendPresence();
+    _renderLobbyFriendList(); // re-render with fresh presence data
+  }
 }
 
 async function lobbyInviteOneFriend(tag, btn) {
@@ -12801,11 +12807,15 @@ setInterval(function(){
     _presenceRef.set({online:true,name:currentDisplayName(),ts:Date.now()})
       .then(()=>console.log('[presence] written ok'))
       .catch(e=>console.error('[presence] write failed:',e));
-    _presenceRef.onDisconnect().update({online:false,ts:Date.now()});
-    // Refresh heartbeat every 60s so stale entries auto-clean
+    // NOTE: We intentionally do NOT use onDisconnect to set online:false,
+    // because Firebase fires onDisconnect on brief network hiccups too,
+    // making friends appear offline when they're still there.
+    // Instead we rely on the ts staleness check (2 min window).
+    _presenceRef.onDisconnect().update({ts:Date.now()});
+    // Refresh heartbeat every 30s so ts stays fresh
     setInterval(()=>{
       try{if(_presenceRef)_presenceRef.update({online:true,ts:Date.now()});}catch(e){}
-    },60000);
+    },30000);
   }
 
   let _presenceListeners={};
@@ -12821,7 +12831,7 @@ setInterval(function(){
       const ref=db.ref('presence/'+presKey);
       _presenceListeners[normTag]=ref.on('value',snap=>{
         const val=snap.val();
-        const isOnline=val&&val.online===true&&val.ts&&(Date.now()-val.ts<600000);
+        const isOnline=val&&val.ts&&(Date.now()-val.ts<120000);
         const wasOnline=_friendPresenceCache[normTag];
         _friendPresenceCache[normTag]=isOnline||false;
         console.log('[presence] update',f.name,'online:',isOnline,'val:',val);
@@ -12834,7 +12844,8 @@ setInterval(function(){
 
   async function _loadFriendPresence(){
     // Still do a one-time read for immediate display, but also start live listeners
-    _friendPresenceCache={};
+    // NOTE: we do NOT reset _friendPresenceCache here to avoid a flash where
+    // everyone looks offline while fresh reads are in flight.
     if(typeof db==='undefined'||!db)return;
     const fr=friends();
     await Promise.all(fr.map(async f=>{
@@ -12844,7 +12855,7 @@ setInterval(function(){
         const snap=await db.ref('presence/'+presKey).once('value');
         const val=snap.val();
         console.log('[presence] friend',f.name,'key',presKey,'val',val);
-        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.online===true&&val.ts&&(Date.now()-val.ts<600000))||false;
+        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.ts&&(Date.now()-val.ts<120000))||false;
       }catch(e){console.warn('[presence] load error for',f.tag,e);}
     }));
     _watchFriendPresence();
@@ -12860,9 +12871,9 @@ setInterval(function(){
 
   function isFriendOnline(tag){
     const t=normalizeTag(tag);
-    if(_friendPresenceCache[t]===true)return true;
-    // Fallback: check game room
-    return playersOnline().some(x=>x===t.toLowerCase()||x===String(tag||'').toLowerCase());
+    // Rely on Firebase presence cache; ignore game-room players
+    // (a player in the room may not be a friend, and vice versa)
+    return _friendPresenceCache[t]===true;
   }
 
   window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();setTimeout(async()=>{await _loadFriendPresence();renderFriends();},2000);};
