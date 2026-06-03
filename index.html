@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -865,7 +865,25 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
    VOICE CHAT BAR
 ══════════════════════════════════════════ */
 
-</style>
+
+/* === Site improvements: sound settings, mobile polish, profiles, friends === */
+.site-modal{position:fixed;inset:0;z-index:320;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:1rem;overflow:auto}
+.site-modal.hidden{display:none!important}
+.site-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.4rem;width:100%;max-width:460px;box-shadow:0 0 40px rgba(212,160,23,.18);position:relative}
+.site-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.55rem;text-align:center;margin-bottom:1rem}
+.site-close{position:absolute;top:.65rem;right:.85rem;background:transparent;border:0;color:var(--ghost);font-size:1.25rem;cursor:pointer;opacity:.65;font-family:inherit;min-width:40px;min-height:40px}
+.site-close:hover{opacity:1;color:var(--moon)}
+.profile-edit{display:grid;grid-template-columns:1fr auto;gap:.45rem;margin:.7rem 0 1rem}
+.profile-edit input,.friends-add input{min-height:44px;background:var(--purple);border:1px solid rgba(212,160,23,.4);border-radius:6px;color:var(--ghost);font-family:inherit;padding:.55rem .7rem}
+.profile-edit button,.friends-add button,.friend-action,.profile-small-btn{min-height:44px;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:var(--moon);font-family:inherit;cursor:pointer;padding:.45rem .75rem}
+.profile-edit button:hover,.friends-add button:hover,.friend-action:hover,.profile-small-btn:hover{border-color:var(--moon);background:rgba(212,160,23,.18)}
+.profile-history{background:rgba(26,10,46,.62);border:1px solid rgba(212,160,23,.22);border-radius:8px;padding:.75rem;margin-bottom:.9rem}
+.profile-history-title{font-size:.72rem;color:var(--ghost);opacity:.72;margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.08em}
+.role-history-list{display:flex;flex-wrap:wrap;gap:.35rem}.role-chip{border:1px solid rgba(212,160,23,.28);border-radius:999px;padding:.22rem .55rem;color:var(--moon-pale);font-size:.75rem;background:rgba(212,160,23,.08)}
+.friends-add{display:grid;grid-template-columns:1fr auto;gap:.45rem;margin-bottom:.9rem}.friends-list{display:flex;flex-direction:column;gap:.5rem;max-height:330px;overflow:auto}.friend-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:.55rem;align-items:center;padding:.65rem;background:rgba(26,10,46,.65);border:1px solid rgba(212,160,23,.18);border-radius:8px}.friend-dot{width:10px;height:10px;border-radius:50%;background:rgba(232,232,232,.25)}.friend-row.online .friend-dot{background:var(--green);box-shadow:0 0 10px rgba(16,185,129,.7)}.friend-name{color:var(--moon-pale);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis}.friend-state{font-size:.72rem;color:var(--ghost);opacity:.55}.friend-action.remove{color:var(--red);border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08)}
+.audio-master{padding-bottom:.45rem;margin-bottom:.15rem;border-bottom:1px solid rgba(212,160,23,.18)}.audio-row{min-height:32px}.audio-row label{min-width:68px}.audio-value{width:34px;text-align:right;color:var(--ghost);opacity:.6;font-size:.7rem}.audio-mute.active{color:var(--red)!important;border-color:var(--red)!important;background:rgba(239,68,68,.1)}.audio-global{width:100%;margin-bottom:.45rem;padding:.42rem;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:var(--moon);font-family:inherit;cursor:pointer}.audio-global.off{border-color:rgba(239,68,68,.45);color:var(--red);background:rgba(239,68,68,.08)}
+@media (max-width:760px){body{letter-spacing:0}.mn-title{font-size:1.7rem}.mn-grid{grid-template-columns:1fr}.mn-btn.primary,.mn-btn{grid-column:auto;min-height:74px}.mn-btn,.btn,.lb,.rc-toggle-btn,.friend-action,.profile-small-btn,.mn-foot-btn,.audio-mute{min-height:44px}.g-content{flex-direction:column;gap:.65rem;padding:.65rem;overflow-y:auto}.left-panel{flex:none;max-height:none;width:100%;padding:.85rem}.center-panel{min-height:58vh;padding:.9rem}.right-panel{width:100%;max-height:42vh}.vote-grid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}.site-box,.profile-box{max-width:96vw;padding:1.2rem .95rem}#audioPanel{left:.7rem;right:.7rem;bottom:.7rem;min-width:0;border-radius:8px}.audio-row{gap:.4rem}.audio-slider{min-width:0}.stats-grid{gap:.5rem}.stat-card{padding:.65rem .45rem}.profile-edit,.friends-add{grid-template-columns:1fr}.friend-row{grid-template-columns:auto 1fr auto}.friend-state{display:none}}
+@media (hover:none){button,.mn-btn,.vote-card,.pc-node,.pc-vote-btn,.chat-tab,.rc,.lb{touch-action:manipulation;-webkit-tap-highlight-color:rgba(212,160,23,.22)}}</style>
 
 <!-- ══ AVATAR SYSTEM (Parts 1-6) ══ -->
 <script>
@@ -4399,6 +4417,11 @@ window.addEventListener('load', () => {
       <div class="mn-icon">📊</div>
       <div class="mn-label">Profile</div>
       <div class="mn-desc">Stats & history</div>
+    </div>
+    <div class="mn-btn" onclick="openFriendsModal()">
+      <div class="mn-icon">🤝</div>
+      <div class="mn-label">Friends</div>
+      <div class="mn-desc">Online & invites</div>
     </div>
     <div class="mn-btn" onclick="openAvatarStore()">
       <div class="mn-icon">🎭</div>
@@ -11500,16 +11523,43 @@ window._doLeaveNow = function(){
     <span>🔊 Sound</span>
     <span id="audioPanelChevron">▲</span>
   </div>
-  <div id="audioPanelBody">
-    <div class="audio-row">
-      <label>🎵 Music</label>
-      <input type="range" class="audio-slider" id="sliderMusic" min="0" max="1" step="0.05" value="0.5" oninput="audioSetMusic(this.value)">
-      <button class="audio-mute" id="btnMuteMusic" onclick="audioMuteMusic()">M</button>
+    <div id="audioPanelBody">
+    <button class="audio-global" id="btnSoundAll" onclick="audioToggleAll()">Sound On</button>
+    <div class="audio-row audio-master">
+      <label>Master</label>
+      <input type="range" class="audio-slider" id="sliderMaster" min="0" max="1" step="0.05" value="1" oninput="audioSetCategory('master',this.value)">
+      <span class="audio-value" id="valMaster">100%</span>
+      <button class="audio-mute" id="btnMuteMaster" onclick="audioToggleCategory('master')">M</button>
     </div>
     <div class="audio-row">
-      <label>🔔 SFX</label>
-      <input type="range" class="audio-slider" id="sliderSfx" min="0" max="1" step="0.05" value="0.8" oninput="audioSetSfx(this.value)">
-      <button class="audio-mute" id="btnMuteSfx" onclick="audioMuteSfx()">M</button>
+      <label>Music</label>
+      <input type="range" class="audio-slider" id="sliderMusic" min="0" max="1" step="0.05" value="0.5" oninput="audioSetCategory('music',this.value)">
+      <span class="audio-value" id="valMusic">50%</span>
+      <button class="audio-mute" id="btnMuteMusic" onclick="audioToggleCategory('music')">M</button>
+    </div>
+    <div class="audio-row">
+      <label>SFX</label>
+      <input type="range" class="audio-slider" id="sliderSfx" min="0" max="1" step="0.05" value="0.8" oninput="audioSetCategory('sfx',this.value)">
+      <span class="audio-value" id="valSfx">80%</span>
+      <button class="audio-mute" id="btnMuteSfx" onclick="audioToggleCategory('sfx')">M</button>
+    </div>
+    <div class="audio-row">
+      <label>Alerts</label>
+      <input type="range" class="audio-slider" id="sliderAlerts" min="0" max="1" step="0.05" value="0.8" oninput="audioSetCategory('alerts',this.value)">
+      <span class="audio-value" id="valAlerts">80%</span>
+      <button class="audio-mute" id="btnMuteAlerts" onclick="audioToggleCategory('alerts')">M</button>
+    </div>
+    <div class="audio-row">
+      <label>UI</label>
+      <input type="range" class="audio-slider" id="sliderUi" min="0" max="1" step="0.05" value="0.7" oninput="audioSetCategory('ui',this.value)">
+      <span class="audio-value" id="valUi">70%</span>
+      <button class="audio-mute" id="btnMuteUi" onclick="audioToggleCategory('ui')">M</button>
+    </div>
+    <div class="audio-row">
+      <label>Voice</label>
+      <input type="range" class="audio-slider" id="sliderVoice" min="0" max="1" step="0.05" value="1" oninput="audioSetCategory('voice',this.value)">
+      <span class="audio-value" id="valVoice">100%</span>
+      <button class="audio-mute" id="btnMuteVoice" onclick="audioToggleCategory('voice')">M</button>
     </div>
   </div>
 </div>
@@ -11526,7 +11576,19 @@ window._doLeaveNow = function(){
   </div>
 </div>
 
-<!-- ── PROFILE MODAL ── -->
+
+<!-- FRIENDS MODAL -->
+<div id="friendsModal" class="site-modal hidden">
+  <div class="site-box">
+    <button class="site-close" onclick="closeFriendsModal()">×</button>
+    <h2>Friends</h2>
+    <div class="friends-add">
+      <input id="friendNameInput" maxlength="24" placeholder="Friend name" autocomplete="off">
+      <button onclick="addFriendFromInput()">Add</button>
+    </div>
+    <div class="friends-list" id="friendsList"></div>
+  </div>
+</div>`n<!-- ── PROFILE MODAL ── -->
 <div id="profileModal" class="hidden">
   <div class="profile-box">
     <button class="profile-close" onclick="closeProfileModal()">✕</button>
@@ -11545,7 +11607,14 @@ window._doLeaveNow = function(){
         <div class="frl" id="pmLblFav">Favourite Role (most wins)</div>
         <div class="frv" id="pmFavRole">—</div>
       </div>
-      <div id="pmLoading" style="text-align:center;color:var(--ghost);opacity:.6;font-size:.85rem;padding:.4rem 0;display:none">Loading…</div>
+      <div class="profile-edit">
+        <input id="pmDisplayNameInput" maxlength="20" placeholder="Display name" autocomplete="off">
+        <button onclick="saveProfileDisplayName()">Save</button>
+      </div>
+      <div class="profile-history">
+        <div class="profile-history-title">Role history</div>
+        <div class="role-history-list" id="pmRoleHistory"><span class="role-chip">No roles yet</span></div>
+      </div>      <div id="pmLoading" style="text-align:center;color:var(--ghost);opacity:.6;font-size:.85rem;padding:.4rem 0;display:none">Loading…</div>
     </div>
     <div id="pmNotSignedIn" class="profile-signin-note" style="display:none">
       Sign in with Google to track your stats across all games.
@@ -12435,3 +12504,49 @@ setInterval(function(){
 }, 2000);
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
+<script>
+(function(){
+  const SOUND_KEY='lg_sound_settings_v2';
+  const PROFILE_KEY='lg_profile_local_v1';
+  const FRIENDS_KEY='lg_friends_v1';
+  const defaults={enabled:true,master:1,music:0.5,sfx:0.8,alerts:0.8,ui:0.7,voice:1,muted:{master:false,music:false,sfx:false,alerts:false,ui:false,voice:false}};
+  function loadJson(key,fallback){try{return Object.assign(Array.isArray(fallback)?[]:{}, fallback, JSON.parse(localStorage.getItem(key)||'null')||{});}catch(e){return Array.isArray(fallback)?[]:{...fallback};}}
+  function saveJson(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
+  window._lgSoundSettings=loadJson(SOUND_KEY,defaults);
+  window._lgSoundSettings.muted=Object.assign({},defaults.muted,window._lgSoundSettings.muted||{});
+  function pct(v){return Math.round((Number(v)||0)*100)+'%';}
+  function effective(cat){const s=window._lgSoundSettings;if(!s.enabled||s.muted.master||s.muted[cat])return 0;return (Number(s.master)||0)*(Number(s[cat])||0);}
+  function applySound(){const s=window._lgSoundSettings;saveJson(SOUND_KEY,s);if(window.AUDIO){AUDIO.setMusicVol(effective('music'));AUDIO.setSfxVol(Math.max(effective('sfx'),effective('alerts'),effective('ui')));AUDIO.muteMusic(effective('music')<=0);AUDIO.muteSfx(Math.max(effective('sfx'),effective('alerts'),effective('ui'))<=0);}['master','music','sfx','alerts','ui','voice'].forEach(cat=>{const cap=cat.charAt(0).toUpperCase()+cat.slice(1);const slider=document.getElementById('slider'+cap);const val=document.getElementById('val'+cap);const btn=document.getElementById('btnMute'+cap);if(slider)slider.value=s[cat];if(val)val.textContent=pct(s[cat]);if(btn)btn.classList.toggle('active',!!s.muted[cat]);});const all=document.getElementById('btnSoundAll');if(all){all.textContent=s.enabled?'Sound On':'Sound Off';all.classList.toggle('off',!s.enabled);}}
+  window.audioSetCategory=function(cat,val){window._lgSoundSettings[cat]=Number(val);applySound();};
+  window.audioToggleCategory=function(cat){const s=window._lgSoundSettings;s.muted[cat]=!s.muted[cat];applySound();};
+  window.audioToggleAll=function(){const s=window._lgSoundSettings;s.enabled=!s.enabled;applySound();};
+  window.audioSetMusic=function(v){window.audioSetCategory('music',v);};
+  window.audioSetSfx=function(v){window.audioSetCategory('sfx',v);};
+  window.audioMuteMusic=function(){window.audioToggleCategory('music');};
+  window.audioMuteSfx=function(){window.audioToggleCategory('sfx');};
+  document.addEventListener('DOMContentLoaded',applySound);setTimeout(applySound,400);
+
+  const baseSfx=window.AUDIO&&window.AUDIO.sfx?window.AUDIO.sfx.bind(window.AUDIO):null;
+  if(baseSfx){window.AUDIO.sfx=function(name){const cat=(name==='click'||name==='tap')?'ui':(String(name||'').includes('phase')?'alerts':'sfx');if(effective(cat)<=0)return;baseSfx(name);};}
+
+  function localProfile(){return loadJson(PROFILE_KEY,{displayName:'',avatar:'wolf',wins:0,losses:0,roleHistory:[]});}
+  function saveLocalProfile(p){saveJson(PROFILE_KEY,p);}
+  window.saveProfileDisplayName=function(){const input=document.getElementById('pmDisplayNameInput');if(!input)return;const p=localProfile();p.displayName=(input.value||'').trim().slice(0,20);saveLocalProfile(p);if(p.displayName){try{localStorage.setItem('lg_guest_name',p.displayName);}catch(e){} if(typeof myName!=='undefined'&&!myName)myName=p.displayName;}const mn=document.getElementById('mnName');if(mn&&p.displayName)mn.textContent=p.displayName;openProfileModal();};
+  function renderProfileExtras(){const p=localProfile();const input=document.getElementById('pmDisplayNameInput');if(input)input.value=p.displayName||((typeof myName!=='undefined'&&myName)||'');const hist=document.getElementById('pmRoleHistory');if(hist){let roles=[...(p.roleHistory||[])];try{const me=(typeof gameState!=="undefined"&&typeof myId!=="undefined"&&gameState?.players)?gameState.players?.[myId]:null;if(me&&me.role&&!roles.includes(me.role))roles.unshift(me.role);}catch(e){}hist.innerHTML=roles.length?roles.slice(0,8).map(r=>`<span class="role-chip">${(typeof tr==='function'?tr(r):r)||r}</span>`).join(''):'<span class="role-chip">No roles yet</span>';}}
+  const baseProfile=window.openProfileModal;
+  window.openProfileModal=async function(){if(baseProfile)await baseProfile();const p=localProfile();const signed=document.getElementById('pmSignedIn');const note=document.getElementById('pmNotSignedIn');if(!_googleUser&&signed&&note){signed.style.display='block';note.style.display='none';document.getElementById('pmAvatarWrap').innerHTML='<div class="profile-avatar-placeholder">🐺</div>';document.getElementById('pmName').textContent=p.displayName||myName||'Guest';document.getElementById('pmEmail').textContent='Local profile';}renderProfileExtras();};
+
+  function friends(){try{return JSON.parse(localStorage.getItem(FRIENDS_KEY)||'[]');}catch(e){return[];}}
+  function saveFriends(list){localStorage.setItem(FRIENDS_KEY,JSON.stringify(list));}
+  function playersOnline(){try{return Object.values(gameState?.players||{}).map(p=>(p.name||'').toLowerCase());}catch(e){return[];}}
+  window.openFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');renderFriends();};
+  window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
+  window.addFriendFromInput=function(){const input=document.getElementById('friendNameInput');const name=(input?.value||'').trim();if(!name)return;const list=friends();if(!list.some(f=>f.name.toLowerCase()===name.toLowerCase()))list.push({name,addedAt:Date.now()});saveFriends(list);if(input)input.value='';renderFriends();};
+  window.removeFriend=function(name){saveFriends(friends().filter(f=>f.name!==name));renderFriends();};
+  window.inviteFriend=function(name){let code=(typeof roomCode!=='undefined'&&roomCode)||'';let msg=code?`Join my Loup-Garou room ${code}`:'Join me for Loup-Garou online';if(code)msg += ` - ${location.origin}${location.pathname}?room=${encodeURIComponent(code)}`;if(navigator.clipboard)navigator.clipboard.writeText(msg);alert(`Invite for ${name} copied${code?' with room code '+code:''}.`);};
+  function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;const list=friends();const online=playersOnline();if(!list.length){el.innerHTML='<div class="profile-signin-note">Add friends by display name. Friends currently in this room show as online.</div>';return;}el.innerHTML=list.map(f=>{const on=online.includes(f.name.toLowerCase());return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${f.name.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div><div class="friend-state">${on?'Online':'Offline'}</div></div><button class="friend-action" onclick="inviteFriend('${f.name.replace(/'/g,"\\'")}')">Invite</button><button class="friend-action remove" onclick="removeFriend('${f.name.replace(/'/g,"\\'")}')">Remove</button></div>`;}).join('');}
+
+  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
+})();
+</script>
