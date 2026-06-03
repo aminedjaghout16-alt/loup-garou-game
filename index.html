@@ -11584,7 +11584,7 @@ window._doLeaveNow = function(){
     <h2>Friends</h2>
     <div class="profile-history"><div class="profile-history-title">Your tag</div><div class="frv" id="myFriendTag">LG-......</div><button class="profile-small-btn" onclick="copyMyFriendTag()">Copy Tag</button></div>
     <div class="friends-add">
-      <input id="friendNameInput" maxlength="24" placeholder="Player tag, example LG-AB12CD" autocomplete="off">
+      <input id="friendNameInput" maxlength="30" placeholder="Tag (LG-ABC123) or display name" autocomplete="off">
       <button onclick="addFriendFromInput()">Add</button>
     </div>
     <div class="friends-list" id="friendsList"></div>
@@ -12524,7 +12524,7 @@ setInterval(function(){
   function loadJson(key,fallback){try{const raw=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(fallback))return Array.isArray(raw)?raw:fallback;return Object.assign({},fallback,raw||{});}catch(e){return Array.isArray(fallback)?[]:{...fallback};}}
   function saveJson(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
   function esc(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
-  function normalizeTag(tag){return String(tag||'').trim().toUpperCase().replace(/^#?/,'').replace(/[^A-Z0-9-]/g,'');}
+  function normalizeTag(tag){let t=String(tag||'').trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');if(t&&!t.startsWith('LG-'))t='LG-'+t.replace(/^LG/,'');return t;}
   function makeTag(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='LG-';for(let i=0;i<6;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out;}
 
   window._lgSoundSettings=loadJson(SOUND_KEY,defaults);
@@ -12560,7 +12560,7 @@ setInterval(function(){
   async function publishIdentity(){
     const p=localProfile();const tag=normalizeTag(p.friendTag);p.friendTag=tag;saveLocalProfile(p);
     const registry=loadJson(REGISTRY_KEY,{});registry[tag]={tag,name:currentDisplayName(),uid:_googleUser?.uid||'',updatedAt:Date.now()};saveJson(REGISTRY_KEY,registry);
-    try{if(typeof db!=='undefined'&&db&&_googleUser?.uid){await db.ref(`publicProfiles/${tag}`).set({tag,name:currentDisplayName(),uid:_googleUser.uid,updatedAt:Date.now()});await db.ref(`users/${_googleUser.uid}/social`).update({friendTag:tag,displayName:currentDisplayName()});}}catch(e){console.warn('Could not publish social tag',e);}
+    try{if(typeof db!=='undefined'&&db){const profileData={tag,name:currentDisplayName(),uid:_googleUser?.uid||'',updatedAt:Date.now()};await db.ref(`publicProfiles/${tag}`).set(profileData);if(_googleUser?.uid){await db.ref(`users/${_googleUser.uid}/social`).update({friendTag:tag,displayName:currentDisplayName()});}}}catch(e){console.warn('Could not publish social tag',e);}
     updateTagDisplays();
   }
   function updateTagDisplays(){['myFriendTag','pmFriendTag'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=myTag();});}
@@ -12576,9 +12576,29 @@ setInterval(function(){
   function saveRequests(list){saveJson(REQUESTS_KEY,list);}
   function playersOnline(){try{return Object.values(gameState?.players||{}).map(p=>(p.friendTag||p.socialTag||p.tag||p.name||'').toLowerCase());}catch(e){return[];}}
   async function resolveTag(tag){
-    tag=normalizeTag(tag);if(!/^LG-[A-Z0-9]{6}$/.test(tag))return null;if(tag===myTag())return {self:true,tag};
+    tag=normalizeTag(tag);
+    // Validate format: must be LG- followed by 6 alphanumeric chars
+    if(!/^LG-[A-Z0-9]{6}$/.test(tag))return null;
+    if(tag===myTag())return {self:true,tag};
+    // Check local registry first (fast)
     const registry=loadJson(REGISTRY_KEY,{});if(registry[tag])return registry[tag];
-    try{if(typeof db!=='undefined'&&db){const snap=await db.ref(`publicProfiles/${tag}`).get();if(snap.exists())return snap.val();}}catch(e){}
+    // Check Firebase
+    try{if(typeof db!=='undefined'&&db){const snap=await db.ref(`publicProfiles/${tag}`).get();if(snap.exists()){const val=snap.val();registry[tag]=val;saveJson(REGISTRY_KEY,registry);return val;}}}catch(e){}
+    return null;
+  }
+  async function resolveByNameOrTag(raw){
+    // First try as a tag
+    const byTag=await resolveTag(raw);if(byTag)return byTag;
+    // If it doesn't look like a tag, try searching by display name in Firebase
+    const cleaned=String(raw||'').trim();if(!cleaned||cleaned.length<2)return null;
+    try{if(typeof db!=='undefined'&&db){
+      // Query publicProfiles where name matches (case-insensitive via client-side filter)
+      const snap=await db.ref('publicProfiles').orderByChild('name').equalTo(cleaned).limitToFirst(5).get();
+      if(snap.exists()){const results=Object.values(snap.val()||{});if(results.length===1)return results[0];if(results.length>1)return {multipleResults:true,results};}
+      // Try case-insensitive fallback: fetch a small batch and filter
+      const snapAll=await db.ref('publicProfiles').orderByChild('updatedAt').limitToLast(500).get();
+      if(snapAll.exists()){const match=Object.values(snapAll.val()||{}).find(p=>p.name&&p.name.toLowerCase()===cleaned.toLowerCase());if(match)return match;}
+    }}catch(e){console.warn('Name search failed',e);}
     return null;
   }
   async function loadIncoming(){
@@ -12587,7 +12607,34 @@ setInterval(function(){
   }
   window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();renderFriends();};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
-  window.addFriendFromInput=async function(){const input=document.getElementById('friendNameInput');const tag=normalizeTag(input?.value||'');const found=await resolveTag(tag);if(!found){alert('No player found with that tag. Ask them to copy their tag from Profile or Friends.');return;}if(found.self){alert('That is your own tag.');return;}const req=requests();const fr=friends();if(fr.some(f=>f.tag===tag)){alert('Already friends.');return;}if(!req.some(r=>r.tag===tag))req.push({tag,name:found.name||tag,uid:found.uid||'',status:'pending_out',addedAt:Date.now()});saveRequests(req);try{if(typeof db!=='undefined'&&db&&found.uid&&_googleUser?.uid){await db.ref(`socialRequests/${found.uid}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid,ts:Date.now()});}}catch(e){}if(input)input.value='';renderFriends();};
+  window.addFriendFromInput=async function(){
+    const input=document.getElementById('friendNameInput');
+    const raw=(input?.value||'').trim();
+    if(!raw){alert('Please enter a player tag (e.g. LG-ABC123) or display name.');return;}
+    const fr=friends();const req=requests();
+    const found=await resolveByNameOrTag(raw);
+    if(!found){
+      const looksLikeTag=/^(LG-?)?[A-Z0-9]{6}$/i.test(raw.replace(/\s/g,''));
+      if(looksLikeTag)alert('No player found with tag "'+raw.toUpperCase()+'". Make sure they have opened the game at least once so their profile is registered.');
+      else alert('No player found with name "'+raw+'". Try using their player tag (LG-XXXXXX) from their Profile page for a reliable search.');
+      return;
+    }
+    if(found.self){alert('That is your own tag.');return;}
+    if(found.multipleResults){
+      const names=found.results.map(r=>r.name+' ('+r.tag+')').join('\n');
+      alert('Multiple players found with that name:\n'+names+'\n\nPlease use their exact player tag (LG-XXXXXX) to add the right one.');
+      return;
+    }
+    const tag=normalizeTag(found.tag);
+    if(fr.some(f=>f.tag===tag)){alert('Already friends with '+( found.name||tag)+'.');return;}
+    if(req.some(r=>r.tag===tag)){alert('Friend request already sent to '+(found.name||tag)+'.');return;}
+    req.push({tag,name:found.name||tag,uid:found.uid||'',status:'pending_out',addedAt:Date.now()});
+    saveRequests(req);
+    try{if(typeof db!=='undefined'&&db&&found.uid&&_googleUser?.uid){await db.ref(`socialRequests/${found.uid}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid,ts:Date.now()});}}catch(e){}
+    if(input)input.value='';
+    renderFriends();
+    alert('Friend request sent to '+(found.name||tag)+'!');
+  };
   window.acceptFriend=function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
   window.declineFriend=function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
   window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
