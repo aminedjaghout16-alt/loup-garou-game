@@ -12801,7 +12801,7 @@ setInterval(function(){
     _presenceRef.set({online:true,name:currentDisplayName(),ts:Date.now()})
       .then(()=>console.log('[presence] written ok'))
       .catch(e=>console.error('[presence] write failed:',e));
-    _presenceRef.onDisconnect().remove();
+    _presenceRef.onDisconnect().update({online:false,ts:Date.now()});
     // Refresh heartbeat every 60s so stale entries auto-clean
     setInterval(()=>{
       try{if(_presenceRef)_presenceRef.update({online:true,ts:Date.now()});}catch(e){}
@@ -12821,9 +12821,10 @@ setInterval(function(){
       const ref=db.ref('presence/'+presKey);
       _presenceListeners[normTag]=ref.on('value',snap=>{
         const val=snap.val();
-        const isOnline=val&&val.ts&&(Date.now()-val.ts<600000);
+        const isOnline=val&&val.online===true&&val.ts&&(Date.now()-val.ts<600000);
         const wasOnline=_friendPresenceCache[normTag];
         _friendPresenceCache[normTag]=isOnline||false;
+        console.log('[presence] update',f.name,'online:',isOnline,'val:',val);
         // Re-render friends list if status changed
         if(!!isOnline!==!!wasOnline&&typeof renderFriends==='function')renderFriends();
       });
@@ -12843,7 +12844,7 @@ setInterval(function(){
         const snap=await db.ref('presence/'+presKey).once('value');
         const val=snap.val();
         console.log('[presence] friend',f.name,'key',presKey,'val',val);
-        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.ts&&(Date.now()-val.ts<600000))||false;
+        _friendPresenceCache[normalizeTag(f.tag)]=(val&&val.online===true&&val.ts&&(Date.now()-val.ts<600000))||false;
       }catch(e){console.warn('[presence] load error for',f.tag,e);}
     }));
     _watchFriendPresence();
@@ -13021,7 +13022,7 @@ setInterval(function(){
     }
     setTimeout(()=>_tryPublish(0),500);
     // Clean up presence on page hide/unload
-    window.addEventListener('beforeunload',()=>{try{if(_presenceRef)_presenceRef.remove();}catch(e){}});
+    window.addEventListener('beforeunload',()=>{try{if(_presenceRef)_presenceRef.update({online:false,ts:Date.now()});}catch(e){}});
     document.addEventListener('visibilitychange',()=>{
       try{
         if(!_presenceRef)return;
