@@ -4764,7 +4764,7 @@ window.addEventListener('load', () => {
             <span class="wr-code-copied" id="lobbyCopied">✓ Copied</span>
           </div>
           <div class="wr-header-actions">
-            <button class="wr-hbtn" onclick="lobbyShare()">📤 Invite</button>
+            <button class="wr-hbtn" onclick="lobbyInviteFriends()" id="lobbyInviteBtn">🐺 Invite Friends</button>
             <span class="wr-player-pill" id="wrPlayerPill">1 / ?</span>
           </div>
         </div>
@@ -11179,6 +11179,60 @@ function lobbyShare() {
   const text = `Join my Loup-Garou game! 🐺\nRoom: ${roomCode}\nhttps://loup-garou-game-beta.vercel.app/`;
   if (navigator.share) navigator.share({title:'Join!', text});
   else { navigator.clipboard?.writeText(text); _showToast('Invite copied!'); }
+}
+
+function lobbyInviteFriends() {
+  // If no friends, fallback to share
+  const fr = (typeof friends === 'function') ? friends() : [];
+  if (!fr.length) { lobbyShare(); return; }
+  // Build or show the friend invite picker modal
+  let modal = document.getElementById('lobbyFriendPickerModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'lobbyFriendPickerModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:11500;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:#1a0a2e;border:1px solid rgba(212,160,23,.5);border-radius:14px;padding:1.4rem 1.5rem;min-width:280px;max-width:340px;width:90vw;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <span style="color:#e8c44a;font-size:1rem;font-weight:700;letter-spacing:.05em;">INVITE TO ROOM</span>
+          <button onclick="document.getElementById('lobbyFriendPickerModal').remove()" style="background:none;border:none;color:rgba(232,232,232,.5);font-size:1.3rem;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="lobbyFriendPickerList" style="display:flex;flex-direction:column;gap:.5rem;max-height:280px;overflow-y:auto;"></div>
+        <button onclick="lobbyShare();document.getElementById('lobbyFriendPickerModal').remove();" style="margin-top:1rem;width:100%;padding:.55rem;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.25);border-radius:8px;color:rgba(232,232,232,.55);font-family:inherit;font-size:.8rem;cursor:pointer;">📤 Share link instead</button>
+      </div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+    document.body.appendChild(modal);
+  }
+  // Render friends list
+  const list = document.getElementById('lobbyFriendPickerList');
+  const online = (typeof _friendPresenceCache !== 'undefined') ? _friendPresenceCache : {};
+  const fr2 = (typeof friends === 'function') ? friends() : [];
+  if (!fr2.length) {
+    list.innerHTML = '<div style="color:rgba(232,232,232,.4);font-size:.85rem;text-align:center;padding:.8rem;">No friends yet. Add them in the Friends panel!</div>';
+  } else {
+    list.innerHTML = fr2.map(f => {
+      const isOn = (typeof isFriendOnline === 'function') ? isFriendOnline(f.tag) : false;
+      return `<div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;padding:.6rem .75rem;background:rgba(26,10,46,.8);border:1px solid rgba(212,160,23,.15);border-radius:8px;">
+        <span style="width:9px;height:9px;border-radius:50%;background:${isOn?'#10b981':'rgba(232,232,232,.2)'};display:inline-block;${isOn?'box-shadow:0 0 8px rgba(16,185,129,.6)':''}"></span>
+        <div>
+          <div style="color:#e8c44a;font-weight:700;font-size:.88rem;">${(f.name||f.tag)}</div>
+          <div style="color:rgba(232,232,232,.4);font-size:.7rem;">${isOn?'Online':'Offline'}</div>
+        </div>
+        <button id="lpick_${f.tag.replace(/[^A-Z0-9]/g,'')}" onclick="lobbyInviteOneFriend('${f.tag}',this)" style="padding:.35rem .75rem;border-radius:6px;border:1px solid rgba(212,160,23,.35);background:rgba(212,160,23,.1);color:#d4a017;font-family:inherit;font-size:.78rem;cursor:pointer;">Invite</button>
+      </div>`;
+    }).join('');
+  }
+  modal.style.display = 'flex';
+}
+
+async function lobbyInviteOneFriend(tag, btn) {
+  if (typeof inviteFriend === 'function') {
+    btn.textContent = 'Sending…';
+    btn.disabled = true;
+    await inviteFriend(tag);
+    btn.textContent = 'Sent ✓';
+    setTimeout(() => { btn.textContent = 'Invite'; btn.disabled = false; }, 4000);
+  }
 }
 
 // Hook renderLobby into renderGame setup phase
