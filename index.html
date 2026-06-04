@@ -10486,6 +10486,15 @@ async function savePlayerStats(winner){
       return s;
     });
     console.log('✅ Stats saved');
+    // Mirror stats to publicProfiles so other players can see them
+    try {
+      const tag = typeof myTag === 'function' ? myTag() : null;
+      if (tag) {
+        const mirrorSnap = await statsRef.once('value');
+        const mirrorStats = mirrorSnap.val();
+        if (mirrorStats) await db.ref('publicProfiles/' + tag + '/stats').set(mirrorStats);
+      }
+    } catch(e2) { console.warn('Stats mirror failed', e2); }
   }catch(e){ console.warn('Stats save failed',e); }
 }
 
@@ -11176,16 +11185,15 @@ async function openLobbyProfile(p) {
   const popup = document.getElementById('lobbyPlayerProfile');
   if (!popup) return;
 
-  // Show popup immediately with avatar + name, load stats async
+  // Show popup immediately — actions show loading spinner until resolved
   popup.style.display = 'flex';
   _lppRenderBasic(p);
-  _lppRenderStats(null); // loading state
-  _lppRenderActions(p, null);
+  _lppRenderStats(null);
+  const actEl = document.getElementById('lppActions');
+  if (actEl) actEl.innerHTML = '<div style="text-align:center;color:rgba(232,232,232,.3);font-size:.8rem;padding:.4rem;">Loading...</div>';
 
-  if (typeof db === 'undefined' || !db) return;
-
-  try {
-    // Resolve friendTag: try player node first, then query publicProfiles by uid
+  if (typeof db !== 'undefined' && db) {
+    // Step 1: resolve friendTag from publicProfiles if not on player node
     if (!p.friendTag && p.uid) {
       try {
         const snap = await db.ref('publicProfiles').orderByChild('uid').equalTo(p.uid).limitToFirst(1).once('value');
@@ -11194,29 +11202,24 @@ async function openLobbyProfile(p) {
           if (val && val.tag) p = Object.assign({}, p, {friendTag: val.tag});
         });
         _lppPlayer = p;
-      } catch(e2) { console.warn('[lpp] could not resolve friendTag', e2); }
+      } catch(e) { console.warn('[lpp] friendTag lookup failed', e); }
     }
 
-    // Load stats and re-render with full data
-    if (p.uid) {
+    // Step 2: load stats from publicProfiles (public) using resolved friendTag
+    let stats = null;
+    const tagForStats = p.friendTag || null;
+    if (tagForStats) {
       try {
-        const snap = await db.ref('users/' + p.uid + '/stats').once('value');
-        const stats = snap.val();
-        _lppRenderBasic(p);
-        _lppRenderStats(stats);
-        _lppRenderActions(p, stats);
-      } catch(e2) {
-        console.warn('[lpp] stats fetch failed', e2);
-        _lppRenderBasic(p);
-        _lppRenderActions(p, null);
-      }
-    } else {
-      _lppRenderBasic(p);
-      _lppRenderActions(p, null);
+        const snap = await db.ref('publicProfiles/' + tagForStats + '/stats').once('value');
+        stats = snap.val();
+      } catch(e) { console.warn('[lpp] stats fetch failed', e); }
     }
-  } catch(e) {
-    // friendTag lookup failed — still render what we have
+
+    // Step 3: render everything with resolved data
     _lppRenderBasic(p);
+    _lppRenderStats(stats);
+    _lppRenderActions(p, stats);
+  } else {
     _lppRenderActions(p, null);
   }
 }
