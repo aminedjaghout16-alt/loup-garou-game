@@ -11311,12 +11311,17 @@ async function openLobbyProfile(p) {
       } catch(e) { console.warn('[lpp] stats fetch failed', e); }
     }
 
-    // Step 3: check if this specific player sent us a request
+    // Step 3: check if this specific player sent us a request (check both uid and tag keys)
     try {
       const _authUser = firebase.auth().currentUser;
       const normTagCheck = p.friendTag ? (typeof normalizeTag === 'function' ? normalizeTag(p.friendTag) : p.friendTag) : null;
-      if (_authUser && normTagCheck && typeof db !== 'undefined' && db) {
-        const reqSnap = await db.ref('socialRequests/' + _authUser.uid + '/' + normTagCheck).once('value');
+      const myT = (typeof myTag === 'function') ? myTag() : null;
+      if (_authUser && normTagCheck && myT && typeof db !== 'undefined' && db) {
+        const [snapUid, snapTag] = await Promise.all([
+          db.ref('socialRequests/' + _authUser.uid + '/' + normTagCheck).once('value'),
+          db.ref('socialRequests/' + myT + '/' + normTagCheck).once('value')
+        ]);
+        const reqSnap = snapUid.exists() ? snapUid : snapTag;
         if (reqSnap.exists()) {
           const val = reqSnap.val();
           const list = (typeof requests === 'function') ? requests() : [];
@@ -13158,9 +13163,13 @@ setInterval(function(){
     const _authUser=firebase.auth().currentUser;
     if(typeof db==='undefined'||!db||!_authUser?.uid)return;
     try{
-      // 1. Pull pending incoming friend requests
-      const snap=await db.ref('socialRequests/'+_authUser.uid).once('value');
-      const val=snap.val()||{};
+      // 1. Pull pending incoming friend requests — check both uid key and tag key (fallback for empty uid)
+      const myT=myTag();
+      const [snapUid, snapTag] = await Promise.all([
+        db.ref('socialRequests/'+_authUser.uid).once('value'),
+        db.ref('socialRequests/'+myT).once('value')
+      ]);
+      const val=Object.assign({}, snapTag.val()||{}, snapUid.val()||{});
       const list=requests();
       Object.values(val).forEach(r=>{
         if(r&&r.tag&&!list.some(x=>x.tag===r.tag&&x.status==='pending_in'))
@@ -13387,10 +13396,12 @@ setInterval(function(){
     req.push({tag,name:found.name||tag,uid:found.uid||'',status:'pending_out',addedAt:Date.now()});
     saveRequests(req);
     try{
-      if(typeof db!=='undefined'&&db&&found.uid){
+      if(typeof db!=='undefined'&&db){
         const _authUser=firebase.auth().currentUser;
         if(_authUser){
-          await db.ref('socialRequests/'+found.uid+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:_authUser.uid,ts:Date.now()});
+          // Use uid if available, fall back to tag as the recipient key
+          const recipientKey=found.uid||found.tag;
+          await db.ref('socialRequests/'+recipientKey+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:_authUser.uid,ts:Date.now()});
         }
       }
     }catch(e){console.warn('Could not send request',e);}
