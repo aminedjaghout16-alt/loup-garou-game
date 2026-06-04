@@ -11194,11 +11194,9 @@ async function openLobbyProfile(p) {
 
   if (typeof db !== 'undefined' && db) {
     // Step 1: resolve friendTag from publicProfiles if not on player node
-    console.log('[lpp] player data:', JSON.stringify(p));
     if (!p.friendTag && p.uid) {
       try {
         const snap = await db.ref('publicProfiles').orderByChild('uid').equalTo(p.uid).limitToFirst(1).once('value');
-        console.log('[lpp] publicProfiles query result:', JSON.stringify(snap.val()));
         snap.forEach(child => {
           const val = child.val();
           if (val && val.tag) p = Object.assign({}, p, {friendTag: val.tag});
@@ -11206,7 +11204,6 @@ async function openLobbyProfile(p) {
         _lppPlayer = p;
       } catch(e) { console.warn('[lpp] friendTag lookup failed', e); }
     }
-    console.log('[lpp] resolved friendTag:', p.friendTag);
 
     // Step 2: load stats from publicProfiles (public) using resolved friendTag
     let stats = null;
@@ -11242,20 +11239,31 @@ function _lppRenderBasic(p) {
   const nameEl = document.getElementById('lppName');
   if (nameEl) nameEl.textContent = p.name || 'Unknown';
 
-  // Friend status
+  // Status badge: friend + online indicator, host crown, guest tag
   const statusEl = document.getElementById('lppFriendStatus');
   if (statusEl) {
     const normTag = p.friendTag ? (typeof normalizeTag === 'function' ? normalizeTag(p.friendTag) : p.friendTag) : null;
     const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
     const isFr = normTag && fr.some(f => f.tag === normTag);
     const isOnline = (normTag && typeof window.isFriendOnline === 'function') ? window.isFriendOnline(normTag) : false;
+    const isHost = gameState?.leader === p.id;
+    const isGuest = !p.uid && !p.friendTag;
+
+    let badges = '';
+    if (isHost) badges += '<span style="color:#d4a017;margin-right:.4rem;">👑 Host</span>';
     if (isFr) {
-      statusEl.innerHTML = '<span style="color:#10b981;">● Friend</span>' + (isOnline ? ' <span style="color:rgba(232,232,232,.4);">· Online</span>' : '');
-    } else if (gameState?.leader === p.id) {
-      statusEl.innerHTML = '<span style="color:#d4a017;">👑 Host</span>';
+      badges += '<span style="color:#10b981;">● Friend</span>';
+      badges += isOnline
+        ? ' <span style="color:rgba(16,185,129,.6);font-size:.68rem;">· Online</span>'
+        : ' <span style="color:rgba(232,232,232,.3);font-size:.68rem;">· Offline</span>';
+    } else if (isGuest) {
+      badges += '<span style="color:rgba(232,232,232,.3);">Guest</span>';
+    } else if (normTag) {
+      badges += '<span style="color:rgba(232,232,232,.3);">Not friends yet</span>';
     } else {
-      statusEl.innerHTML = '<span style="color:rgba(232,232,232,.3);">In this room</span>';
+      badges += '<span style="color:rgba(232,232,232,.3);">In this room</span>';
     }
+    statusEl.innerHTML = badges;
   }
 }
 
@@ -11320,8 +11328,11 @@ function _lppRenderActions(p, stats) {
     } else if (hasPending) {
       html += `<button ${btnStyle('rgba(212,160,23,.05)','rgba(212,160,23,.2)','rgba(212,160,23,.5)')} disabled>⏳ Request Pending</button>`;
     } else {
-      html += `<button ${btnStyle('rgba(16,185,129,.08)','rgba(16,185,129,.3)','#10b981')} onclick="lppAddFriend('${normTag}','${(p.name||'').replace(/'/g,'&#39;')}','${p.uid||''}')">➕ Add Friend</button>`;
+      html += `<button ${btnStyle('rgba(16,185,129,.08)','rgba(16,185,129,.3)','#10b981')} onclick="lppAddFriend('${normTag}','${(p.name||'').replace(/'/g,"\'")}','${p.uid||''}')">➕ Add Friend</button>`;
     }
+  } else {
+    // Guest player — no tag to add
+    html += `<button ${btnStyle('rgba(255,255,255,.03)','rgba(255,255,255,.08)','rgba(232,232,232,.25)')} disabled>➕ Add Friend (guest account)</button>`;
   }
 
   // Host actions
