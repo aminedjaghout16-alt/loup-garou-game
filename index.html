@@ -13237,7 +13237,7 @@ setInterval(function(){
     const registry=loadJson(REGISTRY_KEY,{});registry[tag]={tag,name,uid:_googleUser?.uid||'',updatedAt:Date.now()};saveJson(REGISTRY_KEY,registry);
     try{
       if(typeof db!=='undefined'&&db){
-        const profileData={tag,name,name_lower:name.toLowerCase(),uid:_googleUser?.uid||'',updatedAt:Date.now()};
+        const _authNow=firebase.auth().currentUser;const profileData={tag,name,name_lower:name.toLowerCase(),uid:(_authNow?.uid||_googleUser?.uid||''),updatedAt:Date.now()};
         await db.ref('publicProfiles/'+tag).set(profileData);
         if(_googleUser?.uid){await db.ref('users/'+_googleUser.uid+'/social').update({friendTag:tag,displayName:name});}
         console.log('✅ Identity published:',name+'#'+tag.replace('LG-',''));
