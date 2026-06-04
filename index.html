@@ -11410,7 +11410,9 @@ function _lppRenderActions(p, stats) {
   const fr = (typeof window._lgFriends === 'function') ? window._lgFriends() : [];
   const isFr = normTag && fr.some(f => f.tag === normTag);
   const reqs = (typeof window._lgRequests === 'function') ? window._lgRequests() : [];
-  const hasPending = normTag && reqs.some(r => r.tag === normTag);
+  const pendingReq = normTag && reqs.find(r => r.tag === normTag);
+  const hasPendingOut = pendingReq && pendingReq.status === 'pending_out';
+  const hasPendingIn  = pendingReq && pendingReq.status === 'pending_in';
 
   let html = '';
 
@@ -11421,8 +11423,13 @@ function _lppRenderActions(p, stats) {
   if (normTag) {
     if (isFr) {
       html += `<button ${btnStyle('rgba(239,68,68,.08)','rgba(239,68,68,.3)','#ef4444')} onclick="lppRemoveFriend('${normTag}')">👋 Remove Friend</button>`;
-    } else if (hasPending) {
-      html += `<button ${btnStyle('rgba(212,160,23,.05)','rgba(212,160,23,.2)','rgba(212,160,23,.5)')} disabled>⏳ Request Pending</button>`;
+    } else if (hasPendingIn) {
+      // They sent us a request — show accept / decline inline
+      html += `<div style="font-size:.75rem;color:rgba(212,160,23,.7);text-align:center;margin-bottom:.35rem;">⚠️ Friend request from this player</div>`;
+      html += `<button ${btnStyle('rgba(16,185,129,.12)','rgba(16,185,129,.4)','#10b981')} onclick="lppAcceptFriend('${normTag}')">✅ Accept Friend Request</button>`;
+      html += `<button ${btnStyle('rgba(239,68,68,.08)','rgba(239,68,68,.3)','#ef4444')} style="margin-top:.4rem" onclick="lppDeclineFriend('${normTag}')">✕ Decline Friend Request</button>`;
+    } else if (hasPendingOut) {
+      html += `<button ${btnStyle('rgba(212,160,23,.05)','rgba(212,160,23,.2)','rgba(212,160,23,.5)')} disabled>⏳ Request Sent</button>`;
     } else {
       html += `<button ${btnStyle('rgba(16,185,129,.08)','rgba(16,185,129,.3)','#10b981')} onclick="lppAddFriend('${normTag}','${(p.name||'').replace(/'/g,"\'")}','${p.uid||''}')">➕ Add Friend</button>`;
     }
@@ -11466,6 +11473,18 @@ function lppAddFriend(tag, name, uid) {
 function lppRemoveFriend(tag) {
   if (typeof window.removeFriend === 'function') window.removeFriend(tag);
   _showToast('Friend removed');
+  if (_lppPlayer) _lppRenderActions(_lppPlayer, null);
+}
+
+function lppAcceptFriend(tag) {
+  if (typeof window.acceptFriend === 'function') window.acceptFriend(tag);
+  _showToast('Friend request accepted! 🎉');
+  if (_lppPlayer) { _lppRenderBasic(_lppPlayer); _lppRenderActions(_lppPlayer, null); }
+}
+
+function lppDeclineFriend(tag) {
+  if (typeof window.declineFriend === 'function') window.declineFriend(tag);
+  _showToast('Friend request declined');
   if (_lppPlayer) _lppRenderActions(_lppPlayer, null);
 }
 
