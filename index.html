@@ -13179,7 +13179,7 @@ setInterval(function(){
 
       // 2. Check if any of our pending_out requests were accepted by the other side
       //    We do this by checking socialAccepted/<myTag>/<theirTag>
-      const myT=myTag();
+      // myT already declared above — reuse it
       const accSnap=await db.ref('socialAccepted/'+myT).once('value');
       const accVal=accSnap.val()||{};
       if(Object.keys(accVal).length){
