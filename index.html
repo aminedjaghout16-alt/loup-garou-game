@@ -11311,7 +11311,10 @@ async function openLobbyProfile(p) {
       } catch(e) { console.warn('[lpp] stats fetch failed', e); }
     }
 
-    // Step 3: render everything with resolved data
+    // Step 3: sync incoming requests then render everything with resolved data
+    if (typeof loadIncoming === 'function') {
+      try { await loadIncoming(); } catch(e) {}
+    }
     _lppRenderBasic(p);
     _lppRenderStats(stats);
     _lppRenderActions(p, stats);
