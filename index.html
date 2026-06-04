@@ -13313,14 +13313,18 @@ setInterval(function(){
 
     const statsRef = db.ref('siteStats');
 
-    // Increment totalVisits once for this page load
-    statsRef.child('totalVisits').transaction(cur => (cur||0) + 1);
+    // Increment totalVisits atomically using ServerValue.increment (no transaction race)
+    statsRef.child('totalVisits')
+      .set(firebase.database.ServerValue.increment(1))
+      .then(()=>console.log('[siteStats] visit counted'))
+      .catch(e=>console.warn('[siteStats] increment failed:',e));
 
-    // Real-time listener — updates main-menu counters whenever values change
+    // Real-time listener — updates main-menu counter whenever value changes
     const STALE_MS = 2 * 60 * 1000;
     statsRef.child('totalVisits').on('value', snap=>{
+      const v = snap.val();
       const el = document.getElementById('mnTotalVisits');
-      if(el) el.textContent = _fmtNum(snap.val()||0);
+      if(el && v !== null) el.textContent = _fmtNum(v);
     });
 
     // Online count: watch the presence node (same data used in Public Rooms)
