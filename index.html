@@ -11185,27 +11185,39 @@ async function openLobbyProfile(p) {
   if (typeof db === 'undefined' || !db) return;
 
   try {
-    // Resolve friendTag: try player node first, then look up via uid in publicProfiles
+    // Resolve friendTag: try player node first, then query publicProfiles by uid
     if (!p.friendTag && p.uid) {
-      const social = await db.ref('users/' + p.uid + '/social').once('value');
-      const s = social.val();
-      if (s && s.friendTag) p = Object.assign({}, p, {friendTag: s.friendTag});
-      _lppPlayer = p;
+      try {
+        const snap = await db.ref('publicProfiles').orderByChild('uid').equalTo(p.uid).limitToFirst(1).once('value');
+        snap.forEach(child => {
+          const val = child.val();
+          if (val && val.tag) p = Object.assign({}, p, {friendTag: val.tag});
+        });
+        _lppPlayer = p;
+      } catch(e2) { console.warn('[lpp] could not resolve friendTag', e2); }
     }
 
     // Load stats and re-render with full data
     if (p.uid) {
-      const snap = await db.ref('users/' + p.uid + '/stats').once('value');
-      const stats = snap.val();
-      _lppRenderBasic(p); // re-render now we may have friendTag
-      _lppRenderStats(stats);
-      _lppRenderActions(p, stats);
+      try {
+        const snap = await db.ref('users/' + p.uid + '/stats').once('value');
+        const stats = snap.val();
+        _lppRenderBasic(p);
+        _lppRenderStats(stats);
+        _lppRenderActions(p, stats);
+      } catch(e2) {
+        console.warn('[lpp] stats fetch failed', e2);
+        _lppRenderBasic(p);
+        _lppRenderActions(p, null);
+      }
     } else {
       _lppRenderBasic(p);
       _lppRenderActions(p, null);
     }
   } catch(e) {
-    console.warn('[lpp] error loading profile', e);
+    // friendTag lookup failed — still render what we have
+    _lppRenderBasic(p);
+    _lppRenderActions(p, null);
   }
 }
 
