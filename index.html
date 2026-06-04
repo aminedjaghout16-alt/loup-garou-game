@@ -4405,25 +4405,6 @@ window.addEventListener('load', () => {
 
 </script>
 
-<script>
-// Stubs so menu buttons work even if clicked before the main IIFE loads
-(function(){
-  var _queue = {};
-  function stub(name){
-    window[name] = function(){
-      _queue[name] = arguments;
-      var interval = setInterval(function(){
-        if(typeof window['_real_'+name]==='function'){
-          clearInterval(interval);
-          window['_real_'+name].apply(null, _queue[name]);
-          delete _queue[name];
-        }
-      }, 50);
-    };
-  }
-  stub('openFriendsModal');
-})();
-</script>
 </head>
 <body>
 
@@ -13388,7 +13369,7 @@ setInterval(function(){
   window.normalizeTag=normalizeTag;
   Object.defineProperty(window,"_friendPresenceCache",{get:()=>_friendPresenceCache,configurable:true});
 
-  window._real_openFriendsModal=window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();setTimeout(async()=>{await _loadFriendPresence();renderFriends();},2000);};
+  window.openFriendsModal=async function(){const m=document.getElementById('friendsModal');if(m)m.classList.remove('hidden');await publishIdentity();await loadIncoming();await _loadFriendPresence();renderFriends();setTimeout(async()=>{await _loadFriendPresence();renderFriends();},2000);};
   window.closeFriendsModal=function(){const m=document.getElementById('friendsModal');if(m)m.classList.add('hidden');};
   window.addFriendFromInput=async function(){
     const inputEl=document.getElementById('friendNameInput');
