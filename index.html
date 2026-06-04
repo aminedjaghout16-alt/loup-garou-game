@@ -384,6 +384,29 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .profile-btn:hover{background:rgba(212,160,23,.1);border-color:var(--moon)}
 
 /* ── EMAIL LOGIN ── */
+
+/* feedback */
+#feedbackModal{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:305;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+#feedbackModal.hidden{display:none}
+.feedback-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.6rem;width:100%;max-width:460px;box-shadow:0 0 42px rgba(212,160,23,.22);position:relative}
+.feedback-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.85rem;text-align:center;margin-bottom:.35rem}
+.feedback-sub{text-align:center;color:rgba(232,232,232,.72);font-size:.86rem;line-height:1.45;margin-bottom:1rem}
+.feedback-field{margin-bottom:.9rem;text-align:left}
+.feedback-field label{display:block;margin-bottom:.35rem;color:var(--moon);font-size:.82rem;font-weight:700}
+.feedback-field select,.feedback-field input,.feedback-field textarea{width:100%;padding:.72rem;background:var(--purple);border:1px solid rgba(212,160,23,.55);color:var(--ghost);border-radius:6px;font-family:inherit;font-size:.94rem;resize:vertical}
+.feedback-field textarea{min-height:130px;line-height:1.4}
+.feedback-field select:focus,.feedback-field input:focus,.feedback-field textarea:focus{outline:none;border-color:var(--moon-pale);box-shadow:0 0 10px rgba(212,160,23,.22)}
+.feedback-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.feedback-actions{display:flex;gap:.7rem;margin-top:1rem}
+.feedback-submit,.feedback-secondary{flex:1;padding:.75rem;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.92rem;transition:.2s}
+.feedback-submit{background:linear-gradient(135deg,var(--blood-glow),var(--blood));border:none;color:#fff}
+.feedback-submit:hover{box-shadow:0 0 18px rgba(185,28,28,.45)}
+.feedback-submit:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.feedback-secondary{background:transparent;border:1px solid rgba(212,160,23,.38);color:var(--moon)}
+.feedback-secondary:hover{background:rgba(212,160,23,.1);border-color:var(--moon)}
+.feedback-status{min-height:1.2rem;margin-top:.8rem;text-align:center;font-size:.82rem;color:rgba(232,232,232,.72)}
+.feedback-status.ok{color:#10b981}.feedback-status.err{color:#f87171}
+@media(max-width:520px){.feedback-row{grid-template-columns:1fr}.feedback-actions{flex-direction:column}.feedback-box{padding:1.35rem}}
 .or-divider{display:flex;align-items:center;gap:.7rem;margin:.9rem 0;color:var(--ghost);opacity:.4;font-size:.82rem}
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--moon);opacity:.25}
 .email-login-wrap{text-align:left}
@@ -4469,7 +4492,11 @@ window.addEventListener('load', () => {
       <div class="mn-label">Daily Spin</div>
       <div class="mn-desc">Spin for rewards</div>
     </div>
-  </div>
+     <div class="mn-btn" onclick="openFeedbackModal()">
+      <div class="mn-icon">?</div>
+      <div class="mn-label">Feedback</div>
+      <div class="mn-desc">Bugs & ideas</div>
+    </div> </div>
 
   <!-- Social Bar -->
   <div class="mn-social">
@@ -4496,6 +4523,40 @@ window.addEventListener('load', () => {
 <!-- ══════════════════════════════════════
      ROOM CREATE MODAL
 ════════════════════════════════════════ -->
+
+<!-- FEEDBACK MODAL -->
+<div id="feedbackModal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+  <div class="feedback-box">
+    <button class="profile-close" onclick="closeFeedbackModal()">x</button>
+    <h2 id="feedbackTitle">Feedback</h2>
+    <div class="feedback-sub">Send bugs, ideas, or general notes straight to the team.</div>
+    <form id="feedbackForm" onsubmit="submitFeedback(event)">
+      <div class="feedback-row">
+        <div class="feedback-field">
+          <label for="feedbackType">Type</label>
+          <select id="feedbackType" required>
+            <option value="Bug report">Bug report</option>
+            <option value="Suggestion">Suggestion</option>
+            <option value="General feedback">General feedback</option>
+          </select>
+        </div>
+        <div class="feedback-field">
+          <label for="feedbackContact">Contact</label>
+          <input id="feedbackContact" maxlength="80" placeholder="Discord or email (optional)" autocomplete="off">
+        </div>
+      </div>
+      <div class="feedback-field">
+        <label for="feedbackMessage">Message</label>
+        <textarea id="feedbackMessage" maxlength="1500" required placeholder="What happened? What would you like to see?"></textarea>
+      </div>
+      <div class="feedback-actions">
+        <button class="feedback-secondary" type="button" onclick="closeFeedbackModal()">Cancel</button>
+        <button class="feedback-submit" id="feedbackSubmitBtn" type="submit">Send Feedback</button>
+      </div>
+      <div id="feedbackStatus" class="feedback-status"></div>
+    </form>
+  </div>
+</div>
 <div id="roomCreateModal" class="hidden">
   <div class="rc-box">
     <button class="profile-close" onclick="mnCloseCreate()">✕</button>
@@ -11553,6 +11614,114 @@ window.addEventListener('load',()=>{
 });
 </script>
 <!-- ── RECONNECT BANNER (shown to OTHER players while someone is disconnected) ── -->
+
+<script>
+// Feedback submissions. Paste your Discord webhook URL below to receive and manage submissions in a Discord channel.
+const FEEDBACK_DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512111388968091648/iPeCf5dOyTY9kEujLePjUrKZS_p95RiUZkBethdIxel0eqVANn_Xsv4rxobSx57tKZA_';
+const FEEDBACK_OUTBOX_KEY = 'lg_feedback_outbox_v1';
+
+function openFeedbackModal(){
+  const modal = document.getElementById('feedbackModal');
+  const status = document.getElementById('feedbackStatus');
+  if(status){ status.textContent=''; status.className='feedback-status'; }
+  modal?.classList.remove('hidden');
+  setTimeout(()=>document.getElementById('feedbackMessage')?.focus(), 50);
+}
+function closeFeedbackModal(){
+  document.getElementById('feedbackModal')?.classList.add('hidden');
+}
+function _feedbackSetStatus(msg, kind){
+  const status = document.getElementById('feedbackStatus');
+  if(!status) return;
+  status.textContent = msg || '';
+  status.className = 'feedback-status' + (kind ? ' ' + kind : '');
+}
+function _feedbackContext(){
+  let user = null;
+  try { user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null; } catch(e) {}
+  return {
+    playerName: (typeof myName !== 'undefined' && myName) || user?.displayName || document.getElementById('mnNameInput')?.value?.trim() || 'Guest',
+    playerId: (typeof myId !== 'undefined' && myId) || user?.uid || 'guest',
+    email: user?.email || '',
+    roomCode: (typeof roomCode !== 'undefined' && roomCode) || '',
+    status: (typeof gameState !== 'undefined' && gameState?.status) || '',
+    url: location.href,
+    userAgent: navigator.userAgent,
+    sentAt: new Date().toISOString()
+  };
+}
+function _saveFeedbackLocally(entry){
+  try{
+    const old = JSON.parse(localStorage.getItem(FEEDBACK_OUTBOX_KEY) || '[]');
+    old.unshift(entry);
+    localStorage.setItem(FEEDBACK_OUTBOX_KEY, JSON.stringify(old.slice(0, 50)));
+  }catch(e){}
+}
+async function submitFeedback(event){
+  event?.preventDefault();
+  const type = document.getElementById('feedbackType')?.value || 'General feedback';
+  const contact = document.getElementById('feedbackContact')?.value.trim() || '';
+  const message = document.getElementById('feedbackMessage')?.value.trim() || '';
+  const btn = document.getElementById('feedbackSubmitBtn');
+  if(!message){ _feedbackSetStatus('Write a message first.', 'err'); return; }
+
+  const context = _feedbackContext();
+  const entry = { type, contact, message, context };
+  _saveFeedbackLocally(entry);
+
+  if(!FEEDBACK_DISCORD_WEBHOOK_URL || FEEDBACK_DISCORD_WEBHOOK_URL.includes('PASTE_YOUR_DISCORD_WEBHOOK_URL_HERE')){
+    _feedbackSetStatus('Saved locally. Add your Discord webhook URL in FEEDBACK_DISCORD_WEBHOOK_URL to receive submissions.', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  _feedbackSetStatus('Sending feedback...', '');
+  try{
+    const payload = {
+      username: 'Loup-Garou Feedback',
+      allowed_mentions: { parse: [] },
+      embeds: [{
+        title: type,
+        color: type === 'Bug report' ? 15158332 : type === 'Suggestion' ? 15844367 : 5763719,
+        description: message.slice(0, 1500),
+        fields: [
+          { name: 'Player', value: `${context.playerName} (${context.playerId})`.slice(0, 1024), inline: false },
+          { name: 'Contact', value: contact || context.email || 'Not provided', inline: true },
+          { name: 'Room', value: context.roomCode || 'Not in room', inline: true },
+          { name: 'Game status', value: context.status || 'Unknown', inline: true },
+          { name: 'Page', value: context.url.slice(0, 1024), inline: false }
+        ],
+        footer: { text: 'Loup-Garou feedback' },
+        timestamp: context.sentAt
+      }]
+    };
+    const res = await fetch(FEEDBACK_DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('Discord webhook returned ' + res.status);
+    document.getElementById('feedbackForm')?.reset();
+    _feedbackSetStatus('Thanks. Feedback sent!', 'ok');
+    if(typeof _showToast === 'function') _showToast('Feedback sent. Thank you!');
+    setTimeout(closeFeedbackModal, 900);
+  }catch(err){
+    console.error('[Feedback] submit failed:', err);
+    _feedbackSetStatus('Could not send right now. It was saved locally and can be retried later.', 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Send Feedback';
+  }
+}
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !document.getElementById('feedbackModal')?.classList.contains('hidden')) closeFeedbackModal();
+});
+document.addEventListener('click', e => {
+  const modal = document.getElementById('feedbackModal');
+  if(e.target === modal) closeFeedbackModal();
+});
+</script>
 <div id="reconnectBanner"></div>
 
 <!-- ── RECONNECT MODAL (shown to THE DISCONNECTED PLAYER while trying to reconnect) ── -->
