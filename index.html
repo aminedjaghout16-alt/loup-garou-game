@@ -11456,11 +11456,12 @@ function lppAddFriend(tag, name, uid) {
   reqs.push({tag: normTag, name: name || normTag, uid: uid || '', status: 'pending_out', addedAt: Date.now()});
   if (typeof saveRequests === 'function') saveRequests(reqs);
   try {
-    if (typeof db !== 'undefined' && db && uid && typeof _googleUser !== 'undefined' && _googleUser?.uid) {
+    const _au11=firebase.auth().currentUser;
+    if (typeof db !== 'undefined' && db && uid && _au11?.uid) {
       db.ref('socialRequests/' + uid + '/' + (typeof myTag === 'function' ? myTag() : '')).set({
         tag: typeof myTag === 'function' ? myTag() : '',
         name: typeof currentDisplayName === 'function' ? currentDisplayName() : (myName || ''),
-        uid: _googleUser.uid,
+        uid: _au11.uid,
         ts: Date.now()
       });
     }
@@ -13139,10 +13140,11 @@ setInterval(function(){
   }
 
   async function loadIncoming(){
-    if(typeof db==='undefined'||!db||!_googleUser?.uid)return;
+    const _authUser=firebase.auth().currentUser;
+    if(typeof db==='undefined'||!db||!_authUser?.uid)return;
     try{
       // 1. Pull pending incoming friend requests
-      const snap=await db.ref('socialRequests/'+_googleUser.uid).once('value');
+      const snap=await db.ref('socialRequests/'+_authUser.uid).once('value');
       const val=snap.val()||{};
       const list=requests();
       Object.values(val).forEach(r=>{
@@ -13370,16 +13372,19 @@ setInterval(function(){
     req.push({tag,name:found.name||tag,uid:found.uid||'',status:'pending_out',addedAt:Date.now()});
     saveRequests(req);
     try{
-      if(typeof db!=='undefined'&&db&&found.uid&&_googleUser?.uid){
-        await db.ref('socialRequests/'+found.uid+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid,ts:Date.now()});
+      if(typeof db!=='undefined'&&db&&found.uid){
+        const _authUser=firebase.auth().currentUser;
+        if(_authUser){
+          await db.ref('socialRequests/'+found.uid+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:_authUser.uid,ts:Date.now()});
+        }
       }
     }catch(e){console.warn('Could not send request',e);}
     if(inputEl)inputEl.value='';
     renderFriends();
     alert('Friend request sent to '+displayNameTag(found.name,found.tag)+'!');
   };
-  window.acceptFriend=async function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid){await db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();await db.ref(`socialAccepted/${tag}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_googleUser.uid||'',ts:Date.now()});}}catch(e){console.warn('[acceptFriend] firebase error',e);}renderFriends();};
-  window.declineFriend=function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{if(typeof db!=='undefined'&&db&&_googleUser?.uid)db.ref(`socialRequests/${_googleUser.uid}/${tag}`).remove();}catch(e){}renderFriends();};
+  window.acceptFriend=async function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{const _au=firebase.auth().currentUser;if(typeof db!=='undefined'&&db&&_au?.uid){await db.ref(`socialRequests/${_au.uid}/${tag}`).remove();await db.ref(`socialAccepted/${tag}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_au.uid||'',ts:Date.now()});}}catch(e){console.warn('[acceptFriend] firebase error',e);}renderFriends();};
+  window.declineFriend=async function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{const _au=firebase.auth().currentUser;if(typeof db!=='undefined'&&db&&_au?.uid)await db.ref(`socialRequests/${_au.uid}/${tag}`).remove();}catch(e){}renderFriends();};
   window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
   // ─── GAME INVITE SYSTEM ─────────────────────────────────────────────────
   let _invitePopupTimer=null;
