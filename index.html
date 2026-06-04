@@ -4477,7 +4477,7 @@ window.addEventListener('load', () => {
       <div class="mn-label">Profile</div>
       <div class="mn-desc">Stats & history</div>
     </div>
-    <div class="mn-btn" onclick="openFriendsModal()">
+    <div class="mn-btn" onclick="typeof openFriendsModal==='function' ? openFriendsModal() : null">
       <div class="mn-icon">🤝</div>
       <div class="mn-label">Friends</div>
       <div class="mn-desc">Online & invites</div>
