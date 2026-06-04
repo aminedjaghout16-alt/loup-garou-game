@@ -11312,9 +11312,7 @@ async function openLobbyProfile(p) {
     }
 
     // Step 3: sync incoming requests then render everything with resolved data
-    if (typeof loadIncoming === 'function') {
-      try { await loadIncoming(); } catch(e) {}
-    }
+    try { if (typeof window.loadIncoming === 'function') await window.loadIncoming(); } catch(e) {}
     _lppRenderBasic(p);
     _lppRenderStats(stats);
     _lppRenderActions(p, stats);
@@ -13142,7 +13140,7 @@ setInterval(function(){
     }catch(e){console.warn('[search] Firebase error:',e);return null;}
   }
 
-  async function loadIncoming(){
+  window.loadIncoming = async function loadIncoming(){
     const _authUser=firebase.auth().currentUser;
     if(typeof db==='undefined'||!db||!_authUser?.uid)return;
     try{
