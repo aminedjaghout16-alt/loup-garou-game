@@ -11311,8 +11311,22 @@ async function openLobbyProfile(p) {
       } catch(e) { console.warn('[lpp] stats fetch failed', e); }
     }
 
-    // Step 3: sync incoming requests then render everything with resolved data
-    try { if (typeof window.loadIncoming === 'function') await window.loadIncoming(); } catch(e) {}
+    // Step 3: check if this specific player sent us a request
+    try {
+      const _authUser = firebase.auth().currentUser;
+      const normTagCheck = p.friendTag ? (typeof normalizeTag === 'function' ? normalizeTag(p.friendTag) : p.friendTag) : null;
+      if (_authUser && normTagCheck && typeof db !== 'undefined' && db) {
+        const reqSnap = await db.ref('socialRequests/' + _authUser.uid + '/' + normTagCheck).once('value');
+        if (reqSnap.exists()) {
+          const val = reqSnap.val();
+          const list = (typeof requests === 'function') ? requests() : [];
+          if (!list.some(x => x.tag === normTagCheck)) {
+            list.push({tag: normTagCheck, name: val.name || normTagCheck, uid: val.uid || '', status: 'pending_in', addedAt: val.ts || Date.now()});
+            if (typeof saveRequests === 'function') saveRequests(list);
+          }
+        }
+      }
+    } catch(e) {}
     _lppRenderBasic(p);
     _lppRenderStats(stats);
     _lppRenderActions(p, stats);
