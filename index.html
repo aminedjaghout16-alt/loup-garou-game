@@ -11477,13 +11477,19 @@ function lppAddFriend(tag, name, uid) {
   if (typeof saveRequests === 'function') saveRequests(reqs);
   try {
     const _au11=firebase.auth().currentUser;
-    if (typeof db !== 'undefined' && db && uid && _au11?.uid) {
-      db.ref('socialRequests/' + uid + '/' + (typeof myTag === 'function' ? myTag() : '')).set({
+    if (typeof db !== 'undefined' && db && _au11?.uid) {
+      const payload = {
         tag: typeof myTag === 'function' ? myTag() : '',
         name: typeof currentDisplayName === 'function' ? currentDisplayName() : (myName || ''),
         uid: _au11.uid,
         ts: Date.now()
-      });
+      };
+      const myT11 = typeof myTag === 'function' ? myTag() : '';
+      // Write by uid if available, always also write by tag as fallback so recipient finds it
+      const writes = [];
+      if (uid) writes.push(db.ref('socialRequests/' + uid + '/' + myT11).set(payload));
+      if (normTag) writes.push(db.ref('socialRequests/' + normTag + '/' + myT11).set(payload));
+      Promise.all(writes).catch(e => console.warn('[lppAddFriend] firebase error', e));
     }
   } catch(e) {}
   _showToast('Friend request sent to ' + (name || tag) + '!');
