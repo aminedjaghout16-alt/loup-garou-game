@@ -11194,9 +11194,11 @@ async function openLobbyProfile(p) {
 
   if (typeof db !== 'undefined' && db) {
     // Step 1: resolve friendTag from publicProfiles if not on player node
+    console.log('[lpp] player data:', JSON.stringify(p));
     if (!p.friendTag && p.uid) {
       try {
         const snap = await db.ref('publicProfiles').orderByChild('uid').equalTo(p.uid).limitToFirst(1).once('value');
+        console.log('[lpp] publicProfiles query result:', JSON.stringify(snap.val()));
         snap.forEach(child => {
           const val = child.val();
           if (val && val.tag) p = Object.assign({}, p, {friendTag: val.tag});
@@ -11204,6 +11206,7 @@ async function openLobbyProfile(p) {
         _lppPlayer = p;
       } catch(e) { console.warn('[lpp] friendTag lookup failed', e); }
     }
+    console.log('[lpp] resolved friendTag:', p.friendTag);
 
     // Step 2: load stats from publicProfiles (public) using resolved friendTag
     let stats = null;
