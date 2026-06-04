@@ -4394,6 +4394,16 @@ window.addEventListener('load', () => {
   <div class="mn-title">Loup-Garou</div>
   <div class="mn-sub">ONLINE · MULTIPLAYER</div>
 
+  <!-- Live stats bar -->
+  <div id="mnStatsBar" style="display:flex;align-items:center;justify-content:center;gap:1.2rem;margin-bottom:1rem;font-size:.72rem;color:rgba(232,232,232,.45);letter-spacing:.07em;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:.35rem">
+      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 5px #10b981;animation:prOnlinePulse 2s ease-in-out infinite;flex-shrink:0"></span>
+      <span id="mnOnlineCount">…</span> online now
+    </span>
+    <span style="opacity:.3">·</span>
+    <span>👥 <span id="mnTotalVisits">…</span> total visits</span>
+  </div>
+
   <!-- User bar -->
   <div class="mn-userbar">
     <div class="mn-avatar" id="mnAvatar">🐺</div>
@@ -13292,11 +13302,53 @@ setInterval(function(){
     console.log('[invites] listening at gameInvites/'+myPresKey);
   }
   window.renderFriends=function renderFriends(){const el=document.getElementById('friendsList');if(!el)return;updateTagDisplays();const fr=friends();const req=requests();const online=playersOnline();let html='';const pendingIn=req.filter(r=>r.status==='pending_in');const pendingOut=req.filter(r=>r.status==='pending_out');if(pendingIn.length)html+='<div class="profile-history-title">Requests to accept</div>'+pendingIn.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">${esc(displayNameTag(r.name,r.tag))}</div></div><button class="friend-action" onclick="acceptFriend('${r.tag}')">Accept</button><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Decline</button></div>`).join('');if(pendingOut.length)html+='<div class="profile-history-title">Sent requests</div>'+pendingOut.map(r=>`<div class="friend-row"><span class="friend-dot"></span><div><div class="friend-name">${esc(r.name)}</div><div class="friend-state">Pending · ${esc(r.tag)}</div></div><button class="friend-action remove" onclick="declineFriend('${r.tag}')">Cancel</button></div>`).join('');if(fr.length)html+='<div class="profile-history-title">Friends</div>'+fr.map(f=>{const on=isFriendOnline(f.tag);return `<div class="friend-row ${on?'online':''}"><span class="friend-dot"></span><div><div class="friend-name">${esc(f.name)}</div><div class="friend-state">${on?'Online':'Offline'} · ${esc(displayNameTag(f.name,f.tag))}</div></div><button class="friend-action" onclick="inviteFriend('${f.tag}')" ${!(typeof roomCode!=='undefined'&&roomCode)?'disabled title="Join a room first"':''}>Invite</button><button class="friend-action remove" onclick="removeFriend('${f.tag}')">Remove</button></div>`;}).join('');if(!html)html='<div class="profile-signin-note">Add friends by player tag. They must accept before appearing as friends.</div>';el.innerHTML=html;}
+  // ─── SITE STATS ─────────────────────────────────────────────────────────────
+  // Increments totalVisits once per page load (using a Firebase transaction so
+  // concurrent hits don't collide). Also listens to both counters in real-time
+  // so the main-menu display updates instantly for everyone.
+  let _siteStatsInited = false;
+  function _initSiteStats(){
+    if(_siteStatsInited || typeof db==='undefined' || !db) return;
+    _siteStatsInited = true;
+
+    const statsRef = db.ref('siteStats');
+
+    // Increment totalVisits once for this page load
+    statsRef.child('totalVisits').transaction(cur => (cur||0) + 1);
+
+    // Real-time listener — updates main-menu counters whenever values change
+    const STALE_MS = 2 * 60 * 1000;
+    statsRef.child('totalVisits').on('value', snap=>{
+      const el = document.getElementById('mnTotalVisits');
+      if(el) el.textContent = _fmtNum(snap.val()||0);
+    });
+
+    // Online count: watch the presence node (same data used in Public Rooms)
+    db.ref('presence').on('value', snap=>{
+      let count = 0;
+      const now = Date.now();
+      snap.forEach(c=>{ const v=c.val(); if(v&&v.online&&(now-(v.ts||0))<STALE_MS) count++; });
+      const el = document.getElementById('mnOnlineCount');
+      if(el) el.textContent = count;
+    });
+  }
+
+  function _fmtNum(n){
+    if(n >= 1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'')+'M';
+    if(n >= 1000)    return (n/1000).toFixed(1).replace(/\.0$/,'')+'K';
+    return String(n);
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
     localProfile();
     // Retry publishIdentity + presence until Firebase db is actually ready
     function _tryPublish(attempts){
-      if(typeof db!=='undefined'&&db){publishIdentity();_startPresence();_listenForInvites();if(typeof window._watchFriendPresence==='function')window._watchFriendPresence();return;}
+      if(typeof db!=='undefined'&&db){
+        publishIdentity();_startPresence();_listenForInvites();
+        if(typeof window._watchFriendPresence==='function')window._watchFriendPresence();
+        _initSiteStats();
+        return;
+      }
       if(attempts>60)return; // give up after ~6s
       setTimeout(()=>_tryPublish(attempts+1),100);
     }
