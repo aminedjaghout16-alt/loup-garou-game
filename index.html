@@ -11653,6 +11653,89 @@ window.addEventListener('load',()=>{
 const FEEDBACK_DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512111388968091648/iPeCf5dOyTY9kEujLePjUrKZS_p95RiUZkBethdIxel0eqVANn_Xsv4rxobSx57tKZA_';
 const FEEDBACK_OUTBOX_KEY = 'lg_feedback_outbox_v1';
 
+// ── Discord Activity Tracker ─────────────────────────────────────────────
+const _TRACKER_WEBHOOK = FEEDBACK_DISCORD_WEBHOOK_URL;
+
+function _getTrafficSource() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const utmSource   = params.get('utm_source');
+    const utmMedium   = params.get('utm_medium');
+    const utmCampaign = params.get('utm_campaign');
+    if (utmSource) {
+      let label = `📢 **UTM:** ${utmSource}`;
+      if (utmMedium)   label += ` / ${utmMedium}`;
+      if (utmCampaign) label += ` / ${utmCampaign}`;
+      return label;
+    }
+    const ref = document.referrer;
+    if (!ref) return '🔗 **Direct** (typed URL or bookmark)';
+    if (ref.includes('google.'))  return `🔍 **Google Search**`;
+    if (ref.includes('discord.')) return `💬 **Discord**`;
+    if (ref.includes('reddit.'))  return `🟠 **Reddit**`;
+    if (ref.includes('twitter.') || ref.includes('x.com')) return `🐦 **Twitter / X**`;
+    if (ref.includes('facebook.')) return `📘 **Facebook**`;
+    if (ref.includes('youtube.')) return `▶️ **YouTube**`;
+    return `🌐 **Referrer:** ${ref}`;
+  } catch(e) { return '❓ Unknown'; }
+}
+
+function _sendTrackerEvent(embeds) {
+  if (!_TRACKER_WEBHOOK || _TRACKER_WEBHOOK.includes('PASTE_YOUR')) return;
+  fetch(_TRACKER_WEBHOOK, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ embeds })
+  }).catch(() => {});
+}
+
+// Track page visit + traffic source (once per session)
+(function _trackVisit() {
+  try {
+    if (sessionStorage.getItem('_lg_visit_tracked')) return;
+    sessionStorage.setItem('_lg_visit_tracked', '1');
+    const source = _getTrafficSource();
+    _sendTrackerEvent([{
+      title: '👀 New Visitor',
+      color: 0x7c3aed,
+      fields: [
+        { name: 'Source',    value: source,                          inline: false },
+        { name: 'Page',      value: window.location.pathname || '/', inline: true  },
+        { name: 'Time',      value: new Date().toUTCString(),        inline: true  },
+        { name: 'Language',  value: navigator.language || '?',       inline: true  },
+        { name: 'Device',    value: /Mobi|Android/i.test(navigator.userAgent) ? '📱 Mobile' : '🖥️ Desktop', inline: true }
+      ]
+    }]);
+  } catch(e) {}
+})();
+
+// Hook into doStartGame to track game starts
+const _origDoStartGameTracker = doStartGame;
+doStartGame = function() {
+  try {
+    const players = Object.values(gameState?.players || {}).filter(p => !p.disconnected);
+    const playerCount = players.length;
+    const isPublic = gameState?.isPublic || cfg?.isPublic || false;
+    const roomName = gameState?.roomName || cfg?.roomName || 'Game Room';
+    _sendTrackerEvent([{
+      title: '🎮 Game Started!',
+      color: 0x10b981,
+      fields: [
+        { name: 'Room',         value: `\`${roomCode}\``,                             inline: true  },
+        { name: 'Name',         value: roomName,                                      inline: true  },
+        { name: 'Host',         value: myName || '?',                                 inline: true  },
+        { name: 'Players',      value: `${playerCount}`,                              inline: true  },
+        { name: 'Mode',         value: isPublic ? '🌍 Public' : '🔒 Private',        inline: true  },
+        { name: 'Source',       value: _getTrafficSource(),                           inline: false },
+        { name: 'Time',         value: new Date().toUTCString(),                      inline: false }
+      ]
+    }]);
+  } catch(e) {}
+  _origDoStartGameTracker();
+};
+// ─────────────────────────────────────────────────────────────────────────
+
+
 function openFeedbackModal(){
   const modal = document.getElementById('feedbackModal');
   const status = document.getElementById('feedbackStatus');
