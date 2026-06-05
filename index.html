@@ -11732,8 +11732,124 @@ doStartGame = function() {
       ]
     }]);
   } catch(e) {}
+  if (typeof window._trackDailyGame === 'function') window._trackDailyGame(playerCount);
   _origDoStartGameTracker();
 };
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── Daily Summary + JS Error Tracker ─────────────────────────────────────
+const _ERRORS_WEBHOOK = 'https://discord.com/api/webhooks/1512546097132736727/_GpDVlmHqJFrcPn8AqdlsF2tMwq8iwn_FLhR_Un-6cNfE-LQL9ChoOF13zvtyvqp6GQD';
+
+// ── JS Error tracking ─────────────────────────────────────────────────────
+(function _setupErrorTracking() {
+  const _errorsSent = new Set();
+
+  function _sendError(msg, source, lineno) {
+    const key = msg + ':' + lineno;
+    if (_errorsSent.has(key)) return; // don't spam same error
+    _errorsSent.add(key);
+    const clean = (msg || '').slice(0, 200);
+    const src   = (source || '').replace(window.location.origin, '');
+    fetch(_ERRORS_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [{
+        title: '⚠️ JS Error',
+        color: 0xef4444,
+        fields: [
+          { name: 'Error',   value: clean || '?',          inline: false },
+          { name: 'File',    value: src || '?',            inline: true  },
+          { name: 'Line',    value: String(lineno || '?'), inline: true  },
+          { name: 'User',    value: (typeof myName !== 'undefined' && myName) ? myName : 'Unknown', inline: true },
+          { name: 'Time',    value: new Date().toUTCString(), inline: false }
+        ]
+      }]})
+    }).catch(() => {});
+  }
+
+  window.addEventListener('error', e => {
+    // Ignore the webmanifest 404 noise
+    if (e.message && e.message.includes('webmanifest')) return;
+    _sendError(e.message, e.filename, e.lineno);
+  });
+
+  window.addEventListener('unhandledrejection', e => {
+    const msg = e.reason?.message || String(e.reason) || 'Unhandled Promise Rejection';
+    _sendError(msg, 'promise', 0);
+  });
+})();
+
+// ── Daily Summary ─────────────────────────────────────────────────────────
+(function _setupDailySummary() {
+  const DB_KEY   = 'lg_daily_stats';
+  const todayKey = new Date().toISOString().slice(0, 10); // e.g. "2026-06-05"
+
+  // Load or init today's stats from localStorage
+  function _getStats() {
+    try {
+      const raw = localStorage.getItem(DB_KEY);
+      const all = raw ? JSON.parse(raw) : {};
+      if (!all[todayKey]) all[todayKey] = { visitors: 0, games: 0, peakPlayers: 0 };
+      return all;
+    } catch(e) { return { [todayKey]: { visitors: 0, games: 0, peakPlayers: 0 } }; }
+  }
+
+  function _saveStats(all) {
+    try { localStorage.setItem(DB_KEY, JSON.stringify(all)); } catch(e) {}
+  }
+
+  // Increment visitor count (called on visit)
+  function _countVisitor() {
+    const all = _getStats();
+    all[todayKey].visitors++;
+    _saveStats(all);
+  }
+
+  // Increment game count + track peak players (called on game start)
+  window._trackDailyGame = function(playerCount) {
+    const all = _getStats();
+    all[todayKey].games++;
+    if (playerCount > all[todayKey].peakPlayers) all[todayKey].peakPlayers = playerCount;
+    _saveStats(all);
+  };
+
+  // Count this visit
+  _countVisitor();
+
+  // Check if we should send yesterday's summary
+  // We send it once, the first time someone visits after midnight
+  function _getYesterday() {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  const yesterday = _getYesterday();
+  const summaryKey = '_lg_summary_sent_' + yesterday;
+
+  try {
+    if (!localStorage.getItem(summaryKey)) {
+      const all = _getStats();
+      const yd  = all[yesterday];
+      if (yd && (yd.visitors > 0 || yd.games > 0)) {
+        localStorage.setItem(summaryKey, '1');
+        fetch(_TRACKER_WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ embeds: [{
+            title: '📊 Daily Summary — ' + yesterday,
+            color: 0x6366f1,
+            fields: [
+              { name: '👀 Visitors',     value: String(yd.visitors),    inline: true },
+              { name: '🎮 Games Played', value: String(yd.games),       inline: true },
+              { name: '👥 Peak Players', value: String(yd.peakPlayers), inline: true }
+            ],
+            footer: { text: 'Loup-Garou · Auto Daily Report' }
+          }]})
+        }).catch(() => {});
+      }
+    }
+  } catch(e) {}
+})();
 // ─────────────────────────────────────────────────────────────────────────
 
 
