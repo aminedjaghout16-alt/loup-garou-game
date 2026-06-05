@@ -11069,6 +11069,7 @@ let _lobbyReady = false;
 let _wrCtxTargetId = null;
 
 // ── Render waiting room ───────────────────────────────────────────────────
+const _doorSoundPlayed = new Set();
 function renderLobby(players) {
   const codeEl = document.getElementById('lobbyCode');
   if (codeEl) codeEl.textContent = roomCode || '——';
@@ -11146,7 +11147,10 @@ function renderLobby(players) {
       }
     } else {
       // New player — build and insert card
-      if (_prevLobbyCount > 0 && !isMe && typeof AUDIO !== 'undefined') AUDIO.sfx('playerJoins');
+      if (_prevLobbyCount > 0 && !isMe && !_doorSoundPlayed.has(p.id) && typeof AUDIO !== 'undefined') {
+        _doorSoundPlayed.add(p.id);
+        AUDIO.sfx('playerJoins');
+      }
       const avatarHTML = _wrGetAvatarHTML(p);
       const card = document.createElement('div');
       card.className = cls;
@@ -11439,25 +11443,6 @@ function _lppRenderActions(p, stats) {
   const btnStyle = (bg, border, color) =>
     `style="width:100%;padding:.6rem;border-radius:7px;border:1px solid ${border};background:${bg};color:${color};font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:700;transition:.2s;"`;
 
-  // Friend action
-  if (normTag) {
-    if (isFr) {
-      html += `<button ${btnStyle('rgba(239,68,68,.08)','rgba(239,68,68,.3)','#ef4444')} onclick="lppRemoveFriend('${normTag}')">👋 Remove Friend</button>`;
-    } else if (hasPendingIn) {
-      // They sent us a request — show accept / decline inline
-      html += `<div style="font-size:.75rem;color:rgba(212,160,23,.7);text-align:center;margin-bottom:.35rem;">⚠️ Friend request from this player</div>`;
-      html += `<button ${btnStyle('rgba(16,185,129,.12)','rgba(16,185,129,.4)','#10b981')} onclick="lppAcceptFriend('${normTag}')">✅ Accept Friend Request</button>`;
-      html += `<button ${btnStyle('rgba(239,68,68,.08)','rgba(239,68,68,.3)','#ef4444')} style="margin-top:.4rem" onclick="lppDeclineFriend('${normTag}')">✕ Decline Friend Request</button>`;
-    } else if (hasPendingOut) {
-      html += `<button ${btnStyle('rgba(212,160,23,.05)','rgba(212,160,23,.2)','rgba(212,160,23,.5)')} disabled>⏳ Request Sent</button>`;
-    } else {
-      html += `<button ${btnStyle('rgba(16,185,129,.08)','rgba(16,185,129,.3)','#10b981')} onclick="lppAddFriend('${normTag}','${(p.name||'').replace(/'/g,"\'")}','${p.uid||''}')">➕ Add Friend</button>`;
-    }
-  } else {
-    // Guest player — no tag to add
-    html += `<button ${btnStyle('rgba(255,255,255,.03)','rgba(255,255,255,.08)','rgba(232,232,232,.25)')} disabled>➕ Add Friend (guest account)</button>`;
-  }
-
   // Host actions
   if (amHost) {
     html += `<button ${btnStyle('rgba(212,160,23,.08)','rgba(212,160,23,.3)','#d4a017')} onclick="lppTransferHost('${p.id}')">👑 Make Host</button>`;
@@ -11621,6 +11606,7 @@ async function lobbyInviteOneFriend(tag, btn) {
 }
 
 // Hook renderLobby into renderGame setup phase
+let _avatarsLoadedForRoom = null;
 const _origRenderGameLobby = renderGame;
 renderGame = function(){
   _origRenderGameLobby();
@@ -11628,8 +11614,9 @@ renderGame = function(){
     const players=gameState.players?Object.values(gameState.players).filter(p=>!p.disconnected):[];
     renderLobby(players);
     _wrCheckIfKicked();
-    // Load avatars for lobby cards (async, re-renders when done)
-    if(typeof _loadAllPlayerAvatars==='function'){
+    // Load avatars only once per room, not on every render
+    if(typeof _loadAllPlayerAvatars==='function' && _avatarsLoadedForRoom !== roomCode){
+      _avatarsLoadedForRoom = roomCode;
       _loadAllPlayerAvatars().then(()=>{
         // Re-fetch fresh player list from current gameState
         const freshPlayers = gameState && gameState.players
