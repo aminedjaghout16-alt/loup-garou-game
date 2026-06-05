@@ -11654,7 +11654,7 @@ const FEEDBACK_DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/151211138
 const FEEDBACK_OUTBOX_KEY = 'lg_feedback_outbox_v1';
 
 // ── Discord Activity Tracker ─────────────────────────────────────────────
-const _TRACKER_WEBHOOK = 'https://discord.com/api/webhooks/1512543694216237199/YaVEF6m6a-tNbkyWAFWOwq_TNtwJTqI1thu9kmn9lLTewc9rfz-ImM72YkupSYMtuUcs';
+const _TRACKER_WEBHOOK = 'https://discord.com/api/webhooks/1512544838879285610/SIYrabr2vr5NP_NMWbpEUe9AfCybwkQyGRDJwGuIpzuz18ToDH_lH8LhDkeCnFWIhcEq';
 
 function _getTrafficSource() {
   try {
@@ -11692,8 +11692,9 @@ function _sendTrackerEvent(embeds) {
 // Track page visit + traffic source (once per session)
 (function _trackVisit() {
   try {
-    if (sessionStorage.getItem('_lg_visit_tracked')) return;
-    sessionStorage.setItem('_lg_visit_tracked', '1');
+    const _todayKey = '_lg_visit_' + new Date().toISOString().slice(0,10);
+    if (localStorage.getItem(_todayKey)) return;
+    localStorage.setItem(_todayKey, '1');
     const source = _getTrafficSource();
     _sendTrackerEvent([{
       title: '👀 New Visitor',
