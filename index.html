@@ -10924,7 +10924,7 @@ async function crEnter(){
     try{
       await db.ref(`publicRooms/${roomCode}`).set({
         code:roomCode, name:document.getElementById('rcRoomName')?.value?.trim()||'Game Room',
-        host:myName, hostUid:myId, maxPlayers:_rcMax,
+        host:myName||'Unknown', hostTag:typeof myTag==='function'?myTag():'', hostUid:myId, maxPlayers:_rcMax,
         playerCount:1, status:'setup', createdAt:Date.now()
       });
       db.ref(`publicRooms/${roomCode}`).onDisconnect().update({status:'offline'});
@@ -11024,7 +11024,7 @@ function _prRender(rooms){
     card.innerHTML=`
       <div class="pr-card-info">
         <div class="pr-card-name">${r.name||'Game Room'}</div>
-        <div class="pr-card-meta">Host: ${r.host||'?'} · <span style="color:var(--moon);font-family:'Creepster',cursive">${r.code}</span> · ${age}</div>
+        <div class="pr-card-meta">Host: ${r.host&&r.host!=='undefined'?r.host:(r.hostTag||'?')} · <span style="color:var(--moon);font-family:'Creepster',cursive">${r.code}</span> · ${age}</div>
       </div>
       ${statusPip}
       <button class="pr-join-btn" ${joinDisabled} onclick="_prJoin('${r.code}')">
