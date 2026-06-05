@@ -10982,7 +10982,19 @@ function _prStart(){
 
   _prListener = db.ref('publicRooms').orderByChild('createdAt').on('value', snap=>{
     const rooms=[];
-    snap.forEach(c=>{ const r=c.val(); if(r&&(r.status==='waiting'||r.status==='setup'||r.status==='playing')) rooms.push(r); });
+    const now=Date.now();
+    const TWO_HOURS=2*60*60*1000;
+    snap.forEach(c=>{
+      const r=c.val();
+      if(!r) return;
+      const age=now-(r.createdAt||0);
+      // Auto-delete stale rooms older than 2 hours or with undefined host
+      if(age>TWO_HOURS || !r.host || r.host==='undefined' || r.host==='Unknown' && age>30*60*1000){
+        db.ref(`publicRooms/${c.key}`).remove().catch(()=>{});
+        return;
+      }
+      if(r.status==='waiting'||r.status==='setup'||r.status==='playing') rooms.push(r);
+    });
     rooms.sort((a,b)=>b.createdAt-a.createdAt);
     _prRender(rooms);
   }, ()=>{
