@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loup-Garou — Hors ligne</title>
+<meta name="theme-color" content="#0a0a1a">
+<link rel="icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#0a0a1a;color:#e8e8e8;
+    font-family:'Creepster',cursive;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    min-height:100vh;text-align:center;padding:2rem;
+    letter-spacing:.03em;
+  }
+  .moon{font-size:5rem;margin-bottom:1.5rem;animation:pulse 3s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+  h1{
+    font-family:'Cinzel',cursive;color:#d4a017;
+    font-size:1.8rem;margin-bottom:.75rem;line-height:1.3;
+  }
+  p{color:rgba(232,232,232,.6);max-width:300px;line-height:1.7;font-size:.95rem}
+  .divider{width:60px;height:2px;background:#d4a017;margin:1.5rem auto;opacity:.4;border-radius:2px}
+  .hint{color:rgba(232,232,232,.4);font-size:.82rem;max-width:280px;line-height:1.6}
+  button{
+    margin-top:2rem;padding:.75rem 2rem;
+    background:#d4a017;border:none;border-radius:10px;
+    color:#0a0a1a;font-family:'Creepster',cursive;
+    font-size:1.1rem;cursor:pointer;letter-spacing:.04em;
+    box-shadow:0 0 20px rgba(212,160,23,.3);
+    transition:background .2s,transform .1s;
+  }
+  button:hover{background:#e8c44a}
+  button:active{transform:scale(.96)}
+</style>
+</head>
+<body>
+  <div class="moon">🌕</div>
+  <h1>Vous êtes hors ligne</h1>
+  <p>La connexion Internet est requise pour jouer au Loup-Garou en ligne.</p>
+  <div class="divider"></div>
+  <p class="hint">Vérifiez votre connexion Wi-Fi ou données mobiles, puis réessayez.</p>
+  <button onclick="location.reload()">🐺 Réessayer</button>
+</body>
+</html>
