@@ -10275,21 +10275,53 @@ function irlStep1Next(){
 function _irlBuildRolesGrid(){
   const grid = document.getElementById('irlRolesGrid');
   grid.innerHTML = '';
+
+  const teamOrder = ['village', 'werewolf', 'solo'];
+  const teamLabels = {
+    village:  '🏘️ Villagers',
+    werewolf: '🐺 Wolves',
+    solo:     '🎭 Solo'
+  };
+  const teamColors = {
+    village:  '#4ade80',
+    werewolf: '#f87171',
+    solo:     '#c084fc'
+  };
+
+  // Group roles by team
+  const groups = {village: [], werewolf: [], solo: []};
   Object.entries(ROLES_DEF).forEach(([key, rd]) => {
-    const count = IRL.selectedRoles[key] || 0;
-    const card = document.createElement('div');
-    card.id = 'irlrc_' + key;
-    card.style.cssText = 'background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:.5rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:.15s';
-    card.innerHTML = `
-      <span style="font-size:1.5rem">${rd.e}</span>
-      <span style="font-family:\'Creepster\',cursive;font-size:.8rem;color:var(--moon-pale);text-align:center;line-height:1.2">${tr(key)}</span>
-      <div style="display:flex;align-items:center;gap:.3rem;margin-top:.2rem">
-        <button onclick="irlRoleAdj('${key}',-1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">−</button>
-        <span id="irlcnt_${key}" style="font-family:\'Creepster\',cursive;font-size:1.1rem;color:var(--moon);min-width:16px;text-align:center">${count}</span>
-        <button onclick="irlRoleAdj('${key}',+1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">+</button>
-      </div>`;
-    grid.appendChild(card);
+    const t = rd.team || 'village';
+    if (groups[t]) groups[t].push([key, rd]);
   });
+
+  teamOrder.forEach(team => {
+    const roles = groups[team];
+    if (!roles || roles.length === 0) return;
+
+    // Section header — full width
+    const header = document.createElement('div');
+    header.style.cssText = `grid-column:1/-1;text-align:left;font-family:'Creepster',cursive;font-size:1rem;color:${teamColors[team]};padding:.3rem .1rem .1rem;border-bottom:1px solid ${teamColors[team]}33;margin-top:.4rem`;
+    header.textContent = teamLabels[team];
+    grid.appendChild(header);
+
+    roles.forEach(([key, rd]) => {
+      const count = IRL.selectedRoles[key] || 0;
+      const card = document.createElement('div');
+      card.id = 'irlrc_' + key;
+      card.style.cssText = 'background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:.5rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:.15s';
+      card.innerHTML = `
+        <span style="font-size:1.5rem">${rd.e}</span>
+        <span style="font-family:'Creepster',cursive;font-size:.8rem;color:var(--moon-pale);text-align:center;line-height:1.2">${tr(key)}</span>
+        <div style="display:flex;align-items:center;gap:.3rem;margin-top:.2rem">
+          <button onclick="irlRoleAdj('${key}',-1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">−</button>
+          <span id="irlcnt_${key}" style="font-family:'Creepster',cursive;font-size:1.1rem;color:var(--moon);min-width:16px;text-align:center">${count}</span>
+          <button onclick="irlRoleAdj('${key}',+1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">+</button>
+        </div>`;
+      grid.appendChild(card);
+    });
+  });
+
   _irlUpdateRoleCount();
 }
 
