@@ -12,6 +12,21 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#0a0a1a">
+
+<!-- ══ PWA / Mobile App Meta ══ -->
+<!-- iOS standalone app behaviour -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Loup-Garou">
+<!-- Splash screens (iOS): generated from android-chrome-512x512.png via your build tool -->
+<link rel="apple-touch-startup-image" href="apple-touch-icon.png">
+<!-- Android: disable tap highlight -->
+<meta name="mobile-web-app-capable" content="yes">
+<!-- Windows Tiles -->
+<meta name="msapplication-TileColor" content="#0a0a1a">
+<meta name="msapplication-TileImage" content="android-chrome-192x192.png">
+<!-- Prevent phone number detection -->
+<meta name="format-detection" content="telephone=no">
 <meta name="description" content="Play Loup-Garou online for free with friends! Free multiplayer werewolf game with 40+ roles. No download needed. Jouez au Loup-Garou en ligne gratuitement. العب ذئب البشر أونلاين مجاناً.">
 <meta name="keywords" content="loup garou, loup garou en ligne, loup garou online, jouer loup garou, loup garou gratuit, werewolf online, werewolf game, loup garou jeu, loup garou multijoueur, loup garou telephone, loup garou application, jeu loup garou, play werewolf online, لعبة ذئب البشر, ذئب البشر اونلاين, لعبة ذئب البشر أونلاين">
 <meta name="author" content="Loup-Garou Online">
@@ -60,6 +75,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+/* ══ PWA INSTALL BANNER ══════════════════════════════════════════════════ */
+#pwaInstallBanner{
+  position:fixed;bottom:0;left:0;right:0;z-index:19000;
+  background:linear-gradient(135deg,#1a0a2e 0%,#0d0d24 100%);
+  border-top:2px solid #d4a017;
+  padding:.9rem 1.1rem;
+  display:flex;align-items:center;gap:.85rem;
+  transform:translateY(110%);transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 -4px 30px rgba(212,160,23,.18);
+}
+#pwaInstallBanner.visible{transform:translateY(0)}
+.pwa-icon{font-size:2.1rem;flex-shrink:0}
+.pwa-text{flex:1;min-width:0}
+.pwa-text strong{display:block;color:#e8c44a;font-family:'Cinzel',cursive;font-size:.95rem;letter-spacing:.04em}
+.pwa-text span{color:rgba(232,232,232,.6);font-size:.78rem;line-height:1.4}
+.pwa-btn-install{
+  padding:.52rem 1.05rem;background:#d4a017;border:none;border-radius:8px;
+  color:#0a0a1a;font-family:'Creepster',cursive;font-size:.95rem;font-weight:700;
+  cursor:pointer;white-space:nowrap;letter-spacing:.03em;flex-shrink:0;
+  transition:background .2s,transform .1s;
+}
+.pwa-btn-install:active{transform:scale(.96)}
+.pwa-btn-install:hover{background:#e8c44a}
+.pwa-btn-dismiss{
+  background:none;border:none;color:rgba(232,232,232,.35);
+  font-size:1.2rem;cursor:pointer;padding:.3rem;flex-shrink:0;line-height:1;
+  transition:color .2s;
+}
+.pwa-btn-dismiss:hover{color:rgba(232,232,232,.7)}
+
+/* iOS-specific "share" install hint */
+#pwaIosHint{
+  position:fixed;bottom:0;left:0;right:0;z-index:19000;
+  background:linear-gradient(135deg,#1a0a2e 0%,#0d0d24 100%);
+  border-top:2px solid #d4a017;
+  padding:1rem 1.2rem;text-align:center;
+  transform:translateY(110%);transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 -4px 30px rgba(212,160,23,.18);
+}
+#pwaIosHint.visible{transform:translateY(0)}
+#pwaIosHint p{color:rgba(232,232,232,.75);font-size:.85rem;line-height:1.6}
+#pwaIosHint strong{color:#e8c44a;font-family:'Cinzel',cursive}
+#pwaIosHint .ios-close{
+  margin-top:.6rem;padding:.4rem 1rem;background:rgba(212,160,23,.15);
+  border:1px solid rgba(212,160,23,.3);color:#d4a017;border-radius:6px;
+  cursor:pointer;font-family:inherit;font-size:.8rem;
+}
+/* ══════════════════════════════════════════════════════════════════════════ */
 :root{
   --void:#0a0a1a;--abyss:#0d0d24;--purple:#1a0a2e;--blood:#8b0000;
   --blood-glow:#b91c1c;--moon:#d4a017;--moon-pale:#e8c44a;
@@ -10275,53 +10338,21 @@ function irlStep1Next(){
 function _irlBuildRolesGrid(){
   const grid = document.getElementById('irlRolesGrid');
   grid.innerHTML = '';
-
-  const teamOrder = ['village', 'werewolf', 'solo'];
-  const teamLabels = {
-    village:  '🏘️ Villagers',
-    werewolf: '🐺 Wolves',
-    solo:     '🎭 Solo'
-  };
-  const teamColors = {
-    village:  '#4ade80',
-    werewolf: '#f87171',
-    solo:     '#c084fc'
-  };
-
-  // Group roles by team
-  const groups = {village: [], werewolf: [], solo: []};
   Object.entries(ROLES_DEF).forEach(([key, rd]) => {
-    const t = rd.team || 'village';
-    if (groups[t]) groups[t].push([key, rd]);
+    const count = IRL.selectedRoles[key] || 0;
+    const card = document.createElement('div');
+    card.id = 'irlrc_' + key;
+    card.style.cssText = 'background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:.5rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:.15s';
+    card.innerHTML = `
+      <span style="font-size:1.5rem">${rd.e}</span>
+      <span style="font-family:\'Creepster\',cursive;font-size:.8rem;color:var(--moon-pale);text-align:center;line-height:1.2">${tr(key)}</span>
+      <div style="display:flex;align-items:center;gap:.3rem;margin-top:.2rem">
+        <button onclick="irlRoleAdj('${key}',-1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">−</button>
+        <span id="irlcnt_${key}" style="font-family:\'Creepster\',cursive;font-size:1.1rem;color:var(--moon);min-width:16px;text-align:center">${count}</span>
+        <button onclick="irlRoleAdj('${key}',+1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">+</button>
+      </div>`;
+    grid.appendChild(card);
   });
-
-  teamOrder.forEach(team => {
-    const roles = groups[team];
-    if (!roles || roles.length === 0) return;
-
-    // Section header — full width
-    const header = document.createElement('div');
-    header.style.cssText = `grid-column:1/-1;text-align:left;font-family:'Creepster',cursive;font-size:1rem;color:${teamColors[team]};padding:.3rem .1rem .1rem;border-bottom:1px solid ${teamColors[team]}33;margin-top:.4rem`;
-    header.textContent = teamLabels[team];
-    grid.appendChild(header);
-
-    roles.forEach(([key, rd]) => {
-      const count = IRL.selectedRoles[key] || 0;
-      const card = document.createElement('div');
-      card.id = 'irlrc_' + key;
-      card.style.cssText = 'background:var(--abyss);border:1px solid var(--moon);border-radius:8px;padding:.5rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.25rem;transition:.15s';
-      card.innerHTML = `
-        <span style="font-size:1.5rem">${rd.e}</span>
-        <span style="font-family:'Creepster',cursive;font-size:.8rem;color:var(--moon-pale);text-align:center;line-height:1.2">${tr(key)}</span>
-        <div style="display:flex;align-items:center;gap:.3rem;margin-top:.2rem">
-          <button onclick="irlRoleAdj('${key}',-1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">−</button>
-          <span id="irlcnt_${key}" style="font-family:'Creepster',cursive;font-size:1.1rem;color:var(--moon);min-width:16px;text-align:center">${count}</span>
-          <button onclick="irlRoleAdj('${key}',+1)" style="background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:3px;width:22px;height:22px;cursor:pointer;font-size:.9rem;line-height:1;font-family:inherit">+</button>
-        </div>`;
-      grid.appendChild(card);
-    });
-  });
-
   _irlUpdateRoleCount();
 }
 
@@ -13822,5 +13853,175 @@ setInterval(function(){
       }catch(e){}
     });
   });  let sx=0,sy=0,st=0;document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(!t)return;const dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>650||Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.4)return;const tabs=[...document.querySelectorAll('.chat-tab')];if(tabs.length){const active=Math.max(0,tabs.findIndex(x=>x.classList.contains('active')));const next=tabs[dx<0?Math.min(tabs.length-1,active+1):Math.max(0,active-1)];if(next&&next!==tabs[active])next.click();}}, {passive:true});
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     PWA — Install Banner HTML
+     These divs are hidden by default; JS below controls visibility.
+═════════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Android / Desktop "Add to Home Screen" banner -->
+<div id="pwaInstallBanner" role="banner" aria-live="polite">
+  <div class="pwa-icon">🐺</div>
+  <div class="pwa-text">
+    <strong>Installer l'application</strong>
+    <span>Jouez hors ligne &amp; recevez des notifications de partie</span>
+  </div>
+  <button class="pwa-btn-install" id="pwaInstallBtn">Installer</button>
+  <button class="pwa-btn-dismiss" id="pwaDismissBtn" aria-label="Fermer">✕</button>
+</div>
+
+<!-- iOS Safari hint (no beforeinstallprompt on iOS) -->
+<div id="pwaIosHint">
+  <p>
+    <strong>Installer Loup-Garou</strong><br>
+    Appuyez sur <strong>⎙ Partager</strong> puis
+    <strong>« Sur l'écran d'accueil »</strong> pour jouer comme une vraie app.
+  </p>
+  <button class="ios-close" id="pwaIosClose">Compris !</button>
+</div>
+
+<script>
+/* ══ SERVICE WORKER REGISTRATION ══════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  // ── Register SW ──────────────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then(reg => {
+          console.log('[PWA] Service Worker registered, scope:', reg.scope);
+
+          // Notify user when a new SW version is waiting
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available — show a soft toast
+                _showUpdateToast();
+              }
+            });
+          });
+        })
+        .catch(err => console.warn('[PWA] SW registration failed:', err));
+    });
+  }
+
+  // ── Install Prompt (Android / Desktop Chrome, Edge, Samsung etc.) ────────
+  let _deferredPrompt = null;
+  const DISMISS_KEY   = 'pwa_install_dismissed';
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredPrompt = e;
+
+    // Respect user's previous dismissal for 7 days
+    const dismissed = localStorage.getItem(DISMISS_KEY);
+    if (dismissed && Date.now() - parseInt(dismissed, 10) < 7 * 86400000) return;
+
+    // Show the banner after a short delay so the page settles first
+    setTimeout(() => _showBanner(), 2500);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    _hideBanner();
+    _deferredPrompt = null;
+    console.log('[PWA] App installed successfully 🎉');
+  });
+
+  document.getElementById('pwaInstallBtn').addEventListener('click', async () => {
+    if (!_deferredPrompt) return;
+    _hideBanner();
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    console.log('[PWA] Install prompt outcome:', outcome);
+    _deferredPrompt = null;
+  });
+
+  document.getElementById('pwaDismissBtn').addEventListener('click', () => {
+    _hideBanner();
+    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+  });
+
+  function _showBanner() {
+    document.getElementById('pwaInstallBanner').classList.add('visible');
+  }
+  function _hideBanner() {
+    document.getElementById('pwaInstallBanner').classList.remove('visible');
+  }
+
+  // ── iOS Safari Install Hint ───────────────────────────────────────────────
+  const IOS_KEY = 'pwa_ios_hint_shown';
+  function _isIos() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function _isInStandaloneMode() {
+    return ('standalone' in navigator && navigator.standalone) ||
+           window.matchMedia('(display-mode: standalone)').matches;
+  }
+
+  if (_isIos() && !_isInStandaloneMode() && !localStorage.getItem(IOS_KEY)) {
+    setTimeout(() => {
+      document.getElementById('pwaIosHint').classList.add('visible');
+    }, 3000);
+  }
+
+  document.getElementById('pwaIosClose').addEventListener('click', () => {
+    document.getElementById('pwaIosHint').classList.remove('visible');
+    localStorage.setItem(IOS_KEY, '1');
+  });
+
+  // ── "New version available" toast ────────────────────────────────────────
+  function _showUpdateToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position:fixed;top:1rem;left:50%;transform:translateX(-50%);
+      z-index:20000;background:#1a0a2e;border:1px solid #d4a017;
+      border-radius:9px;padding:.7rem 1.2rem;display:flex;align-items:center;
+      gap:.8rem;color:#e8e8e8;font-family:Creepster,cursive;font-size:.9rem;
+      box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:90vw;
+    `;
+    toast.innerHTML = `
+      <span>🐺 Nouvelle version disponible</span>
+      <button onclick="location.reload()" style="
+        background:#d4a017;border:none;border-radius:6px;
+        padding:.3rem .7rem;color:#0a0a1a;cursor:pointer;
+        font-family:inherit;font-weight:700;font-size:.85rem;
+      ">Mettre à jour</button>
+      <button onclick="this.parentElement.remove()" style="
+        background:none;border:none;color:rgba(232,232,232,.4);
+        cursor:pointer;font-size:1.1rem;
+      ">✕</button>
+    `;
+    document.body.appendChild(toast);
+  }
+
+  // ── URL Shortcut Actions (?action=create / ?action=join) ─────────────────
+  // Fired when user taps a manifest shortcut icon on their home screen.
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get('action');
+    if (!action) return;
+
+    // Wait for the main app to initialise (it sets up these buttons)
+    const _tryAction = (attempts) => {
+      if (attempts > 40) return;
+      if (action === 'create') {
+        const btn = document.getElementById('btnCreate') ||
+                    document.querySelector('[data-action="create"]');
+        if (btn) { btn.click(); return; }
+      }
+      if (action === 'join') {
+        const btn = document.getElementById('btnJoin') ||
+                    document.querySelector('[data-action="join"]');
+        if (btn) { btn.click(); return; }
+      }
+      setTimeout(() => _tryAction(attempts + 1), 150);
+    };
+    setTimeout(() => _tryAction(0), 600);
+  });
+
 })();
 </script>
