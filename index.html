@@ -470,6 +470,21 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .feedback-status{min-height:1.2rem;margin-top:.8rem;text-align:center;font-size:.82rem;color:rgba(232,232,232,.72)}
 .feedback-status.ok{color:#10b981}.feedback-status.err{color:#f87171}
 @media(max-width:520px){.feedback-row{grid-template-columns:1fr}.feedback-actions{flex-direction:column}.feedback-box{padding:1.35rem}}
+
+/* more games modal */
+#moreGamesModal{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:305;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+#moreGamesModal.hidden{display:none}
+.mg-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.6rem;width:100%;max-width:460px;box-shadow:0 0 42px rgba(212,160,23,.22);position:relative}
+.mg-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.85rem;text-align:center;margin-bottom:1rem}
+.mg-list{display:flex;flex-direction:column;gap:.7rem}
+.mg-item{display:flex;align-items:center;gap:.9rem;padding:.85rem;background:var(--purple);border:1px solid rgba(212,160,23,.35);border-radius:8px;text-decoration:none;color:var(--ghost);transition:.2s}
+.mg-item:hover{border-color:var(--moon);background:rgba(212,160,23,.1)}
+.mg-icon{width:42px;height:42px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:rgba(212,160,23,.12);border:1px solid rgba(212,160,23,.3);border-radius:6px}
+.mg-info{flex:1;min-width:0}
+.mg-name{font-weight:700;color:var(--moon-pale);font-size:.98rem}
+.mg-desc{font-size:.78rem;color:rgba(232,232,232,.6);margin-top:.15rem}
+.mg-arrow{font-size:.82rem;color:var(--moon);opacity:0;transition:.2s;flex-shrink:0}
+.mg-item:hover .mg-arrow{opacity:1}
 .or-divider{display:flex;align-items:center;gap:.7rem;margin:.9rem 0;color:var(--ghost);opacity:.4;font-size:.82rem}
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--moon);opacity:.25}
 .email-login-wrap{text-align:left}
@@ -4559,7 +4574,13 @@ window.addEventListener('load', () => {
       <div class="mn-icon">?</div>
       <div class="mn-label">Feedback</div>
       <div class="mn-desc">Bugs & ideas</div>
-    </div> </div>
+    </div>
+    <div class="mn-btn" onclick="openMoreGamesModal()">
+      <div class="mn-icon">🎮</div>
+      <div class="mn-label">More Games</div>
+      <div class="mn-desc">Check out our other games</div>
+    </div>
+    </div>
 
   <!-- Social Bar -->
   <div class="mn-social">
@@ -4586,6 +4607,24 @@ window.addEventListener('load', () => {
 <!-- ══════════════════════════════════════
      ROOM CREATE MODAL
 ════════════════════════════════════════ -->
+
+<!-- MORE GAMES MODAL -->
+<div id="moreGamesModal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="moreGamesTitle">
+  <div class="mg-box">
+    <button class="profile-close" onclick="closeMoreGamesModal()">✕</button>
+    <h2 id="moreGamesTitle">More Games</h2>
+    <div class="mg-list" id="moreGamesList">
+      <a class="mg-item" href="https://hidden-objects-online.vercel.app/" target="_blank" rel="noopener noreferrer">
+        <div class="mg-icon">🎯</div>
+        <div class="mg-info">
+          <div class="mg-name">Prop Hunt Protocol</div>
+          <div class="mg-desc">Hide as a prop or hunt down the anomalies</div>
+        </div>
+        <div class="mg-arrow">PLAY →</div>
+      </a>
+    </div>
+  </div>
+</div>
 
 <!-- FEEDBACK MODAL -->
 <div id="feedbackModal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
@@ -11937,6 +11976,13 @@ function openFeedbackModal(){
 }
 function closeFeedbackModal(){
   document.getElementById('feedbackModal')?.classList.add('hidden');
+}
+
+function openMoreGamesModal(){
+  document.getElementById('moreGamesModal')?.classList.remove('hidden');
+}
+function closeMoreGamesModal(){
+  document.getElementById('moreGamesModal')?.classList.add('hidden');
 }
 function _feedbackSetStatus(msg, kind){
   const status = document.getElementById('feedbackStatus');
