@@ -2467,6 +2467,25 @@ function _updateCoinDisplay() {
   if (el) el.textContent = _storeCoins.toLocaleString();
 }
 
+let _visionTimer = null;
+// FIX: non-blocking replacement for alert() during gameplay.
+// alert() freezes ALL page JS (including the multiplayer heartbeat), so a player
+// who doesn't dismiss the popup in time gets flagged disconnected / diedFromDisconnect.
+// This banner shows the same reveal without ever pausing the game loop.
+function _visionBanner(msg) {
+  let el = document.getElementById('visionBanner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'visionBanner';
+    el.style.cssText = 'position:fixed;top:4.5rem;left:50%;transform:translateX(-50%);max-width:88vw;z-index:9500;background:var(--abyss);border:2px solid var(--moon);color:var(--ghost);font-family:\'Creepster\',cursive;font-size:1.05rem;letter-spacing:.05em;padding:.9rem 1.6rem;border-radius:10px;box-shadow:0 6px 30px rgba(0,0,0,.6);text-align:center;pointer-events:none;opacity:0;transition:opacity .3s';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = msg;
+  el.style.opacity = '1';
+  clearTimeout(_visionTimer);
+  _visionTimer = setTimeout(() => { el.style.opacity = '0'; }, 7000);
+}
+
 let _toastTimer = null;
 function _showToast(msg) {
   const t = document.getElementById('storeToast');
@@ -8083,10 +8102,10 @@ function circleNodeClick(event, targetId){
         const role=gameState.players[targetId]?.role||'unknown';
         let isWolf=isWolfRole(role,gameState);
         if(role==='corruptedbutcher') isWolf=false;
-        if(gameState.gypsyBlackCloud){ setTimeout(()=>alert('🔮 '+tname+': '+(lang==='ar'?'☁️ الرؤية مشوشة!':lang==='fr'?'☁️ Vision brouillée!':'☁️ Vision is clouded!')),100); submitAction({type:'seer',target:targetId,result:'clouded'}); return; }
+        if(gameState.gypsyBlackCloud){ setTimeout(()=>_visionBanner('🔮 '+tname+': '+(lang==='ar'?'☁️ الرؤية مشوشة!':lang==='fr'?'☁️ Vision brouillée!':'☁️ Vision is clouded!')),100); submitAction({type:'seer',target:targetId,result:'clouded'}); return; }
         const result=lang==='ar'?(isWolf?'🐺 ذئب':'✓ بريء'):lang==='fr'?(isWolf?'🐺 Loup':'✓ Innocent'):(isWolf?'🐺 Werewolf':'✓ Innocent');
         submitAction({type:'seer',target:targetId,result});
-        setTimeout(()=>alert('🔮 '+tname+': '+result),100);
+        setTimeout(()=>_visionBanner('🔮 '+tname+': '+result),100);
       });
     } else if(stepId==='bodyguard'){
       const lastProtected=gameState.nightActions?._bodyguardLast;
@@ -8437,7 +8456,7 @@ function renderPhase(){
             if(caught) gameState.littleGirlCaught=true;
           }
           const caughtMsg=caught?(lang==='ar'?' — ⚠️ لقد اكتُشفت! ستموتين هذه الليلة!':lang==='fr'?' — ⚠️ Vous avez été repérée ! Vous mourrez cette nuit !':' — ⚠️ You were caught! You will die tonight!'):'';
-          setTimeout(()=>alert(`🐺 ${lang==='ar'?'الذئاب هم:':lang==='fr'?'Les loups sont :':'Wolves are:'} ${wolfNames}${caughtMsg}`),100);
+          setTimeout(()=>_visionBanner(`🐺 ${lang==='ar'?'الذئاب هم:':lang==='fr'?'Les loups sont :':'Wolves are:'} ${wolfNames}${caughtMsg}`),100);
         });
       }
     }
@@ -8554,13 +8573,13 @@ function renderPhase(){
       if(role==='corruptedbutcher') isWolf=false;
       // Gypsy Black Cloud: seer is blinded
       if(gameState.gypsyBlackCloud){
-        setTimeout(()=>alert('🔮 '+p.name+': '+(lang==='ar'?'☁️ الرؤية مشوشة!':lang==='fr'?'☁️ Vision brouillée !':'☁️ Vision is clouded!')),100);
+        setTimeout(()=>_visionBanner('🔮 '+p.name+': '+(lang==='ar'?'☁️ الرؤية مشوشة!':lang==='fr'?'☁️ Vision brouillée !':'☁️ Vision is clouded!')),100);
         submitAction({type:'seer',target:p.id,result:'clouded'});
         return;
       }
       const result=lang==='ar'?(isWolf?'🐺 ذئب':'✓ بريء'):lang==='fr'?(isWolf?'🐺 Loup':'✓ Innocent'):(isWolf?'🐺 Werewolf':'✓ Innocent');
       submitAction({type:'seer',target:p.id,result});
-      setTimeout(()=>alert('🔮 '+p.name+': '+result),100);
+      setTimeout(()=>_visionBanner('🔮 '+p.name+': '+result),100);
     }));
   }
   // ── BODYGUARD ──
@@ -8677,7 +8696,7 @@ function renderPhase(){
   else if(stepId==='wildchild'){
     alive.forEach(p=>addBtn(ab,p.name,'special',()=>{
       submitAction({type:'wildchild_model',target:p.id});
-      setTimeout(()=>alert('🧒 '+(lang==='ar'?'قدوتك: ':lang==='fr'?'Modèle : ':'Role model: ')+p.name),100);
+      setTimeout(()=>_visionBanner('🧒 '+(lang==='ar'?'قدوتك: ':lang==='fr'?'Modèle : ':'Role model: ')+p.name),100);
     }));
   }
   // ── WOLFHOUND ──
@@ -8704,7 +8723,7 @@ function renderPhase(){
         const foundWolf=group.some(g=>isWolfRole(g.role,gameState));
         submitAction({type:'fox_sniff',target:p.id,found:foundWolf});
         const names=group.map(g=>g.name).join(', ');
-        setTimeout(()=>alert('🦊 '+names+': '+(foundWolf?(lang==='ar'?'🐺 ذئب بالقرب!':lang==='fr'?'🐺 Loup proche !':'🐺 Wolf nearby!'):(lang==='ar'?'لا ذئاب':lang==='fr'?'Pas de loup':'No wolf nearby'))),100);
+        setTimeout(()=>_visionBanner('🦊 '+names+': '+(foundWolf?(lang==='ar'?'🐺 ذئب بالقرب!':lang==='fr'?'🐺 Loup proche !':'🐺 Wolf nearby!'):(lang==='ar'?'لا ذئاب':lang==='fr'?'Pas de loup':'No wolf nearby'))),100);
       });
     });
     addSkipBtn(ab);
@@ -8835,7 +8854,7 @@ function renderPhase(){
       const rd=ROLES_DEF[p.role]||{};
       addBtn(ab,(lang==='ar'?'استحضر ':lang==='fr'?'Invoquer ':'Channel ')+ p.name,'special',()=>{
         submitAction({type:'necro',target:p.id});
-        setTimeout(()=>alert('💀 '+p.name+': '+(rd.e||'?')+' '+tr(p.role||'villager')),100);
+        setTimeout(()=>_visionBanner('💀 '+p.name+': '+(rd.e||'?')+' '+tr(p.role||'villager')),100);
       });
     });
     addSkipBtn(ab);
@@ -8847,7 +8866,7 @@ function renderPhase(){
       const rd=ROLES_DEF[p.role]||{};
       addBtn(ab,(lang==='ar'?'استخدم قدرة ':lang==='fr'?'Utiliser ':'Use ability of ')+p.name,'special',()=>{
         submitAction({type:'grave',target:p.id});
-        setTimeout(()=>alert('⛏️ '+p.name+': '+(rd.e||'?')+' '+tr(p.role||'villager')+' — '+(lang==='ar'?'قدرتهم متاحة لك هذه الليلة':lang==='fr'?'Leur pouvoir est à vous cette nuit':'Their power is yours tonight')),100);
+        setTimeout(()=>_visionBanner('⛏️ '+p.name+': '+(rd.e||'?')+' '+tr(p.role||'villager')+' — '+(lang==='ar'?'قدرتهم متاحة لك هذه الليلة':lang==='fr'?'Leur pouvoir est à vous cette nuit':'Their power is yours tonight')),100);
       });
     });
     addSkipBtn(ab);
@@ -8950,7 +8969,7 @@ function renderPhase(){
     events.forEach(ev=>{
       addBtn(ab,ev.label[lang]||ev.label.en,'special',()=>{
         submitAction({type:'gypsy_event',event:ev.id});
-        setTimeout(()=>alert('🔯 '+(lang==='ar'?'تم تفعيل الحدث!':lang==='fr'?'Événement activé !':'Event activated!')),100);
+        setTimeout(()=>_visionBanner('🔯 '+(lang==='ar'?'تم تفعيل الحدث!':lang==='fr'?'Événement activé !':'Event activated!')),100);
       });
     });
     addSkipBtn(ab);
@@ -8966,7 +8985,7 @@ function renderPhase(){
       const rd=ROLES_DEF[r]||{};
       addBtn(ab,(rd.e||'')+'  '+tr(r),'special',()=>{
         submitAction({type:'actor_switch',take:r});
-        setTimeout(()=>alert('🎪 '+(lang==='ar'?'أصبحت: ':lang==='fr'?'Vous êtes maintenant : ':'You are now: ')+tr(r)),100);
+        setTimeout(()=>_visionBanner('🎪 '+(lang==='ar'?'أصبحت: ':lang==='fr'?'Vous êtes maintenant : ':'You are now: ')+tr(r)),100);
       });
     });
     addSkipBtn(ab);
