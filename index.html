@@ -7555,8 +7555,10 @@ function assignRoles(n){
 // ════════════════════════════════════════════
 function renderGame(){
   if(!gameState) return;
-  // Exclude pure spectators (not in players node at all) from all game logic
-  const players=(gameState.players?Object.values(gameState.players):[]).filter(p=>!p.spectator);
+  // Exclude pure spectators (not in players node at all) from all game logic.
+  // Also drop ghost entries (empty name/role from a mid-game rejoin race) — they
+  // previously crashed the player-circle render and froze everyone's night actions.
+  const players=(gameState.players?Object.values(gameState.players):[]).filter(p=>!p.spectator&&p.name&&p.role);
   document.getElementById('hPlayers').textContent=players.filter(p=>p.alive).length;
   document.getElementById('hRoom').textContent=roomCode||'';
 
@@ -7823,6 +7825,10 @@ function closeCirclePopup(){
 }
 
 function renderPlayerList(players){
+  // FIX: guard against ghost/empty player entries (created by a mid-game rejoin race).
+  // An entry without a name/role previously crashed this render and left players
+  // unable to act for the rest of the game.
+  players=(players||[]).filter(p=>p&&p.name&&p.role);
   const el=document.getElementById('playerList');
   const n=players.length;
   if(n===0){ el.innerHTML=''; return; }
@@ -9183,7 +9189,8 @@ function resolveNightAndAdvance(){
   if(!isLeader) return;
   const gs=gameState;
   const actions=gs.nightActions||{};
-  const players={...(gs.players||{})};
+  // FIX: ignore ghost/empty player entries (mid-game rejoin race) in resolution math
+  const players=Object.fromEntries(Object.entries(gs.players||{}).filter(([,p])=>p&&p.name&&p.role));
   const upd={};
 
   // Collect who dies
@@ -9788,7 +9795,8 @@ function checkDayVoteComplete(){
 function resolveDayAndAdvance(){
   if(!isLeader) return;
   const gs=gameState;
-  const players=Object.values(gs.players||{});
+  // FIX: ignore ghost/empty player entries (mid-game rejoin race)
+  const players=Object.values(gs.players||{}).filter(p=>p&&p.name&&p.role);
   const dayVotes=gs.dayVotes||{};
   const actions=gs.nightActions||{};
 
