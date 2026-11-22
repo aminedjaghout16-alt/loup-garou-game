@@ -10301,9 +10301,20 @@ function checkMaireElection(){
   });
   const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
   if(!sorted.length) return;
-  const winnerId=sorted[0][0];
+  // FIX: handle ties — previously the first object key won, electing an arbitrary player
+  const maxVotes=sorted[0][1];
+  const tied=sorted.filter(([,v])=>v===maxVotes);
+  const winnerId = tied.length>1
+    ? tied[Math.floor(Math.random()*tied.length)][0]
+    : sorted[0][0];
+  // Defense-in-depth: only a candidate may be elected
+  if(!candidateIds.has(winnerId)) return;
   if(fbOk&&db&&roomCode){
     db.ref(`games/${roomCode}/maire`).set(winnerId);
+    if(tied.length>1){
+      const wName=(gameState.players[winnerId]||{}).name||'?';
+      db.ref(`games/${roomCode}/chat`).push({n:'👑',t:`Mayor vote ended in a tie (${maxVotes} votes each) — ${wName} was elected by lot.`,ts:Date.now()}).catch(()=>{});
+    }
   } else if(gameState){
     gameState.maire=winnerId;
     renderGame();
