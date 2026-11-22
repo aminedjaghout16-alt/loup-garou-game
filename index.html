@@ -2373,8 +2373,17 @@ function _updateFooter() {
     const canAfford = _storeCoins >= av.price;
     btn.className = 'store-action-btn sab-buy' + (canAfford ? '' : ' sab-locked');
     btn.textContent = av.price === 0 ? `Claim ${av.name} (Free)` : `Buy · ${av.price} 🪙`;
-    btn.disabled = !canAfford && av.price !== 0;
-    btn.onclick = canAfford || av.price === 0 ? () => _buyAvatar(av.id) : null;
+    // FIX: previously the button was disabled with no feedback at all when
+    // the player couldn't afford the item. Now it stays clickable and shows
+    // a toast explaining why the purchase can't happen.
+    btn.disabled = false;
+    btn.onclick = () => {
+      if(!canAfford && av.price !== 0){
+        _showToast(lang==='fr'?`Pas assez de pièces (${av.price} 🪙 requis)`:lang==='ar'?`عملات غير كافية (مطلوب ${av.price} 🪙)`:`Not enough coins — you need ${av.price} 🪙`);
+        return;
+      }
+      _buyAvatar(av.id);
+    };
   }
 }
 
@@ -4493,16 +4502,16 @@ window.addEventListener('load', () => {
 ════════════════════════════════════════ -->
 <div id="mainMenu" class="hidden">
   <div class="mn-title">Loup-Garou</div>
-  <div class="mn-sub">ONLINE · MULTIPLAYER</div>
+  <div class="mn-sub" id="t_m_sub">ONLINE · MULTIPLAYER</div>
 
   <!-- Live stats bar -->
   <div id="mnStatsBar" style="display:flex;align-items:center;justify-content:center;gap:1.2rem;margin-bottom:1rem;font-size:.72rem;color:rgba(232,232,232,.45);letter-spacing:.07em;flex-wrap:wrap">
     <span style="display:flex;align-items:center;gap:.35rem">
       <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 5px #10b981;animation:prOnlinePulse 2s ease-in-out infinite;flex-shrink:0"></span>
-      <span id="mnOnlineCount">…</span> online now
+      <span id="mnOnlineCount">…</span> <span id="t_m_online">online now</span>
     </span>
     <span style="opacity:.3">·</span>
-    <span>👥 <span id="mnTotalVisits">…</span> total visits</span>
+    <span>👥 <span id="mnTotalVisits">…</span> <span id="t_m_visits">total visits</span></span>
   </div>
 
   <!-- User bar -->
@@ -4517,68 +4526,68 @@ window.addEventListener('load', () => {
 
   <!-- Guest name input (hidden for signed-in users) -->
   <div class="mn-name-panel" id="mnNamePanel">
-    <label style="font-size:.8rem;color:var(--moon);font-weight:700">Your display name</label>
+    <label id="t_m_yourname" style="font-size:.8rem;color:var(--moon);font-weight:700">Your display name</label>
     <input id="mnNameInput" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
   </div>
 
   <!-- Join code panel (slides open) -->
   <div class="mn-join-panel" id="mnJoinPanel">
-    <label style="font-size:.8rem;color:var(--moon);font-weight:700">Enter Room Code</label>
+    <label id="t_m_entercode" style="font-size:.8rem;color:var(--moon);font-weight:700">Enter Room Code</label>
     <input id="mnCodeInput" type="text" maxlength="6" placeholder="ABC123" autocomplete="off">
-    <button onclick="mnConfirmJoin()" style="padding:.65rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700">Join Room →</button>
+    <button onclick="mnConfirmJoin()" id="t_m_joinbtn" style="padding:.65rem;background:var(--blood-glow);border:none;color:#fff;border-radius:5px;cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:700">Join Room →</button>
   </div>
 
   <!-- Grid -->
   <div class="mn-grid">
     <div class="mn-btn primary" onclick="mnOpenCreate()">
       <div class="mn-icon">⚔️</div>
-      <div class="mn-label">Create Room</div>
-      <div class="mn-desc">Start a new game</div>
+      <div class="mn-label" id="t_m_create">Create Room</div>
+      <div class="mn-desc" id="t_m_create_d">Start a new game</div>
     </div>
     <div class="mn-btn" onclick="mnToggleJoin()">
       <div class="mn-icon">🔑</div>
-      <div class="mn-label">Join by Code</div>
-      <div class="mn-desc">Enter room code</div>
+      <div class="mn-label" id="t_m_join">Join by Code</div>
+      <div class="mn-desc" id="t_m_join_d">Enter room code</div>
     </div>
     <div class="mn-btn" onclick="mnOpenPublicRooms()">
       <div class="mn-icon">🌐</div>
-      <div class="mn-label">Public Rooms</div>
-      <div class="mn-desc">Browse open games</div>
+      <div class="mn-label" id="t_m_public">Public Rooms</div>
+      <div class="mn-desc" id="t_m_public_d">Browse open games</div>
     </div>
     <div class="mn-btn" onclick="openLeaderboard()">
       <div class="mn-icon">🏆</div>
-      <div class="mn-label">Leaderboard</div>
-      <div class="mn-desc">Global rankings</div>
+      <div class="mn-label" id="t_m_lb">Leaderboard</div>
+      <div class="mn-desc" id="t_m_lb_d">Global rankings</div>
     </div>
     <div class="mn-btn" onclick="openProfileModal()">
       <div class="mn-icon">📊</div>
-      <div class="mn-label">Profile</div>
-      <div class="mn-desc">Stats & history</div>
+      <div class="mn-label" id="t_m_profile">Profile</div>
+      <div class="mn-desc" id="t_m_profile_d">Stats & history</div>
     </div>
     <div class="mn-btn" onclick="openFriendsModal()">
       <div class="mn-icon">🤝</div>
-      <div class="mn-label">Friends</div>
-      <div class="mn-desc">Online & invites</div>
+      <div class="mn-label" id="t_m_friends">Friends</div>
+      <div class="mn-desc" id="t_m_friends_d">Online & invites</div>
     </div>
     <div class="mn-btn" onclick="openAvatarStore()">
       <div class="mn-icon">🎭</div>
-      <div class="mn-label">Avatar Store</div>
-      <div class="mn-desc">Customize your look</div>
+      <div class="mn-label" id="t_m_store">Avatar Store</div>
+      <div class="mn-desc" id="t_m_store_d">Customize your look</div>
     </div>
     <div class="mn-btn" onclick="openSpinWheel()">
       <div class="mn-icon">🎡</div>
-      <div class="mn-label">Daily Spin</div>
-      <div class="mn-desc">Spin for rewards</div>
+      <div class="mn-label" id="t_m_spin">Daily Spin</div>
+      <div class="mn-desc" id="t_m_spin_d">Spin for rewards</div>
     </div>
      <div class="mn-btn" onclick="openFeedbackModal()">
       <div class="mn-icon">?</div>
-      <div class="mn-label">Feedback</div>
-      <div class="mn-desc">Bugs & ideas</div>
+      <div class="mn-label" id="t_m_feedback">Feedback</div>
+      <div class="mn-desc" id="t_m_feedback_d">Bugs & ideas</div>
     </div>
     <div class="mn-btn" onclick="openMoreGamesModal()">
       <div class="mn-icon">🎮</div>
-      <div class="mn-label">More Games</div>
-      <div class="mn-desc">Check out our other games</div>
+      <div class="mn-label" id="t_m_more">More Games</div>
+      <div class="mn-desc" id="t_m_more_d">Check out our other games</div>
     </div>
     </div>
 
@@ -4599,8 +4608,8 @@ window.addEventListener('load', () => {
   </div>
   <!-- Footer -->
   <div class="mn-footer">
-    <button class="mn-foot-btn" id="mnSignOutBtn" onclick="mnSignOut()" style="display:none">Sign Out</button>
-    <button class="mn-foot-btn" id="mnSignInBtn" onclick="mnGoLogin()">Sign In</button>
+    <button class="mn-foot-btn" id="mnSignOutBtn" onclick="mnSignOut()" style="display:none"><span id="t_m_signout2">Sign Out</span></button>
+    <button class="mn-foot-btn" id="mnSignInBtn" onclick="mnGoLogin()"><span id="t_m_signin">Sign In</span></button>
   </div>
 </div>
 
@@ -4662,26 +4671,26 @@ window.addEventListener('load', () => {
 <div id="roomCreateModal" class="hidden">
   <div class="rc-box">
     <button class="profile-close" onclick="mnCloseCreate()">✕</button>
-    <h2>⚔️ Create Room</h2>
+    <h2 id="t_m_crm">⚔️ Create Room</h2>
 
     <div class="rc-toggle">
-      <button class="rc-toggle-btn active" id="rcBtnPublic" onclick="rcSetType('public')">🌐 Public</button>
-      <button class="rc-toggle-btn" id="rcBtnPrivate" onclick="rcSetType('private')">🔒 Private</button>
+      <button class="rc-toggle-btn active" id="rcBtnPublic" onclick="rcSetType('public')"><span id="t_m_pub">🌐 Public</span></button>
+      <button class="rc-toggle-btn" id="rcBtnPrivate" onclick="rcSetType('private')"><span id="t_m_priv">🔒 Private</span></button>
     </div>
 
     <div class="rc-field" id="rcRoomNameField">
-      <label>Room Name</label>
+      <label id="t_m_roomname">Room Name</label>
       <input id="rcRoomName" type="text" maxlength="30" placeholder="Dark Forest…" autocomplete="off">
-      <div class="hint">Shown in public rooms list</div>
+      <div class="hint" id="t_m_roomname_h">Shown in public rooms list</div>
     </div>
 
     <div class="rc-field">
-      <label>Your Name</label>
+      <label id="t_m_hostname">Your Name</label>
       <input id="rcHostName" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off">
     </div>
 
     <div class="rc-players">
-      <label>Max Players</label>
+      <label id="t_m_maxp">Max Players</label>
       <div class="rc-stepper">
         <button onclick="rcAdj(-1)">−</button>
         <span id="rcPlayers">8</span>
@@ -4689,7 +4698,7 @@ window.addEventListener('load', () => {
       </div>
     </div>
 
-    <button class="rc-submit" onclick="rcCreate()">Create Room →</button>
+    <button class="rc-submit" onclick="rcCreate()"><span id="t_m_creatgo">Create Room →</span></button>
   </div>
 </div>
 
@@ -4718,18 +4727,18 @@ window.addEventListener('load', () => {
 <div id="publicRoomsModal" class="hidden">
   <div class="pr-wrap">
     <button class="profile-close" onclick="mnClosePublicRooms()">✕</button>
-    <h2>🌐 Public Rooms</h2>
-    <div class="pr-subtitle" id="prSubtitle">Live open games</div>
+    <h2 id="t_m_public2">🌐 Public Rooms</h2>
+    <div class="pr-subtitle" id="prSubtitle"><span id="t_m_live">Live open games</span></div>
     <div id="prOnlineBar" style="display:flex;align-items:center;justify-content:center;gap:.45rem;margin-bottom:.6rem;font-size:.78rem;color:rgba(232,232,232,.55);letter-spacing:.06em">
       <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;flex-shrink:0;animation:prOnlinePulse 2s ease-in-out infinite"></span>
-      <span id="prOnlineCount">…</span> players online right now
+      <span id="prOnlineCount">…</span> <span id="t_m_online2">players online right now</span>
     </div>
     <div class="pr-toolbar">
-      <button class="pr-rfbtn" onclick="prRefresh()">↻ Refresh</button>
-      <button class="pr-newbtn" onclick="mnClosePublicRooms();mnOpenCreate()">+ Create</button>
+      <button class="pr-rfbtn" onclick="prRefresh()"><span id="t_m_refresh">↻ Refresh</span></button>
+      <button class="pr-newbtn" onclick="mnClosePublicRooms();mnOpenCreate()"><span id="t_m_creat2">+ Create</span></button>
     </div>
     <div class="pr-name-panel" id="prNamePanel">
-      <label style="font-size:.78rem;color:var(--moon);font-weight:700">Your name to join</label>
+      <label id="t_m_yourjoin" style="font-size:.78rem;color:var(--moon);font-weight:700">Your name to join</label>
       <input id="prJoinName" type="text" maxlength="20" placeholder="Your name…" autocomplete="off">
       <button onclick="prConfirmJoin()" style="padding:.5rem;background:var(--blood-glow);border:none;color:#fff;border-radius:4px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:700">Join →</button>
     </div>
@@ -4919,8 +4928,8 @@ window.addEventListener('load', () => {
       <h3 id="t_linfo">Game Info</h3>
       <div class="irow"><strong id="t_lalive">Alive:</strong><span id="iAlive">0</span></div>
       <div class="irow"><strong id="t_ldead">Dead:</strong><span id="iDead">0</span></div>
-      <div class="irow"><strong id="t_lwolves">Wolves:</strong><span id="iWolves">?</span></div>
-      <div class="irow"><strong id="t_lvillage">Villagers:</strong><span id="iVillage">?</span></div>
+      <div class="irow"><strong id="t_lwolves">Wolves eliminated:</strong><span id="iWolves">?</span></div>
+      <div class="irow"><strong id="t_lvillage">Villagers lost:</strong><span id="iVillage">?</span></div>
       <h3 id="t_lrole" style="margin-top:.8rem">Your Role</h3>
       <div class="role-card">
         <div class="re" id="rEmoji">🌑</div>
@@ -5261,7 +5270,7 @@ en:{
   t_name:'Your Name', t_code:'Room Code', t_join:'Join Game', t_create:'Create Room',
   t_shareCode:'Share this code with friends:',
   t_gtitle:'Loup-Garou', t_lphase:'Phase:', t_lplayers:'Players:', t_lroom:'Room:', t_lstatus:'Status:', t_leave:'Leave',
-  t_linfo:'Game Info', t_lalive:'Alive:', t_ldead:'Dead:', t_lwolves:'Wolves:', t_lvillage:'Villagers:', t_lrole:'Your Role',
+  t_linfo:'Game Info', t_lalive:'Alive:', t_ldead:'Dead:', t_lwolves:'Wolves eliminated:', t_lvillage:'Villagers lost:', t_lrole:'Your Role',
   t_setup:'Game Setup', t_nplayers:'Number of Players (4–20)', t_roles:'Select Roles',
   t_dayt:'Day Timer (s)', t_nightt:'Night Timer (s)', t_start:'Start Game',
   t_wait:'Waiting for host to start…', t_chat:'Game Chat', t_send:'▶',
@@ -5336,13 +5345,33 @@ en:{
   teamChat:'Team Chat', generalChat:'General',
   wolvesChat:'Wolves', sistersChat:'Sisters', brothersChat:'Brothers',
   t_googlebtn:'Continue with Google', t_signout:'Sign out', t_viewstats:'📊 Stats',
+  // ── Main menu (FR/AR support) ──
+  t_m_sub:'ONLINE · MULTIPLAYER', t_m_online:'online now', t_m_visits:'total visits',
+  t_m_yourname:'Your display name', t_m_phname:'Enter your name…',
+  t_m_entercode:'Enter Room Code', t_m_phcode:'ABC123', t_m_joinbtn:'Join Room →',
+  t_m_create:'Create Room', t_m_create_d:'Start a new game',
+  t_m_join:'Join by Code', t_m_join_d:'Enter room code',
+  t_m_public:'Public Rooms', t_m_public_d:'Browse open games',
+  t_m_lb:'Leaderboard', t_m_lb_d:'Global rankings',
+  t_m_profile:'Profile', t_m_profile_d:'Stats & history',
+  t_m_friends:'Friends', t_m_friends_d:'Online & invites',
+  t_m_store:'Avatar Store', t_m_store_d:'Customize your look',
+  t_m_spin:'Daily Spin', t_m_spin_d:'Spin for rewards',
+  t_m_feedback:'Feedback', t_m_feedback_d:'Bugs & ideas',
+  t_m_more:'More Games', t_m_more_d:'Check out our other games',
+  t_m_signin:'Sign In', t_m_signout2:'Sign Out',
+  t_m_crm:'⚔️ Create Room', t_m_pub:'🌐 Public', t_m_priv:'🔒 Private',
+  t_m_roomname:'Room Name', t_m_roomname_h:'Shown in public rooms list',
+  t_m_hostname:'Your Name', t_m_maxp:'Max Players', t_m_creatgo:'Create Room →',
+  t_m_live:'Live open games', t_m_online2:'players online right now',
+  t_m_refresh:'↻ Refresh', t_m_creat2:'+ Create', t_m_yourjoin:'Your name to join', t_m_public2:'🌐 Public Rooms',
 },
 fr:{
   t_title:'Loup-Garou', t_sub:'Rejoignez le jeu de la tromperie et de la survie',
   t_name:'Votre nom', t_code:'Code de salle', t_join:'Rejoindre', t_create:'Créer une salle',
   t_shareCode:'Partagez ce code avec vos amis :',
   t_gtitle:'Loup-Garou', t_lphase:'Phase :', t_lplayers:'Joueurs :', t_lroom:'Salle :', t_lstatus:'État :', t_leave:'Quitter',
-  t_linfo:'Infos', t_lalive:'Vivants :', t_ldead:'Morts :', t_lwolves:'Loups :', t_lvillage:'Villageois :', t_lrole:'Votre rôle',
+  t_linfo:'Infos', t_lalive:'Vivants :', t_ldead:'Morts :', t_lwolves:'Loups éliminés :', t_lvillage:'Villageois perdus :', t_lrole:'Votre rôle',
   t_setup:'Configuration', t_nplayers:'Nombre de joueurs (4–20)', t_roles:'Choisir les rôles',
   t_dayt:'Chrono jour (s)', t_nightt:'Chrono nuit (s)', t_start:'Démarrer',
   t_wait:'En attente du meneur…', t_chat:'Chat', t_send:'▶',
@@ -5415,13 +5444,33 @@ fr:{
   teamChat:'Chat d\'équipe', generalChat:'Général',
   wolvesChat:'Loups', sistersChat:'Sœurs', brothersChat:'Frères',
   t_googlebtn:'Continuer avec Google', t_signout:'Déconnexion', t_viewstats:'📊 Stats',
+  // ── Menu principal (support FR/AR) ──
+  t_m_sub:'EN LIGNE · MULTIJOUEUR', t_m_online:'en ligne', t_m_visits:'visites au total',
+  t_m_yourname:'Votre nom affiché', t_m_phname:'Entrez votre nom…',
+  t_m_entercode:'Entrer le code de salle', t_m_phcode:'ABC123', t_m_joinbtn:'Rejoindre la salle →',
+  t_m_create:'Créer une salle', t_m_create_d:'Démarrer une nouvelle partie',
+  t_m_join:'Rejoindre par code', t_m_join_d:'Entrer le code de la salle',
+  t_m_public:'Salles publiques', t_m_public_d:'Parcourir les parties ouvertes',
+  t_m_lb:'Classement', t_m_lb_d:'Classement mondial',
+  t_m_profile:'Profil', t_m_profile_d:'Stats et historique',
+  t_m_friends:'Amis', t_m_friends_d:'En ligne et invitations',
+  t_m_store:'Boutique d\'avatars', t_m_store_d:'Personnalisez votre look',
+  t_m_spin:'Roue quotidienne', t_m_spin_d:'Tentez votre chance',
+  t_m_feedback:'Commentaires', t_m_feedback_d:'Bugs et idées',
+  t_m_more:'Autres jeux', t_m_more_d:'Découvrez nos autres jeux',
+  t_m_signin:'Se connecter', t_m_signout2:'Se déconnecter',
+  t_m_crm:'⚔️ Créer une salle', t_m_pub:'🌐 Public', t_m_priv:'🔒 Privé',
+  t_m_roomname:'Nom de la salle', t_m_roomname_h:'Visible dans la liste des salles publiques',
+  t_m_hostname:'Votre nom', t_m_maxp:'Joueurs max', t_m_creatgo:'Créer la salle →',
+  t_m_live:'Salles ouvertes en direct', t_m_online2:'joueurs en ligne',
+  t_m_refresh:'↻ Actualiser', t_m_creat2:'+ Créer', t_m_yourjoin:'Votre nom pour rejoindre', t_m_public2:'🌐 Salles publiques',
 },
 ar:{
   t_title:'ذئب البشر', t_sub:'انضم إلى لعبة الخداع والبقاء',
   t_name:'اسمك', t_code:'كود الغرفة', t_join:'انضم', t_create:'إنشاء غرفة',
   t_shareCode:'شارك هذا الكود مع أصدقائك:',
   t_gtitle:'ذئب البشر', t_lphase:'المرحلة:', t_lplayers:'اللاعبون:', t_lroom:'الغرفة:', t_lstatus:'الحالة:', t_leave:'خروج',
-  t_linfo:'معلومات', t_lalive:'أحياء:', t_ldead:'أموات:', t_lwolves:'ذئاب:', t_lvillage:'قرويون:', t_lrole:'دورك',
+  t_linfo:'معلومات', t_lalive:'أحياء:', t_ldead:'أموات:', t_lwolves:'ذئاب مقتولون:', t_lvillage:'قرويون ماتوا:ويون:', t_lrole:'دورك',
   t_setup:'إعداد اللعبة', t_nplayers:'عدد اللاعبين (4–20)', t_roles:'اختر الأدوار',
   t_dayt:'مدة النهار (ثا)', t_nightt:'مدة الليل (ثا)', t_start:'ابدأ اللعبة',
   t_wait:'بانتظار المضيف للبدء…', t_chat:'الدردشة', t_send:'▶',
@@ -5494,6 +5543,26 @@ ar:{
   teamChat:'دردشة الفريق', generalChat:'عام',
   wolvesChat:'الذئاب', sistersChat:'الأختان', brothersChat:'الإخوة',
   t_googlebtn:'المتابعة مع Google', t_signout:'تسجيل الخروج', t_viewstats:'📊 إحصائياتي',
+  // ── القائمة الرئيسية ──
+  t_m_sub:'عبر الإنترنت · متعدد اللاعبين', t_m_online:'متصلون الآن', t_m_visits:'إجمالي الزيارات',
+  t_m_yourname:'اسم اللاعب', t_m_phname:'أدخل اسمك…',
+  t_m_entercode:'أدخل رمز الغرفة', t_m_phcode:'ABC123', t_m_joinbtn:'انضم إلى الغرفة →',
+  t_m_create:'إنشاء غرفة', t_m_create_d:'ابدأ لعبة جديدة',
+  t_m_join:'انضم برمز', t_m_join_d:'أدخل رمز الغرفة',
+  t_m_public:'الغرف العامة', t_m_public_d:'تصفح الألعاب المفتوحة',
+  t_m_lb:'المتصدرون', t_m_lb_d:'التصنيف العالمي',
+  t_m_profile:'الملف الشخصي', t_m_profile_d:'الإحصائيات والسجل',
+  t_m_friends:'الأصدقاء', t_m_friends_d:'متصلون ودعوات',
+  t_m_store:'متجر الأفاتار', t_m_store_d:'خصص مظهرك',
+  t_m_spin:'الدوران اليومي', t_m_spin_d:'اربح جوائز',
+  t_m_feedback:'الملاحظات', t_m_feedback_d:'الأخطاء والأفكار',
+  t_m_more:'ألعاب أخرى', t_m_more_d:'اكتشف ألعابنا الأخرى',
+  t_m_signin:'تسجيل الدخول', t_m_signout2:'تسجيل الخروج',
+  t_m_crm:'⚔️ إنشاء غرفة', t_m_pub:'🌐 عامة', t_m_priv:'🔒 خاصة',
+  t_m_roomname:'اسم الغرفة', t_m_roomname_h:'يظهر في قائمة الغرف العامة',
+  t_m_hostname:'اسمك', t_m_maxp:'الحد الأقصى للاعبين', t_m_creatgo:'إنشاء الغرفة →',
+  t_m_live:'غرف مفتوحة الآن', t_m_online2:'لاعبون متصلون الآن',
+  t_m_refresh:'↻ تحديث', t_m_creat2:'+ إنشاء', t_m_yourjoin:'اسمك للانضمام', t_m_public2:'🌐 الغرف العامة',
 }};
 
 // ════════════════════════════════════════════
@@ -5827,7 +5896,7 @@ function showGameOver(result){
     <div id="gameOverScoreSheet" style="text-align:center;padding:2rem;display:none">
       <div style="font-size:4rem;margin-bottom:1rem">${winIcon}</div>
       <div class="phase-title" style="color:${winColor}">
-        ${result.msg||'Game Over!'}
+        ${lang==='ar'?'انتهت اللعبة!':lang==='fr'?'Fin de partie !':'Game Over!'}
       </div>
       <div style="font-size:1.1rem;color:var(--ghost);margin:1rem 0">${result.msg}</div>
       <div style="margin-top:1.5rem;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
@@ -6208,7 +6277,10 @@ function handleRematch(){
     upd[`games/${roomCode}/phaseStart`]=null;
     upd[`games/${roomCode}/dayNum`]=null;
     upd[`games/${roomCode}/startedAt`]=null;
-    upd[`games/${roomCode}/readyPlayers`]=null;
+    // FIX: keep readyPlayers on rematch — everyone is still in the room and
+    // still ready, so the host isn't dead-locked waiting for players to
+    // re-ready (previously a single stuck client blocked Start forever).
+    // Players who left are already filtered out of readyPlayers elsewhere.
     upd[`games/${roomCode}/nightTurn`]=null;
     upd[`games/${roomCode}/nightActions`]=null;
     upd[`games/${roomCode}/dayVotes`]=null;
@@ -6628,6 +6700,18 @@ function doGuestPlay(){
   if(emailWrap) emailWrap.style.display = 'none';
   if(googleBtn) googleBtn.style.display = 'none';
   if(gameEntry) gameEntry.style.display = 'block';
+  // FIX: pre-fill the name inputs with the last used guest name so returning
+  // players don't have to retype it after a reload/leave.
+  try {
+    const last = JSON.parse(localStorage.getItem('lg_last_guest_name') || 'null');
+    const nm = typeof last === 'string' ? last : (last && last.name);
+    if (nm) {
+      const inName = document.getElementById('inName');
+      const mnNameInput = document.getElementById('mnNameInput');
+      if (inName && !inName.value) inName.value = nm;
+      if (mnNameInput && !mnNameInput.value) mnNameInput.value = nm;
+    }
+  } catch(e) {}
   // _googleUser stays null → savePlayerStats will return early (no stats for guests)
   console.log('👤 Playing as guest — stats disabled');
 }
@@ -6672,6 +6756,31 @@ function setLang(l){
 }
 
 function applyTranslations(){
+
+  // FIX: translate menu input placeholders (i18n previously ignored placeholders)
+
+  const _ph={
+
+    mnNameInput: tr('t_m_phname'),
+
+    mnCodeInput: tr('t_m_phcode'),
+
+    rcRoomName: tr('t_m_roomname'),
+
+    rcHostName: tr('t_m_phname'),
+
+    prJoinName: tr('t_m_phname')
+
+  };
+
+  Object.entries(_ph).forEach(([pid,val])=>{
+
+    const el=document.getElementById(pid);
+
+    if(el && val && val!=='undefined') el.placeholder=val;
+
+  });
+
   // translate every element whose id starts with t_ or st_ or ph_
   document.querySelectorAll('[id]').forEach(el=>{
     const v=tr(el.id);
@@ -6850,6 +6959,9 @@ async function enterRoom(){
     if(!snap.exists()){
       if(!isLeader){
         alert('❌ '+(lang==='ar'?'الغرفة غير موجودة':lang==='fr'?'Salle introuvable':'Room not found'));
+        // FIX: _hideAll() already hid every panel before doJoin ran — restore
+        // the menu, otherwise the player is left on a blank screen.
+        if(typeof showMainMenu==='function') showMainMenu();
         return;
       }
       // Create room
@@ -7670,6 +7782,11 @@ function renderStats(players){
     });
     document.getElementById('iWolves').textContent = dead.filter(p=>isWolfRole(p.role,gameState)).length;
     document.getElementById('iVillage').textContent = dead.filter(p=>!isWolfRole(p.role,gameState)).length;
+  } else {
+    // FIX: reset to '?' outside of an active game so values from the previous
+    // game don't linger into the lobby/next game (was showing stale counts).
+    document.getElementById('iWolves').textContent='?';
+    document.getElementById('iVillage').textContent='?';
   }
 }
 
@@ -8282,6 +8399,9 @@ function renderPhase(){
   const isMyTurn = step && (step.roles.includes(myRole) || (stepId==='wolves' && _wolfhoundIsWolf));
   const me=gameState.players?.[myId];
   const iAmAlive = me?.alive;
+  // FIX: plural team labels (Werewolves / Three Brothers / Two Sisters) need
+  // "are acting" / "agissent", not "is acting" / "agit".
+  const _pluralStep = stepId==='wolves' || stepId==='threebrothers' || stepId==='twosisters';
 
   if(!stepId || stepId==='__init__'){
     document.getElementById('phaseDesc').textContent=lang==='ar'?'الليل يبدأ…':lang==='fr'?'La nuit commence…':'Night begins…';
@@ -8291,9 +8411,9 @@ function renderPhase(){
   // What everyone sees
   if(!isMyTurn || !iAmAlive){
     document.getElementById('phaseDesc').textContent=
-      lang==='ar'? `${stepLabel} يتصرف الآن… 🌙` :
-      lang==='fr'? `${stepLabel} agit maintenant… 🌙` :
-                   `${stepLabel} is acting now… 🌙`;
+      lang==='ar'? `${stepLabel} ${_pluralStep?'يتصرفون':'يتصرف'} الآن… 🌙` :
+      lang==='fr'? `${stepLabel} ${_pluralStep?'agissent':'agit'} maintenant… 🌙` :
+                   `${stepLabel} ${_pluralStep?'are':'is'} acting now… 🌙`;
     // Little Girl: may peek during wolves turn (at her own risk — if wolves notice, she can die)
     if(myRole==='littlegirl' && iAmAlive && stepId==='wolves'){
       const peekCount=gameState.littleGirlPeeks||0;
@@ -9117,14 +9237,10 @@ function resolveNightAndAdvance(){
     Object.values(players).forEach(p=>{ if(p.role==='berserker') killSet.delete(p.id); });
   }
 
-  // Cupid lovers: if one lover is killed, the other dies too
-  const loversIds=gs.loversIds||actions._loversIds||[];
-  if(loversIds.length===2){
-    const [l1,l2]=loversIds;
-    if(killSet.has(l1) && players[l2]?.alive) killSet.add(l2);
-    if(killSet.has(l2) && players[l1]?.alive) killSet.add(l1);
-  }
-
+  // FIX: Elder survival must be resolved BEFORE the lover cascade.
+  // Previously the elder check ran after it, so when wolves attacked the elder
+  // and the elder survived, the lover-cascade had already added the elder's
+  // lover to the killSet — killing an innocent lover even though nobody died.
   // Elder: survives first wolf attack
   const elderPlayer=Object.values(players).find(p=>p.role==='elder'&&p.alive);
   if(elderPlayer && killSet.has(elderPlayer.id)){
@@ -9135,6 +9251,14 @@ function resolveNightAndAdvance(){
       killSet.delete(elderPlayer.id);
       upd[`games/${roomCode}/elderLives`]=0;
     }
+  }
+
+  // Cupid lovers: if one lover is killed, the other dies too
+  const loversIds=gs.loversIds||actions._loversIds||[];
+  if(loversIds.length===2){
+    const [l1,l2]=loversIds;
+    if(killSet.has(l1) && players[l2]?.alive) killSet.add(l2);
+    if(killSet.has(l2) && players[l1]?.alive) killSet.add(l1);
   }
 
   // Wolf Father: infect a player, turning them into a werewolf (instead of killing)
@@ -9578,9 +9702,11 @@ function renderDayVoting(){
 
   // ── SECTION 2: ELIMINATION — only shown after mayor is resolved ──
   if(maireElectionPending){
-    html+=`<div style="font-size:.85rem;opacity:.55;margin-top:.8rem;text-align:center">
-      ⏳ ${lang==='ar'?'انتظر انتهاء انتخاب العمدة':lang==='fr'?'Attendez la fin de l\'élection du Maire':'Waiting for Mayor election to finish…'}
-    </div>`;
+    // FIX: previously this showed a dead-end "Waiting for Mayor election…"
+    // message with NO way to vote, so the election could never finish.
+    // Now we render the full candidate list with Vote Mayor buttons
+    // (buildMaireHtml existed but was never called anywhere).
+    html+=buildMaireHtml(players);
     ab.innerHTML=html;
     return;
   }
@@ -10881,10 +11007,13 @@ function _mnRefresh(){
 }
 
 function _mnGetName(){
-  return _googleUser?.displayName?.split(' ')[0]
+  const nm = _googleUser?.displayName?.split(' ')[0]
     || _googleUser?.email?.split('@')[0]
     || document.getElementById('mnNameInput')?.value?.trim()
     || '';
+  // Remember last used name so it can be pre-filled after reload/leave
+  if(nm){ try{ localStorage.setItem('lg_last_guest_name', JSON.stringify(nm)); }catch(e){} }
+  return nm;
 }
 
 function mnGoLogin(){
@@ -10961,6 +11090,7 @@ function rcCreate(){
     document.getElementById('rcHostName').focus();
     _showToast('Enter your name first'); return;
   }
+  try{ localStorage.setItem('lg_last_guest_name', JSON.stringify(host)); }catch(e){}
   const roomName = _rcType==='public'
     ? (document.getElementById('rcRoomName').value.trim()||'Game Room')
     : null;
@@ -11845,8 +11975,12 @@ doStartGame = function() {
         { name: 'Time',         value: new Date().toUTCString(),                      inline: false }
       ]
     }]);
+    // FIX: track daily game INSIDE the try block — playerCount is block-scoped
+    // to the try, and referencing it here previously threw
+    // 'ReferenceError: playerCount is not defined', which aborted the call
+    // BEFORE _origDoStartGameTracker() ran, so games could never start.
+    if (typeof window._trackDailyGame === 'function') window._trackDailyGame(playerCount);
   } catch(e) {}
-  if (typeof window._trackDailyGame === 'function') window._trackDailyGame(playerCount);
   _origDoStartGameTracker();
 };
 // ─────────────────────────────────────────────────────────────────────────
@@ -13389,6 +13523,10 @@ function continueAfterVoteHistory(){
 
 <script>
 // ── VOICE BAR FAILSAFE — polls every 2s, shows bar + reconnects if needed ──
+// FIX: _vcInited/_vcJoining/_vcNextRetryAt were never declared anywhere
+// (voice chat is stubbed out), so this interval threw a silent
+// ReferenceError every 2 seconds. Declare them once, properly.
+var _vcInited=false, _vcJoining=false, _vcNextRetryAt=0;
 setInterval(function(){
   try {
     const gameScreen = document.getElementById('gameScreen');
@@ -13404,6 +13542,11 @@ setInterval(function(){
     if(!_vcInited && !_vcJoining && typeof roomCode !== 'undefined' && roomCode && typeof myId !== 'undefined' && myId){
       if(Date.now() < _vcNextRetryAt) return; // still in cooldown
       console.log('[Voice] Failsafe: voice disconnected while in-game, reconnecting...');
+      // FIX: set the cooldown BEFORE attempting reconnect. Previously the
+      // cooldown was only set on some failure paths, so when initVoiceChat
+      // failed without setting it, this failsafe retried every 2 s — a tight
+      // AgoraRTC init loop heavy enough to contribute to tab freezes.
+      try{ _vcNextRetryAt = Date.now() + 15000; }catch(e){}
       if(typeof initVoiceChat === 'function') initVoiceChat();
     }
   } catch(e){}
