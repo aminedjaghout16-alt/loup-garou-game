@@ -10300,6 +10300,23 @@ function checkMaireElection(){
   const eligibleVoters=alive.filter(p=>!candidateIds.has(p.id));
   // Elect when all eligible voters have voted
   if(aliveVoters.length<eligibleVoters.length) return;
+  // FIX: if EVERY alive player is a candidate nobody can vote and the election
+  // could never resolve — mayorPending then blocked "Vote Out" for the rest of
+  // the game. Elect by lot among alive candidates so the day isn't deadlocked.
+  if(eligibleVoters.length===0){
+    const candIds=Object.keys(candidates).filter(id=>aliveIds.has(id));
+    if(!candIds.length) return;
+    const winnerId=candIds[Math.floor(Math.random()*candIds.length)];
+    if(fbOk&&db&&roomCode){
+      db.ref(`games/${roomCode}/maire`).set(winnerId);
+      const wName=(gameState.players[winnerId]||{}).name||'?';
+      db.ref(`games/${roomCode}/chat`).push({n:'👑',t:lang==='fr'?`Personne ne pouvait voter (tous candidats) — ${wName} élu·e au hasard.`:lang==='ar'?`لم يستطع أحد التصويت (الجميع مرشحون) — ${wName} انتُخب بالقرعة.`:`Nobody could vote (everyone is a candidate) — ${wName} was elected by lot.`,ts:Date.now()}).catch(()=>{});
+    } else if(gameState){
+      gameState.maire=winnerId;
+      renderGame();
+    }
+    return;
+  }
   // Tally (only alive votes)
   const tally={};
   aliveVoters.forEach(pid=>{
