@@ -7170,6 +7170,13 @@ function startHeartbeat(){
   stopHeartbeat();
   function beat(){
     if(!fbOk||!db||!roomCode||!myId) return;
+    // FIX: spectators must never touch players/{myId} — their heartbeat used to
+    // create a bare ghost node (heartbeat/disconnected only, no name/role) in the
+    // players list. Spectators heartbeat into spectators/{myId} instead.
+    if(window._isSpectator===true){
+      db.ref(`games/${roomCode}/spectators/${myId}`).update({ heartbeat: Date.now() });
+      return;
+    }
     db.ref(`games/${roomCode}/players/${myId}`).update({
       heartbeat: Date.now(),
       disconnected: false,
