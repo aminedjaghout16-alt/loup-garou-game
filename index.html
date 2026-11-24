@@ -13604,7 +13604,16 @@ setInterval(function(){
   function saveJson(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
   function esc(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
   // Internal tag format: LG-XXXXXX  |  Share/display format: Name#XXXXXX
-  function normalizeTag(tag){let t=String(tag||'').trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');if(t&&!t.startsWith('LG-'))t='LG-'+t.replace(/^LG/,'');return t;}
+  function normalizeTag(tag){
+    // FIX: display-format tags ("Bob#LER5S2") were mangled here — the '#' was
+    // stripped producing "LG-BOBLER5S2" (wrong key, e.g. removeFriend no-op).
+    // Try the proper extractor first; fall back to legacy normalization.
+    let t=String(tag||'').trim();
+    if(t){ try{ const ex=extractLgTag(t); if(ex)return ex; }catch(e){} }
+    t=t.toUpperCase().replace(/[^A-Z0-9-]/g,'');
+    if(t&&!t.startsWith('LG-'))t='LG-'+t.replace(/^LG/,'');
+    return t;
+  }
   function makeTag(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='LG-';for(let i=0;i<6;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out;}
   function tagSuffix(fullTag){return String(fullTag||'').replace(/^LG-/i,'').slice(0,6).toUpperCase();}
   function displayNameTag(name,fullTag){return (name||'Player')+'#'+tagSuffix(fullTag);}
@@ -13656,13 +13665,15 @@ setInterval(function(){
 
   window.loadIncoming = async function loadIncoming(){
     const _authUser=firebase.auth().currentUser;
-    if(typeof db==='undefined'||!db||!_authUser?.uid)return;
+    if(typeof db==='undefined'||!db)return;
     try{
       // 1. Pull pending incoming friend requests — check both uid key and tag key (fallback for empty uid)
+      // FIX: guests (no _authUser) previously returned early and never saw incoming
+      // requests written to their tag key. Guests now read the tag-keyed path.
       const myT=myTag();
       const [snapUid, snapTag] = await Promise.all([
-        db.ref('socialRequests/'+_authUser.uid).once('value'),
-        db.ref('socialRequests/'+myT).once('value')
+        _authUser?.uid ? db.ref('socialRequests/'+_authUser.uid).once('value') : Promise.resolve({val:()=>({})}),
+        myT ? db.ref('socialRequests/'+myT).once('value') : Promise.resolve({val:()=>({})})
       ]);
       const val=Object.assign({}, snapTag.val()||{}, snapUid.val()||{});
       const list=requests();
@@ -13887,26 +13898,42 @@ setInterval(function(){
     const tag=normalizeTag(found.tag);
     const fr=friends();const req=requests();
     if(fr.some(f=>f.tag===tag)){alert('Already friends with '+(found.name||tag)+'.');return;}
-    if(req.some(r=>r.tag===tag)){alert('Request already sent to '+(found.name||tag)+'.');return;}
+    if(req.some(r=>r.tag===tag)){
+      // Heal: the recipient may have declined (removing the Firebase request node)
+      // while our local pending_out remains, which used to block re-sending forever.
+      // Rewrite the node (idempotent) so the request can still reach them.
+      try{ if(typeof db!=='undefined'&&db){ const _au=firebase.auth().currentUser; await db.ref('socialRequests/'+(found.uid||found.tag)+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:(_au?.uid||''),ts:Date.now()}); } }catch(e){}
+      alert('Request already sent to '+(found.name||tag)+'.');return;
+    }
     req.push({tag,name:found.name||tag,uid:found.uid||'',status:'pending_out',addedAt:Date.now()});
     saveRequests(req);
     try{
       if(typeof db!=='undefined'&&db){
+        // FIX: write the request even for guests (no _authUser) — previously a guest
+        // sender's request was silently dropped (stayed local-only) while the UI
+        // still claimed "Friend request sent!". Recipient key: uid if known, else tag.
         const _authUser=firebase.auth().currentUser;
-        if(_authUser){
-          // Use uid if available, fall back to tag as the recipient key
-          const recipientKey=found.uid||found.tag;
-          await db.ref('socialRequests/'+recipientKey+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:_authUser.uid,ts:Date.now()});
-        }
+        const recipientKey=found.uid||found.tag;
+        await db.ref('socialRequests/'+recipientKey+'/'+myTag()).set({tag:myTag(),name:currentDisplayName(),uid:(_authUser?.uid||''),ts:Date.now()});
       }
     }catch(e){console.warn('Could not send request',e);}
     if(inputEl)inputEl.value='';
     renderFriends();
     alert('Friend request sent to '+displayNameTag(found.name,found.tag)+'!');
   };
-  window.acceptFriend=async function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{const _au=firebase.auth().currentUser;if(typeof db!=='undefined'&&db&&_au?.uid){await db.ref(`socialRequests/${_au.uid}/${tag}`).remove();await db.ref(`socialAccepted/${tag}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_au.uid||'',ts:Date.now()});}}catch(e){console.warn('[acceptFriend] firebase error',e);}renderFriends();};
-  window.declineFriend=async function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{const _au=firebase.auth().currentUser;if(typeof db!=='undefined'&&db&&_au?.uid)await db.ref(`socialRequests/${_au.uid}/${tag}`).remove();}catch(e){}renderFriends();};
+  window.acceptFriend=async function(tag){tag=normalizeTag(tag);const req=requests();const r=req.find(x=>x.tag===tag);const fr=friends();if(r&&!fr.some(f=>f.tag===tag))fr.push({tag:r.tag,name:r.name||r.tag,uid:r.uid||'',addedAt:Date.now()});saveFriends(fr);saveRequests(req.filter(x=>x.tag!==tag));try{const _au=firebase.auth().currentUser;if(typeof db!=='undefined'&&db){
+    // FIX: write the acceptance receipt even for guests (no uid) so the sender's
+    // pending_out request resolves to a friendship. uid may be empty.
+    await db.ref(`socialRequests/${(_au?.uid||myTag())}/${tag}`).remove().catch(()=>{});
+    await db.ref(`socialAccepted/${tag}/${myTag()}`).set({tag:myTag(),name:currentDisplayName(),uid:_au?.uid||'',ts:Date.now()});
+  }}catch(e){console.warn('[acceptFriend] firebase error',e);}renderFriends();};
+  window.declineFriend=async function(tag){tag=normalizeTag(tag);saveRequests(requests().filter(x=>x.tag!==tag));try{const _au=firebase.auth().currentUser;if(typeof db!=='undefined'&&db){
+    // FIX: remove the request node even for guests (no uid) so a declined request
+    // doesn't re-appear from Firebase on the next loadIncoming.
+    await db.ref(`socialRequests/${(_au?.uid||myTag())}/${tag}`).remove().catch(()=>{});
+  }}catch(e){}renderFriends();};
   window.removeFriend=function(tag){tag=normalizeTag(tag);saveFriends(friends().filter(f=>f.tag!==tag));renderFriends();};
+  window._lgNormalizeTag=normalizeTag; window._lgRemoveFriend=removeFriend; window._lgDeclineFriend=declineFriend; window._lgAcceptFriend=acceptFriend;
   // ─── GAME INVITE SYSTEM ─────────────────────────────────────────────────
   let _invitePopupTimer=null;
   let _pendingInviteRoom=null;
