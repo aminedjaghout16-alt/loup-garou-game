@@ -265,9 +265,9 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .mn-name-panel input{width:100%;padding:.65rem;background:var(--purple);border:1px solid var(--moon);color:var(--ghost);border-radius:5px;font-family:inherit;font-size:1rem}
 .mn-name-panel input:focus{outline:none;box-shadow:0 0 8px rgba(212,160,23,.3)}
 /* ══ ROOM CREATE MODAL ══ */
-#roomCreateModal{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,1);display:flex;align-items:center;justify-content:center;padding:1rem}
+#roomCreateModal{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,1);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
 #roomCreateModal.hidden{display:none!important}
-.rc-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.8rem 1.5rem;width:100%;max-width:420px;position:relative;box-shadow:0 0 40px rgba(212,160,23,.15)}
+.rc-box{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.8rem 1.5rem;width:100%;max-width:420px;margin:auto;position:relative;box-shadow:0 0 40px rgba(212,160,23,.15)}
 .rc-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.7rem;text-align:center;margin-bottom:1.2rem}
 .rc-toggle{display:flex;border:1px solid var(--moon);border-radius:7px;overflow:hidden;margin-bottom:1.1rem}
 .rc-toggle-btn{flex:1;padding:.65rem;background:transparent;border:none;color:var(--ghost);cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:700;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.4rem}
@@ -307,7 +307,7 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .cr-btn-back{background:transparent;border:1px solid rgba(255,255,255,.12)!important;color:rgba(255,255,255,.4)}
 .cr-btn-back:hover{border-color:rgba(212,160,23,.3)!important;color:var(--moon)}
 /* ══ PUBLIC ROOMS ══ */
-#publicRoomsModal{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,1);display:flex;align-items:center;justify-content:center;padding:1rem}
+#publicRoomsModal{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,1);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
 #publicRoomsModal.hidden{display:none!important}
 .pr-wrap{background:var(--abyss);border:1px solid var(--moon);border-radius:13px;padding:1.5rem 1.3rem;width:100%;max-width:460px;max-height:86vh;display:flex;flex-direction:column;position:relative;box-shadow:0 0 40px rgba(212,160,23,.14)}
 .pr-wrap h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.7rem;text-align:center;margin-bottom:.25rem}
@@ -424,9 +424,13 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 .wr-wait-dot:nth-child(3){animation-delay:.4s}
 @keyframes wrDotPulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:.9;transform:scale(1.2)}}
 
-#profileModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem}
+#profileModal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
 #profileModal.hidden{display:none}
-.profile-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.8rem;width:100%;max-width:420px;box-shadow:0 0 40px rgba(212,160,23,.2);position:relative}
+/* FIX: the profile box was taller than the viewport on smaller screens — with
+   align-items:center and no overflow the ✕ close button sat above the screen
+   edge and nothing could scroll. margin:auto centers when short and keeps the
+   top reachable (scrollable) when tall. */
+.profile-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.8rem;width:100%;max-width:420px;margin:auto;box-shadow:0 0 40px rgba(212,160,23,.2);position:relative}
 .profile-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.8rem;text-align:center;margin-bottom:1.2rem}
 .profile-avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--moon);margin:0 auto .8rem;display:block;object-fit:cover}
 .profile-avatar-placeholder{width:64px;height:64px;border-radius:50%;border:2px solid var(--moon);margin:0 auto .8rem;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:1.8rem}
@@ -968,9 +972,10 @@ body{font-family:'Creepster',cursive;background:var(--void);color:var(--ghost);l
 
 
 /* === Site improvements: sound settings, mobile polish, profiles, friends === */
-.site-modal{position:fixed;inset:0;z-index:320;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:1rem;overflow:auto}
+.site-modal{position:fixed;inset:0;z-index:320;background:rgba(0,0,0,.82);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow:auto}
+/* margin:auto keeps short content centered while tall content stays fully scrollable */
+.site-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.4rem;width:100%;max-width:460px;margin:auto;box-shadow:0 0 40px rgba(212,160,23,.18);position:relative}
 .site-modal.hidden{display:none!important}
-.site-box{background:var(--abyss);border:1px solid var(--moon);border-radius:12px;padding:1.4rem;width:100%;max-width:460px;box-shadow:0 0 40px rgba(212,160,23,.18);position:relative}
 .site-box h2{font-family:'Creepster',cursive;color:var(--moon);font-size:1.55rem;text-align:center;margin-bottom:1rem}
 .site-close{position:absolute;top:.65rem;right:.85rem;background:transparent;border:0;color:var(--ghost);font-size:1.25rem;cursor:pointer;opacity:.65;font-family:inherit;min-width:40px;min-height:40px}
 .site-close:hover{opacity:1;color:var(--moon)}
