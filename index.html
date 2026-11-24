@@ -3777,6 +3777,10 @@ async function initCoins() {
   }
 
   _renderCoinBadge();
+  // FIX: after the async coin load completes, the main-menu bar's 🪙 counter
+  // (mnCoins) still showed the stale value (0) while the floating badge showed
+  // the real balance (e.g. 1.2K) — visible as a mismatch in recordings.
+  if(typeof _mnRefresh==='function') _mnRefresh();
 }
 
 // Helper: persist dedup set to localStorage
@@ -4105,6 +4109,10 @@ function _renderCoinBadge() {
   // Hide badge on login screen to avoid text appearing on the background
   const loginEl = document.getElementById('loginScreen');
   const onLoginScreen = loginEl && !loginEl.classList.contains('hidden');
+  // Also keep the main-menu bar's 🪙 counter in sync (it used to go stale after
+  // the async coin load and after addCoins/spendCoins).
+  const _mnc=document.getElementById('mnCoins');
+  if(_mnc) _mnc.textContent='🪙 '+(typeof _coinBalance==='number'?_coinBalance.toLocaleString():0);
 
   let badge = document.getElementById('coinBadge');
   if (!badge) {
