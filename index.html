@@ -6766,6 +6766,8 @@ function tr(k){ return T[lang]?.[k] ?? T.en[k] ?? k; }
 
 function setLang(l){
   lang=l;
+  // FIX: language choice was not persisted — reload always reset to English.
+  try{localStorage.setItem('lg_lang',l);}catch(e){}
   document.documentElement.lang=l;
   document.documentElement.dir=l==='ar'?'rtl':'ltr';
   document.querySelectorAll('.lb').forEach(b=>b.classList.toggle('active',b.dataset.l===l));
@@ -6773,6 +6775,14 @@ function setLang(l){
   buildRolesGrid();
   if(typeof _irlApplyLang==='function') _irlApplyLang();
 }
+// Restore the persisted language once the DOM is ready
+try{
+  const _savedLang=localStorage.getItem('lg_lang');
+  if(_savedLang&&_savedLang!==lang){
+    if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',()=>setLang(_savedLang)); }
+    else{ setLang(_savedLang); }
+  }
+}catch(e){}
 
 function applyTranslations(){
 
@@ -7177,10 +7187,22 @@ function startHeartbeat(){
       db.ref(`games/${roomCode}/spectators/${myId}`).update({ heartbeat: Date.now() });
       return;
     }
-    db.ref(`games/${roomCode}/players/${myId}`).update({
-      heartbeat: Date.now(),
-      disconnected: false,
-      disconnectedAt: null
+    // FIX: if the lobby's onDisconnect().remove() fired (socket hiccup), the
+    // heartbeat recreated a bare node {heartbeat, disconnected} with no name —
+    // the player turned into a nameless ghost ("Not ready yet: " with empty
+    // names, "Connected: 0"). Use a transaction that restores the full
+    // identity whenever the node is missing or nameless.
+    db.ref(`games/${roomCode}/players/${myId}`).transaction(cur=>{
+      if(!cur || !cur.name){
+        const _uid=(typeof _googleUser!=='undefined'&&_googleUser?.uid)||null;
+        const _photo=(typeof _googleUser!=='undefined'&&_googleUser?.photoURL)||null;
+        return {id:myId, name:myName, alive:true, role:null, joinedAt:(cur&&cur.joinedAt)||Date.now(),
+          uid:_uid, friendTag:(typeof myTag==='function'?myTag():null)||null,
+          avatarId:(typeof getEquippedAvatar==='function'?getEquippedAvatar():null)||null,
+          photoURL:_photo, disconnected:false, heartbeat:Date.now()};
+      }
+      cur.heartbeat=Date.now(); cur.disconnected=false; cur.disconnectedAt=null;
+      return cur;
     });
   }
   beat(); // immediate first beat
@@ -11948,7 +11970,11 @@ doStartGame = function(){
 };
 
 window.addEventListener('load',()=>{
-  setLang('en');
+  // FIX: this used to hard-reset to English on every load, killing the saved
+  // language. Restore the persisted choice with English as fallback.
+  let _l='en';
+  try{ _l=localStorage.getItem('lg_lang')||'en'; }catch(e){}
+  setLang(_l);
   setTimeout(()=>initFB(), 200);
 });
 </script>
