@@ -6829,31 +6829,38 @@ function initFBWithRetry(callback, tries=0){
   ov.textContent='Signing you in with Google…';
   ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#140a20;color:#fff;display:flex;align-items:center;justify-content:center;font-family:sans-serif;font-size:1.1rem';
   document.body.appendChild(ov);
+  const _relayErr=(e)=>{
+    console.error('[AuthRelay] error', e);
+    try{ window.opener.postMessage({source:'lg-auth-relay', error:e.code||'auth/failed'}, '*'); }catch(_){}
+    ov.textContent='Sign-in failed: '+(e.code||e.message);
+    setTimeout(()=>window.close(), 2500);
+  };
   let tries=0;
   (function waitFB(){
     if(window._fbReady && typeof firebase!=='undefined'){
       initFB();
-      const p=new firebase.auth.GoogleAuthProvider();
-      p.setCustomParameters({prompt:'select_account'});
-      firebase.auth().signInWithPopup(p)
-        .then(async res=>{
-          const idToken=await res.user.getIdToken(true);
-          const accessToken=(res.credential && res.credential.accessToken) || null;
-          window.opener.postMessage({source:'lg-auth-relay', idToken:idToken, accessToken:accessToken}, '*');
-          ov.textContent='Signed in! You can close this window.';
-        })
-        .catch(e=>{
-          console.error('[AuthRelay] popup error', e);
-          try{ window.opener.postMessage({source:'lg-auth-relay', error:e.code||'auth/failed'}, '*'); }catch(_){}
-          ov.textContent='Sign-in failed: '+(e.code||e.message);
-        })
-        .finally(()=>setTimeout(()=>window.close(), 1200));
+      const auth=firebase.auth();
+      // After returning from the Google redirect, getRedirectResult() resolves
+      // with the signed-in user — hand the Firebase ID token to the opener.
+      auth.getRedirectResult().then(res=>{
+        if(res.user){
+          return res.user.getIdToken(true).then(idToken=>{
+            const accessToken=(res.credential && res.credential.accessToken) || null;
+            window.opener.postMessage({source:'lg-auth-relay', idToken:idToken, accessToken:accessToken}, '*');
+            ov.textContent='Signed in! Closing…';
+            setTimeout(()=>window.close(), 900);
+          });
+        }
+        // First load — send the user to Google via redirect (no nested popup
+        // needed; redirect works on this authorized origin).
+        const p=new firebase.auth.GoogleAuthProvider();
+        p.setCustomParameters({prompt:'select_account'});
+        return auth.signInWithRedirect(p);
+      }).catch(_relayErr);
     } else if(tries++<150){
       setTimeout(waitFB, 100);
     } else {
-      try{ window.opener.postMessage({source:'lg-auth-relay', error:'auth/timeout'}, '*'); }catch(_){}
-      ov.textContent='Connection timed out. Please try again.';
-      setTimeout(()=>window.close(), 2000);
+      _relayErr({code:'auth/timeout'});
     }
   })();
 })();
