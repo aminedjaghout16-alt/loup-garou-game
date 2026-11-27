@@ -14227,10 +14227,18 @@ setInterval(function(){
   }
 
   // ── Install Prompt (Android / Desktop Chrome, Edge, Samsung etc.) ────────
+  // Skip entirely when embedded (itch.io embed / any iframe) — install prompt
+  // and service workers don't apply inside a cross-origin iframe.
+  const _lgEmbedded = (() => { try { return window.self !== window.top || /itch\.zone$/.test(location.hostname); } catch (e) { return true; } })();
   let _deferredPrompt = null;
   const DISMISS_KEY   = 'pwa_install_dismissed';
 
+  if (_lgEmbedded) {
+    document.querySelectorAll('#pwaInstallBanner, #pwaIosHint').forEach(el => el.remove());
+  }
+
   window.addEventListener('beforeinstallprompt', e => {
+    if (_lgEmbedded) { e.preventDefault(); return; }
     e.preventDefault();
     _deferredPrompt = e;
 
@@ -14279,13 +14287,15 @@ setInterval(function(){
            window.matchMedia('(display-mode: standalone)').matches;
   }
 
-  if (_isIos() && !_isInStandaloneMode() && !localStorage.getItem(IOS_KEY)) {
+  if (_isIos() && !_isInStandaloneMode() && !localStorage.getItem(IOS_KEY) && !_lgEmbedded) {
     setTimeout(() => {
       document.getElementById('pwaIosHint').classList.add('visible');
     }, 3000);
   }
 
-  document.getElementById('pwaIosClose').addEventListener('click', () => {
+  if (!document.getElementById('pwaIosClose')) {
+    // Embedded: hint element removed — stub the close handler
+  } else document.getElementById('pwaIosClose').addEventListener('click', () => {
     document.getElementById('pwaIosHint').classList.remove('visible');
     localStorage.setItem(IOS_KEY, '1');
   });
