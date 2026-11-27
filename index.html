@@ -6823,8 +6823,7 @@ function initFBWithRetry(callback, tries=0){
 // This origin IS authorized in Firebase, so sign in here and hand the
 // Firebase ID token back to the opener via postMessage.
 (function _lgAuthRelay(){
-  const _dbg=location.hash.indexOf('relay-debug')>-1;
-  if(!_dbg && (location.hash.indexOf('google-auth-relay')===-1 || !window.opener)) return;
+  if(location.hash.indexOf('google-auth-relay')===-1 || !window.opener) return;
   // Overlay so the user sees something is happening instead of the full game
   const ov=document.createElement('div');
   ov.textContent='Signing you in with Google…';
@@ -6846,7 +6845,6 @@ function initFBWithRetry(callback, tries=0){
       auth.getRedirectResult().then(res=>{
         if(res.user){
           return res.user.getIdToken(true).then(idToken=>{
-            if(_dbg){ ov.textContent='RELAY TEST OK — got token ('+idToken.length+' chars)'; return; }
             const accessToken=(res.credential && res.credential.accessToken) || null;
             window.opener.postMessage({source:'lg-auth-relay', idToken:idToken, accessToken:accessToken}, '*');
             ov.textContent='Signed in! Closing…';
