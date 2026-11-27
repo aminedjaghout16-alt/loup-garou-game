@@ -6588,8 +6588,52 @@ function _updateGoogleUI(user){
   }
 }
 
+// ── EMBEDDED-AUTH RELAY (itch.io etc.) ──────────────────────────────────
+// Inside a cross-origin iframe (itch embed), Firebase rejects Google popup
+// sign-in with auth/unauthorized-domain. Workaround: open a popup on the
+// official site (authorized domain), sign in there, then pass the Firebase
+// ID token back via postMessage and finish sign-in here with
+// signInWithCredential (a pure REST call — no domain check).
+let _lgEmbeddedAuth = (() => {
+  try { return window.self !== window.top || /itch\.zone$/.test(location.hostname); }
+  catch (e) { return true; }
+})();
+
+function _lgGoogleRelaySignIn(btn){
+  if(btn) btn.disabled=true;
+  let settled=false;
+  const handler=(ev)=>{
+    const d=ev.data;
+    if(!d || d.source!=='lg-auth-relay') return;
+    settled=true;
+    window.removeEventListener('message', handler);
+    const finish=(user)=>{ if(btn) btn.disabled=false; if(user) _updateGoogleUI(user); };
+    if(d.error){ if(btn) btn.disabled=false; alert('Sign-in failed: '+d.error); return; }
+    const cred=firebase.auth.GoogleAuthProvider.credential(d.idToken, d.accessToken||null);
+    const useCred=()=>_fbAuth.signInWithCredential(cred)
+      .then(res=>finish(res.user))
+      .catch(err=>{ console.error('Relay sign-in error',err); finish(null); alert('Sign-in failed: '+err.message); });
+    if(_fbAuth) useCred();
+    else initFBWithRetry(()=>{ if(_fbAuth) useCred(); else { finish(null); alert('Could not connect to Google. Please try again.'); } });
+  };
+  window.addEventListener('message', handler);
+  // Safety net: if popup was blocked or closed without responding, re-enable
+  setTimeout(()=>{ if(!settled && btn) btn.disabled=false; }, 120000);
+  window.open('https://loup-garou-game-beta.vercel.app/#google-auth-relay','lgAuthRelay','width=480,height=640');
+}
+
 function doGoogleSignIn(){
   if(_googleUser){ _updateGoogleUI(_googleUser); return; } // already signed in
+  if(_lgEmbeddedAuth){
+    // No Firebase needed in embed for the relay itself, but wait for it so the
+    // credential exchange is instant when the popup answers.
+    if(!_fbAuth){
+      initFBWithRetry(()=>{ if(_fbAuth) doGoogleSignIn(); else alert('Could not connect to Google. Please try again.'); });
+      return;
+    }
+    _lgGoogleRelaySignIn(document.getElementById('googleSignInBtn'));
+    return;
+  }
   if(!_fbAuth){
     initFBWithRetry(()=>{
       if(_fbAuth) doGoogleSignIn();
@@ -6771,6 +6815,48 @@ function initFBWithRetry(callback, tries=0){
   }
   setTimeout(()=>initFBWithRetry(callback, tries+1), 100);
 }
+
+// ════════════════════════════════════════════
+// GOOGLE AUTH RELAY (for itch.io embeds)
+// ════════════════════════════════════════════
+// The embedded game (itch iframe) opens this page with #google-auth-relay.
+// This origin IS authorized in Firebase, so sign in here and hand the
+// Firebase ID token back to the opener via postMessage.
+(function _lgAuthRelay(){
+  if(location.hash.indexOf('google-auth-relay')===-1 || !window.opener) return;
+  // Overlay so the user sees something is happening instead of the full game
+  const ov=document.createElement('div');
+  ov.textContent='Signing you in with Google…';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#140a20;color:#fff;display:flex;align-items:center;justify-content:center;font-family:sans-serif;font-size:1.1rem';
+  document.body.appendChild(ov);
+  let tries=0;
+  (function waitFB(){
+    if(window._fbReady && typeof firebase!=='undefined'){
+      initFB();
+      const p=new firebase.auth.GoogleAuthProvider();
+      p.setCustomParameters({prompt:'select_account'});
+      firebase.auth().signInWithPopup(p)
+        .then(async res=>{
+          const idToken=await res.user.getIdToken(true);
+          const accessToken=(res.credential && res.credential.accessToken) || null;
+          window.opener.postMessage({source:'lg-auth-relay', idToken:idToken, accessToken:accessToken}, '*');
+          ov.textContent='Signed in! You can close this window.';
+        })
+        .catch(e=>{
+          console.error('[AuthRelay] popup error', e);
+          try{ window.opener.postMessage({source:'lg-auth-relay', error:e.code||'auth/failed'}, '*'); }catch(_){}
+          ov.textContent='Sign-in failed: '+(e.code||e.message);
+        })
+        .finally(()=>setTimeout(()=>window.close(), 1200));
+    } else if(tries++<150){
+      setTimeout(waitFB, 100);
+    } else {
+      try{ window.opener.postMessage({source:'lg-auth-relay', error:'auth/timeout'}, '*'); }catch(_){}
+      ov.textContent='Connection timed out. Please try again.';
+      setTimeout(()=>window.close(), 2000);
+    }
+  })();
+})();
 
 // ════════════════════════════════════════════
 // LANGUAGE
